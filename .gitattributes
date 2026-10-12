@@ -1,0 +1,2 @@
+# Garante LF nos scripts de shell, para o gate rodar em qualquer máquina
+*.sh text eol=lf

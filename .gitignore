@@ -1,0 +1,32 @@
+# Flags de liberação do gate de deploy, locais e nunca versionadas
+.claude/state/READY_*
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Ambiente e segredos
+.env
+.env.*
+!.env.example
+
+# Firebase
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+
+# Sistema e editor
+.DS_Store
+Thumbs.db
+*.local
+.vscode/
+.idea/
