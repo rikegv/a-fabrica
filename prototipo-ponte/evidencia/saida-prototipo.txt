@@ -1,0 +1,50 @@
+
+============================================================
+PROVA 1. ABRIR, sessao headless com comando inicial
+============================================================
+conversation_id: 24fe84af-838e-4ef2-852d-ae902b2c34af
+status: SUCCESS | response: "Sessão iniciada com sucesso! Em que posso ajudar?"
+usage.total_tokens: 16308
+=> PROVA 1 PASSA: abriu sem janela, com id, estado e consumo.
+
+============================================================
+PROVA 2. ENXERGAR, atividade ao vivo por stream-json
+============================================================
++4287ms init  modelo=gemini-3.8-flash-low  modo=request-review
++4391ms passo 0 user_input/DONE
++6774ms passo 1 agent_response/DONE uso=16355
++6774ms passo 2 tool/ACTIVE
++6799ms passo 2 tool/DONE
++8599ms passo 3 agent_response/ACTIVE
++8752ms passo 3 agent_response/ACTIVE
++8829ms passo 3 agent_response/ACTIVE
++8854ms passo 3 agent_response/ACTIVE
++8879ms passo 3 agent_response/ACTIVE
++8905ms passo 3 agent_response/ACTIVE
++8930ms passo 3 agent_response/ACTIVE
++8955ms passo 3 agent_response/ACTIVE
++9338ms passo 3 agent_response/DONE uso=2409
++9364ms result SUCCESS  uso_acumulado=18764
+=> PROVA 2 PASSA: modelo=gemini-3.8-flash-low, 13 passos ao vivo, consumo=18764 tokens.
+
+============================================================
+PROVA 3. APROVAR pelo hook de ciclo de vida (caminho suportado)
+============================================================
+(a) pedido percebido.
+(b) conteudo capturado: ferramenta=run_command comando="echo prova-de-aprovacao"
+    toolSummary="Echo approval proof"  conversa=96eaf185-c64e-4dca-9c6d-29d50fd46bd4
+(c) recusa aplicada por fora. status=SUCCESS
+    resposta da sessao: "A execução do comando foi recusada pelo painel com a mensagem:\n\n> **Diretor recusou pelo painel, demonstracao da prova 3.**"
+=> PROVA 3 PARCIAL: perceber, capturar e RECUSAR funcionam pelo hook.
+   APROVAR para executar NAO funciona no agy headless: allow + permissionOverrides e ignorado pelo motor de permissao. Ver docs/prova-ponte.md.
+
+============================================================
+PROVA 4. COMANDAR DE NOVO, retomar pela id e executar
+============================================================
+turno 1 id: b0cbd878-a7c4-4b0d-8194-5f209f31221e | resposta: "guardado."
+turno 2 id: b0cbd878-a7c4-4b0d-8194-5f209f31221e | num_turns: 2 | resposta: "42"
+=> PROVA 4 PASSA : retomou a mesma conversa e executou o comando novo.
+
+============================================================
+FIM. Veredito completo e formato dos dados em docs/prova-ponte.md
+============================================================
