@@ -7,7 +7,7 @@
           {
             "type": "command",
             "command": "node C:\\Users\\Henrique\\a-fabrica-lab\\projeto-bobo\\.agents\\hooks\\pretool.mjs PreToolUse",
-            "timeout": 120
+            "timeout": 600
           }
         ]
       }

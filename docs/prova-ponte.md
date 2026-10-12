@@ -239,3 +239,120 @@ node prototipo-ponte/ponte-poc.mjs
 ```
 
 Roda as quatro provas em sessao viva e imprime a saida real. O hook de aprovacao esta em `prototipo-ponte/pretool-hook.mjs`, registrado pelo exemplo `prototipo-ponte/hooks.json.exemplo`, que na prova viveu na pasta de teste `a-fabrica-lab/projeto-bobo/.agents/`. As evidencias estao em `prototipo-ponte/evidencia/`.
+
+---
+
+# Spike da aprovacao invertida (OST 1, Parte 2, tarefa 2)
+
+Agente responsavel: ponte. Seguranca audita ao final. Sessao viva com `agy` 1.3.3, cota autorizada. Pasta cobaia `a-fabrica-lab/projeto-bobo`.
+
+## Hipotese testada
+Como o hook sabe recusar com confiabilidade, invertemos a logica: pre-autoriza no `agy` o necessario para ele nao travar sozinho, e o hook `PreToolUse` passa a ser o PORTAO que segura toda chamada de risco, grava o pedido na fila, espera a resposta do diretor e so entao deixa passar ou recusa. O `agy` deixa de decidir, o hook decide. Nada anda sem resposta do diretor.
+
+## Como a pre-autorizacao ficou fora da config global (§A.9)
+O achado de permissao: em headless, o `agy` 1.3.3 ignora `permissions.allow` em `antigravity-cli/settings.json` e ignora o `allow` do proprio hook (os dois sao soft-denied). A unica pre-autorizacao que funciona e um grant em `config.json`, em `userSettings.globalPermissionGrants.allow`, com padrao regex.
+
+Para nao tocar a config global do diretor, rodei o `agy` com o HOME apontado para uma pasta descartavel, `a-fabrica-lab/agy-home-teste`. A autenticacao sobreviveu, porque fica no gerenciador de credenciais do Windows, nao no perfil. Entao todo o grant vive no config descartavel, e o `~/.gemini` real do diretor nao e tocado. Confirmei: `agy models` autenticado com HOME relocado, e o comando executa com o grant so no sandbox.
+
+Grant usado, no sandbox:
+
+```json
+{ "userSettings": { "globalPermissionGrants": { "allow": ["command(regex:echo.*)"] } } }
+```
+
+## Os cinco resultados, saida real
+
+Saida consolidada do protótipo `prototipo-ponte/ponte-inversao.mjs` (em `prototipo-ponte/evidencia/saida-inversao.txt`):
+
+```
+EXECUTOU   aprovar                executou
+bloqueado  recusar                diretor recusou
+bloqueado  falha-sem-resposta     Sem resposta do diretor no tempo. Negado por seguranca.
+bloqueado  falha-malformada       Resposta malformada. Negado por seguranca.
+EXECUTOU   hook-ausente(furo)     EXECUTOU sem o diretor
+```
+
+### 1. Aprovar por fora executa. PASSA.
+O que faltava na Parte 2. Diretor aprova por fora, o hook devolve `allow`, e o comando executa de verdade. Saida real (`evidencia/inv1-aprovar-executa.ndjson`):
+
+```
+"output":"prova-de-aprovacao\r\n"
+response: "O comando foi executado com sucesso:\n\n```\nprova-de-aprovacao\n```"
+```
+
+### 2. Recusar por fora nao executa. PASSA.
+Diretor recusa, o comando e bloqueado: `tool call denied by pre-tool hook: diretor recusou`.
+
+### 3. Falha fechada, testada de proposito.
+Em todos os casos abaixo, com o hook presente, a chamada foi RECUSADA e nada executou:
+
+- Sem resposta (tempo esgotado): `Sem resposta do diretor no tempo. Negado por seguranca.`
+- Resposta malformada (JSON invalido): `Resposta malformada. Negado por seguranca.`
+- Hook morto no meio da espera: matei o processo `node` do hook durante a espera. O `agy` bloqueou. Saida real (`evidencia/inv-p3c-hook-morto.ndjson`): `"A execução do comando foi bloqueada pelo hook de pré-execução do ambiente"`.
+
+O hook falha fechado por construcao: stdin ilegivel, resposta ausente, resposta malformada, decisao desconhecida, tempo esgotado e excecao, tudo cai em `deny`.
+
+MAS existe um caminho de FALHA ABERTA, e e o achado grave do spike:
+
+- Hook AUSENTE com o pre-grant ativo: removi o `hooks.json` e rodei. O comando EXECUTOU SEM o diretor responder. Saida real (`evidencia/inv-p3d-hook-ausente.ndjson`): `"output":"prova-de-aprovacao\r\n"`.
+
+Ou seja, o pre-grant e uma permissao permanente. Enquanto o hook esta de pe, ele segura tudo e falha fechado. Se o hook nao roda, por remocao, pasta sem trust, ou erro de registro, a pre-autorizacao sozinha deixa passar o que foi pre-concedido, sem o diretor. A seguranca da inversao depende de o hook SEMPRE rodar, o que o `agy` nao garante.
+
+### 4. Espera longa. PASSA.
+A sessao sobreviveu a uma espera de 140 segundos ate a resposta do diretor, e executou depois. Medido: passo da ferramenta parado por 147 s, total 151 s. O teto e o `timeout` do hook em `hooks.json`, que coloquei em 600 s. Da para esperar minutos, compativel com o diretor respondendo pelo celular.
+
+### 5. O pedido capturado traz o que a tela precisa? PARCIAL.
+O pedido traz o QUE e um resumo curto, mas nao o POR QUE, o IMPACTO e o RISCO estruturados. Conteudo real capturado:
+
+```json
+{
+  "ferramenta": "run_command",
+  "comando": "echo prova-de-aprovacao",
+  "args": { "CommandLine": "echo prova-de-aprovacao", "Cwd": "...projeto-bobo",
+            "toolAction": "Executing command", "toolSummary": "Echo command" },
+  "conversationId": "...",
+  "workspacePaths": ["...projeto-bobo"],
+  "transcriptPath": ".../transcript_full.jsonl"
+}
+```
+
+Para a tela mostrar por que e qual o impacto, a ponte tera de ler o `transcriptPath` e compor. O payload do hook sozinho nao basta para o pacote do §A.4.
+
+## Atraso e tempo parado
+Percepcao do pedido pela ponte: abaixo de meio segundo. Tempo parado esperando o diretor: o que o diretor levar, ate o teto de `hooks.json` (600 s no teste, pode subir). A sessao nao morre na espera.
+
+## Recomendacao do agente ponte
+A inversao resolve o que faltava: aprovar por fora passa a executar, e recusar, timeout e malformada falham fechado. Mas o pre-grant abre um furo: se o hook nao rodar, o pre-autorizado executa sem o diretor. Portanto a Onda 2 PODE ser construida sobre a inversao, com duas condicoes duras:
+
+1. Pre-grant minimo. Conceder o menos possivel, e nunca `command(*)` nem regex amplo. Quanto menor o pre-grant, menor o estrago se o hook cair.
+2. Garantia de que o hook roda. A ponte tem de recusar abrir qualquer sessao sem confirmar que o hook esta registrado, a pasta esta trusted e o portao responde. Se nao conseguir confirmar, nao abre a sessao.
+
+Proposta para o §A.6, como proposta, sem alterar o arquivo agora:
+
+- Registrar a regra da falha fechada: toda chamada de risco e negada por padrao e so executa com resposta explicita do diretor; qualquer erro, ausencia, malformacao ou tempo esgotado e recusa.
+- Registrar o limite do pre-grant: a pre-autorizacao concedida ao agente de execucao e minima e auditada, e a ponte nao abre sessao sem o portao ativo, porque o pre-grant sem portao executa sem o diretor.
+
+
+## Parecer de seguranca (agente seguranca)
+
+### Veredito: VETADO
+
+Existe um caminho provado em que uma chamada de risco EXECUTA sem o diretor ter respondido, o que fere a regra dura do §A.6 ("Nao existe aprovacao automatica nesta versao").
+
+Caminho de risco, com evidencia: hook ausente com pre-grant ativo. Em `evidencia/inv-p3d-hook-ausente.ndjson` o `run_command` executou (`"output":"prova-de-aprovacao\r\n"`, result SUCCESS) sem nenhum `resposta.json` consultado. O pre-grant em `userSettings.globalPermissionGrants.allow` e uma permissao permanente; o portao e o hook; se o hook nao roda (remocao do hooks.json, pasta sem trust, falha de registro), o pre-grant sozinho libera o pre-concedido, sem o diretor.
+
+Caminhos que falham fechado, verificados pela seguranca (nao sustentam o veto, mas ficam no registro): hook morto no meio da espera (bloqueado), sem resposta no tempo (deny), resposta malformada (deny), decisao desconhecida ou ausente (deny). Com o hook presente, nada executa sem resposta.
+
+Observacoes secundarias da seguranca, que nao sao base do veto: pacote de aprovacao do §A.4 incompleto (falta por que, impacto e risco, que estao no transcript); amplitude do pre-grant (regex largo ou `command(*)` tornaria o furo catastrofico); §A.9 preservado no spike, com o grant isolado no HOME descartavel.
+
+### Condicoes para reavaliacao (aprovado condicional)
+O veto cai se, e so se, todas forem satisfeitas e provadas por evidencia:
+
+1. Garantia de portao antes de abrir sessao: a ponte recusa abrir fabrica sem confirmar, no ato, que o hook esta registrado, a pasta trusted e o portao respondeu a um teste vivo.
+2. Pre-grant minimo, por recurso, nunca `command(*)` nem regex largo.
+3. Verificacao continua do portao durante a sessao, nao so na abertura.
+4. Isolacao do grant fora da config real do diretor em producao, mantendo §A.9.
+5. Completar o pacote do §A.4 lendo o `transcriptPath`.
+
+## Conclusao da ponte, reconciliada com o veto
+A inversao prova que aprovar por fora executa e que, com o hook presente, tudo falha fechado. Mas a seguranca VETOU a inversao como base da Onda 2 enquanto o furo do hook ausente puder executar um pre-concedido sem o diretor. Portanto: a Onda 2 NAO deve ser construida sobre a inversao ainda. O caminho e atacar as cinco condicoes, com a numero 1 (garantia de portao antes de abrir, e recusar abrir sem portao) e a numero 2 (pre-grant minimo) como as que fecham o furo principal. So depois disso, com a evidencia na mao, vale propor a revisao do §A.6.

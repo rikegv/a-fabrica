@@ -1,0 +1,10 @@
+
+=== INVERSAO DA APROVACAO, resultados ===
+EXECUTOU   aprovar                executou
+bloqueado  recusar                diretor recusou
+bloqueado  falha-sem-resposta     Sem resposta do diretor no tempo. Negado por seguranca.
+bloqueado  falha-malformada       Resposta malformada. Negado por seguranca.
+EXECUTOU   hook-ausente(furo)     EXECUTOU sem o diretor
+
+Esperado: aprovar EXECUTA; recusar/timeout/malformada bloqueiam; hook-ausente EXECUTA (furo do pre-grant).
+Detalhe, evidencia e parecer de seguranca em docs/prova-ponte.md.
