@@ -14,9 +14,17 @@ rules_version = '2';
 //
 // Como conferir, em vez de confiar neste comentario: baixe o conjunto publicado
 // em projects/a-fabrica-soulan/releases/cloud.firestore e compare com este
-// arquivo. A seguranca da OST 6 fez exatamente isso e achou identico, byte a
-// byte. Quem editar este arquivo, inclusive so o comentario, publica de novo,
-// senao esta frase deixa de ser verdade.
+// arquivo. Quem editar este arquivo, inclusive so o comentario, publica de novo,
+// senao a comparacao deixa de fechar.
+//
+// PENDENCIA ABERTA E DECLARADA, OST 6 parte 2: o CORPO das regras publicado na
+// nuvem e o deste arquivo sao os mesmos, nenhuma permissao mudou. O COMENTARIO
+// divergiu: a correcao do segundo fator, logo abaixo, foi escrita depois da
+// ultima publicacao, porque o Firebase CLI da maquina perdeu a credencial e
+// pede login interativo do diretor. Assim que ele rodar firebase login
+// --reauth, o coordenador republica e a comparacao volta a fechar byte a byte.
+// Fica dito aqui para ninguem conferir e achar que descobriu uma divergencia
+// escondida.
 //
 // Principios, §A.6:
 //  - Conta unica. So o e-mail do diretor, com e-mail verificado. Nega todo o resto.
@@ -37,9 +45,16 @@ rules_version = '2';
 // Observacao honesta para a seguranca, sem vender protecao que nao existe: sob conta
 // unica, sem chave de servico, nao existe isolamento entre pessoas, porque so existe
 // uma pessoa. maquinaId e escopo logico, nao fronteira de seguranca: quem tem a conta
-// do diretor alcanca a fila de qualquer maquina. A protecao dura e a conta unica com
-// segundo fator, exigido na camada de Auth, mais o nega tudo daqui, mais a trilha que
-// nao se apaga e cuja hora vem do servidor.
+// do diretor alcanca a fila de qualquer maquina. A protecao dura e a conta unica,
+// mais o nega tudo daqui, mais a trilha que nao se apaga e cuja hora vem do servidor.
+//
+// SEGUNDO FATOR, correcao exigida pela seguranca na OST 6: esta regra NAO confere
+// segundo fator, e nada neste projeto confere. O token do provedor Google nao
+// carrega essa informacao, e o Authentication deste projeto nao impoe segunda
+// etapa. O segundo fator, se existe, vive na conta Google do diretor e e
+// responsabilidade dela. Enquanto isso nao for provado com evidencia da conta,
+// nenhum arquivo deste repositorio deve afirmar que o segundo fator esta exigido,
+// porque afirmar protecao que nao se verifica e pior do que nao ter.
 
 service cloud.firestore {
   match /databases/{database}/documents {

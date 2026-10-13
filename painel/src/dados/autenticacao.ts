@@ -3,8 +3,11 @@
 /*
  * Entrada do painel, §A.6: conta unica do diretor, pelo provedor Google.
  *
- * O Google e quem carrega o segundo fator da conta e entrega email_verified
- * verdadeiro, que a regra do Firestore exige. Qualquer outro e-mail e
+ * O Google e quem entrega email_verified verdadeiro, que a regra do Firestore
+ * exige. Aviso da seguranca da OST 6, para nao vender protecao que nao existe:
+ * nem esta camada nem a regra do Firestore conferem segundo fator, e o token do
+ * provedor Google nao carrega essa informacao. Segunda etapa, se existe, e da
+ * conta Google do diretor. Qualquer outro e-mail e
  * desconectado na hora, com mensagem clara. Nao existe cadastro, nao existe
  * recuperacao de senha, nao existe segunda conta.
  *

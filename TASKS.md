@@ -4,10 +4,13 @@ Fila de trabalho da fábrica. Pendentes no topo, concluídas no rodapé. Cada ta
 
 ## Pendentes
 <!-- Formato: - [ ] Título, onda, agentes, situação -->
-- [ ] OST 6 Bloco 1 Passo 3, os sete testes contra a BASE REAL, Onda 1, agente ponte, BLOQUEADO no clique do diretor para ligar o Authentication
+- [ ] OST 6, os sete testes contra a BASE REAL mais a prova do tempo esgotado, condicao 11 da seguranca, Onda 1, agente ponte, BLOQUEADO na credencial de sessao que so o diretor entrega
+- [ ] OST 6, prova do segundo fator da conta Google, §A.6, condicao 1 da seguranca, bloqueia a main E a Onda 2, aguarda o diretor
+- [ ] OST 6, reautenticar firebase CLI e gcloud na maquina, destrava republicacao do painel, da regra e as duas opcoes do Firestore, aguarda o diretor
+- [ ] OST 6, republicar o painel com a correcao de texto da recusa e republicar a regra com a correcao do segundo fator, Onda 1, coordenador, aguarda o firebase CLI
+- [ ] OST 6, ligar recuperacao a ponto no tempo e protecao contra exclusao no Firestore, decidido pelo diretor, condicao 8, coordenador, aguarda o gcloud
+- [ ] OST 6, decidir o que protege a sessao da ponte em disco quando ela virar chave de aprovacao na Onda 2, condicao 12 da seguranca, aguarda o diretor
 - [ ] OST 6, validacao visual do painel de verdade, §A.13, Onda 1, diretor, aguarda o diretor
-- [ ] OST 6, prova do segundo fator da conta Google, §A.6, condicao 1 da seguranca, bloqueia a main, aguarda o diretor
-- [ ] OST 6, reauditoria da seguranca depois do login no ar, oito itens do parecer, Onda 1, agente seguranca, aguarda o login
 
 ## Concluídas
 <!-- Formato: - [x] Título, onda, agentes, data -->

@@ -43,7 +43,7 @@ export function Barreira({ entrada }: { entrada: Entrada }) {
         <div className="flex flex-col gap-1">
           <div className="label gf-muted">Entrada única</div>
           <p className="body gf-muted">
-            Só a conta do diretor entra, pelo Google, que carrega o segundo fator. O painel é de uso individual.
+            Só a conta do diretor entra, pelo Google, com e-mail verificado. O painel é de uso individual.
           </p>
           <p className="mono gf-faint">{EMAIL_DO_DIRETOR}</p>
         </div>

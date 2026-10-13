@@ -68,4 +68,20 @@ Seguranca: APROVADO COM RESSALVA. Nenhum caminho executa risco sem resposta do d
 
 Gate de deploy: quatro ciclos de flag criada e removida. Uma vez ele bloqueou um push de verdade, porque o comando foi montado na ordem errada e a flag ainda não existia. É o teste obrigatório do §A.7 passando sem ensaio.
 
+## 2026-10-13, OST 6 parte 2, com o login no ar
+
+Agentes: ponte e frontend em paralelo, seguranca na reauditoria, coordenador na coordenação e nas correções de texto.
+
+O diretor ligou o Authentication com o provedor Google e tomou as duas decisões que faltavam, registradas em docs/ost6-decisoes-do-diretor.md. A Decisão 1 proíbe o token do Firebase CLI como credencial da ponte, porque carrega escopo de nuvem muito maior do que as regras do Firestore limitam, e firma a regra de conduta: se o login de cliente não der conta, isso é achado para relatar, não motivo para subir de credencial.
+
+Ponte: cumpriu a Decisão 1, o degrau morreu inteiro, sem resto comentado, e a ponte deixou de ler qualquer arquivo de configuração do diretor, o que é ganho também para o §A.9. Relatou o achado que a decisão gerou, com seis opções, custo e risco. Provou a colagem com 10 de 10 casos de erro falhando fechado. Fechou a ressalva da trilha: tempo esgotado agora deixa registro na base dizendo que foi recusa por tempo e não resposta do diretor, e a resposta tardia passou a ser negada pela própria base.
+
+Frontend: provou na nuvem que o painel publicado lê a configuração da hospedagem, não leva chave dentro, abre a janela do Google sem erro de domínio e não faz uma única chamada ao Firestore sem usuário. Provou no emulador que outra conta e conta sem e-mail verificado não abrem o painel. Achou um furo de texto: as duas recusas davam a mesma frase, e ela afirmava que a conta não era a do diretor mesmo quando era.
+
+Seguranca, reauditoria: APROVADO COM RESSALVA, nenhum furo novo, o que sustenta a ressalva é prova que falta e não defeito achado. Resposta à pergunta do diretor sobre a Onda 2: SIM para construir, NÃO para ligar. Confirmou por conta própria que as portas de escuta fecharam, inclusive as de outro agente, e que o legado em .mjs.txt continua recusando. Achado novo com veredito: o token de atualização do Firebase não morre quando o diretor sai do navegador, na Onda 2 o arquivo de sessão da ponte passa a valer como chave de aprovação, e a revogação hoje não é granular, derruba ponte e painel juntos.
+
+Correção de honestidade feita pelo coordenador, a pedido da segurança: três arquivos vivos afirmavam que o segundo fator estava exigido, e nada neste projeto confere segundo fator. O texto da tela, o comentário da entrada do painel e o cabeçalho da regra passaram a dizer a verdade, que segunda etapa vive na conta Google e é responsabilidade dela.
+
+O que não andou, e por quê: os sete testes contra a base real continuam não executados, presos na credencial de cliente que só o diretor entrega. E no meio do trabalho o gcloud e depois o Firebase CLI da máquina perderam a credencial e passaram a pedir login interativo, o que travou a republicação do painel, a republicação da regra e as duas opções do Firestore que o diretor aprovou. Nada disso é defeito do sistema, é credencial de ferramenta expirada, e virou pendência declarada em vez de silêncio.
+
 <!-- Nova entrada acima desta linha. Formato: ## AAAA-MM-DD, título curto -->
