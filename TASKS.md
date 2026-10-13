@@ -4,6 +4,8 @@ Fila de trabalho da fábrica. Pendentes no topo, concluídas no rodapé. Cada ta
 
 ## Pendentes
 <!-- Formato: - [ ] Título, onda, agentes, situação -->
+<!-- OST 6 encerrada em 2026-10-13 com entrega parcial. O ponto de retomada, com a
+     ordem exata dos passos, está na última entrada do DIARIO.md. Leia de lá. -->
 - [ ] OST 6, os sete testes contra a BASE REAL mais a prova do tempo esgotado, condicao 11 da seguranca, Onda 1, agente ponte, BLOQUEADO na credencial de sessao que so o diretor entrega
 - [ ] OST 6, prova do segundo fator da conta Google, §A.6, condicao 1 da seguranca, bloqueia a main E a Onda 2, aguarda o diretor
 - [ ] OST 6, reautenticar firebase CLI e gcloud na maquina, destrava republicacao do painel, da regra e as duas opcoes do Firestore, aguarda o diretor

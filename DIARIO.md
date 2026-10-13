@@ -84,4 +84,44 @@ Correção de honestidade feita pelo coordenador, a pedido da segurança: três 
 
 O que não andou, e por quê: os sete testes contra a base real continuam não executados, presos na credencial de cliente que só o diretor entrega. E no meio do trabalho o gcloud e depois o Firebase CLI da máquina perderam a credencial e passaram a pedir login interativo, o que travou a republicação do painel, a republicação da regra e as duas opções do Firestore que o diretor aprovou. Nada disso é defeito do sistema, é credencial de ferramenta expirada, e virou pendência declarada em vez de silêncio.
 
+## 2026-10-13, fechamento do dia e ponto de retomada da OST 6
+
+Agente: coordenador. Encerramento pedido pelo diretor. Esta entrada existe para a próxima sessão não precisar reconstruir contexto nenhum: ela diz onde paramos, o que está no ar, o que falta e em que ordem retomar.
+
+### Estado do que está no ar
+Painel de verdade publicado em https://a-fabrica-soulan.web.app, com login exigido e funcionando, faltando apenas uma correção de texto da mensagem de recusa. Regras endurecidas publicadas em a-fabrica-soulan, com o corpo igual ao do arquivo e só o comentário divergindo, pendência declarada dentro do próprio firestore.rules. Índices publicados. Canal preview-madrugada apagado, endereço antigo respondendo 404. O protótipo público não existe mais em nenhuma frente.
+
+### Estado do repositório
+Branch feature/ost5-madrugada, último commit 94a7798, local igual ao remoto, árvore limpa, nenhuma flag do gate em .claude/state. A main continua intocada e só recebe trabalho validado, §A.21. Cinco commits da OST 6: 688ed2b, 7f0c81f, f7e6eff, d5a9ad9, 94a7798.
+
+### Estado da máquina do diretor
+Limpa. Nenhum processo do projeto vivo, nenhuma porta de teste escutando. No fechamento ainda havia dois processos presos de um gcloud que esperava reautenticação interativa, e foram encerrados. AnyDesk e ZeroTier escutam em todas as interfaces, são do diretor, anteriores ao projeto e fora do alcance da fábrica pelo §A.9.
+
+### Onde exatamente paramos
+Os sete testes contra a BASE REAL continuam NÃO EXECUTADOS. É a entrega principal que falta da OST 6. O executor está pronto, a escada de credencial está pronta, a colagem foi provada com 10 de 10 casos de erro falhando fechado, e no emulador os sete passam. O que falta é uma credencial de sessão de cliente que só o diretor entrega, porque a Decisão 1 dele proibiu o único caminho automático que existia.
+
+No meio do trabalho o gcloud e depois o Firebase CLI da máquina perderam a credencial e passaram a pedir login interativo. Isso não é defeito do sistema, é credencial de ferramenta expirada, e travou três coisas: republicar o painel, republicar a regra e aplicar as duas opções do Firestore que o diretor aprovou.
+
+### Para retomar, nesta ordem
+Primeiro, quatro ações do diretor, todas de minutos:
+1. `firebase login --reauth`
+2. `gcloud auth login`
+3. Entrar em https://a-fabrica-soulan.web.app com a conta Google, abrir o console do navegador e rodar a linha da seção 7 de docs/ost6-ponte-credencial.md, que imprime o e-mail e o token de atualização da própria sessão. Entregar a saída à fábrica.
+4. Evidência do segundo fator da conta Google. Hoje bloqueia a main E a Onda 2, por decisão da segurança.
+
+Depois, a fábrica fecha num bloco só, sem precisar de nova OST:
+- `powershell -ExecutionPolicy Bypass -File ponte\instalar.ps1 -Colar` com a credencial, depois `npm run base-real` e `npm run prova:tempo` na pasta ponte, colando a saída real dos sete testes.
+- Republicar o painel com a correção de texto e republicar a regra, cada um com flag do gate criada e removida.
+- Ligar recuperação a ponto no tempo e proteção contra exclusão no Firestore.
+- Acionar a segurança para fechar as condições 11 a 15 do parecer em docs/ost6-seguranca-parte2.md.
+
+### Decisões em aberto esperando o diretor
+Condição 12, o que protege a sessão da ponte em disco quando ela virar chave de aprovação na Onda 2. Condição 14 e 15 do parecer da segurança. A sugestão de transformar a Decisão 1 em regra permanente do CLAUDE.md, que a fábrica não faz por conta própria. E a proposta da ponte de evoluir para fluxo de dispositivo com cliente OAuth de escopo mínimo, que daria ao diretor revogar a ponte com um clique na própria conta Google.
+
+### Onda 2
+Liberada para CONSTRUIR, proibida de LIGAR, por parecer da segurança. Construir o caminho de escrita não cria superfície enquanto a ponte não tem credencial e o painel publicado não escreve.
+
+### Onde está cada coisa escrita
+docs/ost6-ponte.md e docs/ost6-ponte-parte2.md, a ponte. docs/ost6-ponte-credencial.md, o achado da credencial com seis opções. docs/ost6-base.md, a base. docs/ost6-painel.md e docs/ost6-painel-parte2.md, o painel. docs/ost6-seguranca.md e docs/ost6-seguranca-parte2.md, os dois pareceres. docs/ost6-decisoes-do-diretor.md, as duas decisões. Evidências em firebase/testes, painel/testes e C:\Users\Henrique\a-fabrica-lab\rodadas, nenhuma sobrescrita, nenhuma apagada, §A.17.
+
 <!-- Nova entrada acima desta linha. Formato: ## AAAA-MM-DD, título curto -->
