@@ -1,0 +1,3 @@
+PASSOU: 12 | FALHOU: 0
+  OK diretor cria/le comando; outra conta e anonimo NEGADOS;
+  OK trilha imutavel (nao altera criadoEm, nao apaga); aprovacao criada, respondida uma vez, nao apagada.

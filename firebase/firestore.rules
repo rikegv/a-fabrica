@@ -67,7 +67,7 @@ service cloud.firestore {
       allow read: if diretor();
       allow create: if diretor()
         && request.resource.data.situacao == 'pendente'
-        && request.resource.data.resposta == null
+        && request.resource.data.get('resposta', null) == null
         && request.resource.data.keys().hasAll(
              ['fabricaId','maquinaId','pacote','situacao','criadoEm','origem']);
       allow update: if diretor()

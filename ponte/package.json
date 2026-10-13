@@ -1,0 +1,16 @@
+{
+  "name": "a-fabrica-ponte",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Ponte local da Fabrica: pilota o Claude Code e conversa com a base no Firestore. So conexao de saida.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "ponte": "node src/ponte.mjs",
+    "ponte:emulador": "cross-env PONTE_EMULADOR=1 node src/ponte.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.296",
+    "firebase": "^11.0.0"
+  }
+}
