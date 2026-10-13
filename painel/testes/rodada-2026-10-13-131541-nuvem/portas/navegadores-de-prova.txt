@@ -1,0 +1,7 @@
+﻿NAVEGADORES DE PROVA, 2026-10-13 13:35:30
+O Chromium do playwright foi fechado no fim de cada roteiro (navegador.close() no bloco finally).
+
+NENHUM processo de navegador do playwright vivo.
+
+Nota: procurar por texto de comando devolve falso positivo, porque o proprio comando de busca
+carrega as palavras procuradas. Por isso aqui o filtro e pelo NOME do executavel.

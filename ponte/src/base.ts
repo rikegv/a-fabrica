@@ -16,6 +16,7 @@ import {
   collection,
   connectFirestoreEmulator,
   doc,
+  getDoc,
   getFirestore,
   onSnapshot,
   query,
@@ -144,14 +145,80 @@ export function publicarAprovacao(
 }
 
 /**
+ * Prazo de espera da resposta do diretor. Cinco minutos por padrao.
+ *
+ * Trocavel por ambiente so dentro de limite sao, para prova de caminho e para o
+ * dia em que o diretor decidir outro prazo. Mexer nisto nao afrouxa nada: tempo
+ * esgotado sempre resulta em RECUSA, §A.6.
+ */
+export const LIMITE_APROVACAO_MS = ((): number => {
+  const bruto = Number(process.env.PONTE_LIMITE_APROVACAO_MS ?? '300000');
+  if (!Number.isFinite(bruto) || bruto < 1000 || bruto > 3600000) return 300000;
+  return Math.floor(bruto);
+})();
+
+export type SaidaDaTrilhaDeTempo = 'gravado' | 'ja respondido pelo diretor' | 'nao deu para gravar';
+
+/**
+ * Grava na base que o pedido foi RECUSADO POR TEMPO, e nao por resposta do diretor.
+ *
+ * Sem isto, a recusa por tempo nao deixava trilha: o pedido ficava pendente para
+ * sempre e uma resposta tardia do diretor gravava "aprovado" num pedido que nunca
+ * executou. A trilha passa a dizer a verdade.
+ *
+ * Respeita as regras publicadas: situacao vai de pendente para respondida uma vez,
+ * resposta e um dos tres valores aceitos, respondidoEm e hora do SERVIDOR e
+ * respondidoPor vem preenchido. Se o diretor respondeu no mesmo instante, a regra
+ * nega esta escrita, porque o documento ja nao esta pendente, e isso e o certo: a
+ * resposta dele fica e esta funcao nao reescreve nada.
+ */
+export async function registrarRecusaPorTempo(
+  db: Firestore,
+  aprovacaoId: string,
+  limiteMs: number
+): Promise<SaidaDaTrilhaDeTempo> {
+  const segundos = Math.round(limiteMs / 1000);
+  try {
+    await updateDoc(doc(db, 'aprovacoes', aprovacaoId), {
+      situacao: 'respondida',
+      resposta: 'recusado',
+      observacao:
+        `recusa por tempo esgotado, nao resposta do diretor: ninguem respondeu em ${segundos} segundo(s), ` +
+        'a ponte negou por seguranca e nada executou, §A.6',
+      respondidoEm: serverTimestamp(),
+      respondidoPor: `ponte, tempo esgotado, ${DIRETOR}`,
+    });
+    return 'gravado';
+  } catch {
+    // Pode ser corrida com a resposta do diretor, pode ser rede. Le para saber qual.
+    try {
+      const agora = await getDoc(doc(db, 'aprovacoes', aprovacaoId));
+      if (textoDe(agora.data(), 'situacao') === 'respondida') return 'ja respondido pelo diretor';
+    } catch {
+      // segue para a saida honesta abaixo
+    }
+    return 'nao deu para gravar';
+  }
+}
+
+/**
  * Espera a resposta do diretor, vinda da base. Falha fechada: erro ao ouvir,
  * resposta malformada ou tempo esgotado resultam em recusa.
+ *
+ * No tempo esgotado a recusa vai para a base antes de a ponte seguir, para a
+ * trilha nao mentir.
  */
-export function esperarResposta(db: Firestore, aprovacaoId: string, limiteMs = 300000): Promise<DecisaoPortao> {
+export function esperarResposta(db: Firestore, aprovacaoId: string, limiteMs = LIMITE_APROVACAO_MS): Promise<DecisaoPortao> {
   return new Promise<DecisaoPortao>((resolve) => {
     let resolvido = false;
     let desligar: (() => void) | null = null;
-    const relogio = setTimeout(() => fim({ decisao: 'deny', resposta: 'sem resposta no tempo' }), limiteMs);
+    const relogio = setTimeout(() => {
+      // Decide primeiro, grava a trilha depois, e so entao devolve a recusa. A
+      // decisao nao depende da gravacao: se a gravacao falhar, continua recusado.
+      void registrarRecusaPorTempo(db, aprovacaoId, limiteMs).then((trilha) => {
+        fim({ decisao: 'deny', resposta: `sem resposta no tempo, recusado por seguranca (trilha na base: ${trilha})` });
+      });
+    }, limiteMs);
     const fim = (r: DecisaoPortao): void => {
       if (resolvido) return;
       resolvido = true;

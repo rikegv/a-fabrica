@@ -1,0 +1,50 @@
+CONFERENCIAS DE CODIGO DO PAINEL, OST 6 parte 2
+hora: 2026-10-13T13:29:45-03:00
+
+=== npm run tipos (tsc --noEmit) ===
+
+> painel-a-fabrica@0.1.0 tipos
+> tsc --noEmit
+
+codigo de saida do tsc: 0
+
+=== escrita no Firestore em painel/src e painel/app ===
+termos: setDoc addDoc updateDoc deleteDoc runTransaction writeBatch
+ZERO ocorrencias
+
+=== o unico .set( do painel e um Map do JavaScript, nao o Firestore ===
+src/dados/painel.ts:64:      porFabrica.set(pedido.factoryId, lista);
+      aprovacoes.itens.filter(aprovacaoPendente).map((doc) => traduzirAprovacao(doc, agora))
+    );
+
+    const porFabrica = new Map<string, Aprovacao[]>();
+    for (const pedido of pendentes) {
+      if (!pedido.factoryId) continue;
+      const lista = porFabrica.get(pedido.factoryId) ?? [];
+      lista.push(pedido);
+      porFabrica.set(pedido.factoryId, lista);
+
+=== o que o painel importa como VALOR de firebase/firestore ===
+import {
+  collection,
+  limit as limitar,
+  onSnapshot,
+  orderBy,
+  query,
+  type Firestore,
+  type FirestoreError,
+  type Query
+} from 'firebase/firestore';
+(todo o resto importa apenas o tipo Firestore)
+
+=== manipulador de acao passado para componente, em telas e app ===
+ZERO ocorrencias
+
+=== travessao, §A.11, em app, src e scripts ===
+nenhum travessao encontrado
+
+=== chave do Firebase em arquivo versionado do painel ===
+scripts/construir-para-hospedagem.mjs:58:  return /AIzaSy/.test(readFileSync(caminho, 'utf8'));
+
+=== .env.local continua ignorado pelo git ===
+.gitignore:30:*.local	.env.local

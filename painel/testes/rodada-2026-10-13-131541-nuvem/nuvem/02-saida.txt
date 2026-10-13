@@ -1,0 +1,90 @@
+ITENS 2 E 3, CONTRA A NUVEM DE VERDADE
+endereco: https://a-fabrica-soulan.web.app/
+navegador: chromium do playwright, sem janela
+hora: 2026-10-13T16:18:22.896Z
+
+--- 2.a a barreira de entrada aparece no painel publicado ---
+HTTP da raiz: 200
+foto: 02-barreira-na-nuvem.png
+botao "Entrar com o Google" existe: true
+botao desabilitado: false
+painel de dentro desenhado antes do login (.gf-app ou .gf-mapp): false
+texto que a tela mostra, na integra:
+  A Fábrica
+  Acompanhar e comandar as fábricas de agentes.
+  ENTRADA ÚNICA
+  Só a conta do diretor entra, pelo Google, que carrega o segundo fator. O painel é de uso individual.
+  henrique.vieira@soulan.com.br
+  Entrar com o Google
+  Configuração lida: hospedagem.
+
+--- 3.a trafego de rede do navegador, painel aberto e SEM login ---
+total de pedidos observados ate aqui: 14
+pedidos por destino:
+  a-fabrica-soulan.web.app: 11
+  fonts.gstatic.com: 2
+  fonts.googleapis.com: 1
+
+pedidos ao FIRESTORE antes de haver usuario: 0
+pedidos ao Identity Toolkit antes de clicar em entrar: 0
+
+VEREDITO 3.a: ZERO chamada ao Firestore. O ouvinte nao nasce porque a base e nula sem usuario.
+
+--- 3.b a mesma leitura feita na mao, da origem do painel publicado, com a chave publica ---
+  maquinas    -> HTTP 403 PERMISSION_DENIED Missing or insufficient permissions.
+  fabricas    -> HTTP 403 PERMISSION_DENIED Missing or insufficient permissions.
+  aprovacoes  -> HTTP 403 PERMISSION_DENIED Missing or insufficient permissions.
+  comandos    -> HTTP 403 PERMISSION_DENIED Missing or insufficient permissions.
+  relatorios  -> HTTP 403 PERMISSION_DENIED Missing or insufficient permissions.
+VEREDITO 3.b: a regra que esta na nuvem nega leitura sem sessao em todas as colecoes, agora, com Auth ligado.
+
+--- 2.b o botao dispara e a janela do Google abre ---
+a janela abriu, evento popup recebido.
+foto do painel depois do clique: 03-painel-depois-do-clique.png
+url inicial da janela: https://a-fabrica-soulan.firebaseapp.com/__/auth/handler?apiKey=<mascarado><mascarado>&appName=%5BDEFAULT%5D&authType=signInViaPopup&redirectUrl=https%3A%2F%2Fa-fabrica-soulan.web.app%2F&v=10.14.1&eventId=9442568205&providerId=google.com&customParameters=%7B%22prompt%22%3A%22select_account%22%2C%22login_hint%22%3A%22henrique.vieira%40soulan.com.br%22%7D&scopes=profile
+janela ainda aberta: true
+url onde a janela parou: https://accounts.google.com/v3/signin/identifier?opparams=%253Fcontext_uri%253Dhttps%25253A%25252F%25252Fa-fabrica-soulan.web.app&dsh=S221894435%3A1791908312478051&client_id=<mascarado>&login_hint=henrique.vieira%40soulan.com.br&o2v=1&prompt=select_account&redirect_uri=https%3A%2F%2Fa-fabrica-soulan.firebaseapp.com%2F__%2Fauth%2Fhandler&response_type=code&scope=openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+profile&service=lso&state=AMbdmDl4BK7vO0uot9Ogn92jspOauO4WLXUoXVboqkZUvHBPAHcVBc-Bk8Ye3_z8jy4smLEu1OPdh8Q1pSACz2Fb9lrSfOz8H2CTnSWX69s7vDDx3r_4FPNDydA-2z9ps0XrnNHSG8MPwg5YrvOm6EWl8mEff1Xih393db7Ev5c9c2-YF-jgfDh-OxvuEdGWfSKqOK5mJDvvpNIPU0UziI7HN52L2zAdumSruRPM7XRNJlRUtllHS8mnM1Y1ORWOX7p6gTpRzbzGxmqUA61WSFznXTwPsEzRrosEUKB_VKe47mAaKAmmVPwKfIe77pwgQdoV0qfVbmuuX7w&flowName=GeneralOAuthLite&continue=https%3A%2F%2Faccounts.google.com%2Fsignin%2Foauth%2Flegacy%2Fconsent%3Fauthuser%3Dunknown%26part%3DAJi8hAP0qG1thF-M1OshrwnCBO4GvXLuoe7hwaPilaupkZeQlBUxh9fE0pe6bnfSBJ8SEA7fx6lszYKa4ZxfnyKlnBDv-HKZrYS7YWONDFeMRQ_2k72X94BXx2qZAvNdH9OucLpKKw20i2Mrbp6hLOMYPzWhJS-VTQrnOl7wt3EQMiJUtARkihCX4VOpIlb9kp_8oNgdzKq1LyaVegZr96Py6kTtgwGghAMJn04CEgydJxdZOlZOZVJopNfAOiypHai2O99goD5vvPTqJ2Lhh_zbpHQofaNBwNgahYK6q5cZxPSMr6nr9dlV5Cnq9OX4VETy80tnTkhm3JJMvpBEkWSl1e5trzq-Rhd3O6KkZStwxaaQZrSLGqVGJvMd1Vz-v5_VI5D9v4z2r0HmRPG8fAS4Z-z51HqK9Xvkk3jj3KCdz6fprkZXHL3TB-0JncT44POvM8YfLYsAHOjkRS87ptn6LDq3-b6JfyTS_Hv6-YhxXPP4QK5uEFQ%26flowName%3DGeneralOAuthFlow%26as%3DS221894435%253A1791908312478051%26client_id%3D352717030070-49jae7r30p580tuu64bsa6a5dkb7up0h.apps.googleusercontent.com%23&app_domain=https%3A%2F%2Fa-fabrica-soulan.firebaseapp.com&rart=ANgoxcfFc3j_fsxHf9f4rl8KJmIobykxEdykbMZdy9Wv-nG548yAoYSVIpqWUp9oVec8Dp9arKS0EQP62vQiIwXGCpcyaQW-yv2i4wosVqVCm0cy-wMjS80
+host: accounts.google.com
+foto da janela: 04-janela-do-google.png
+titulo da janela: Fazer login nas Contas do Google
+texto que a janela mostra: Fazer Login com o Google Faça login Prosseguir para a-fabrica-soulan.firebaseapp.com @soulan.com.br Insira seu e-mail Esqueceu o e-mail? Avançar Criar conta Afrikaans azərbaycan bosanski català Čeština Cymraeg Dansk Deutsch eesti English (United Kingdom) English (United States) Español (España) Español (Latinoamérica) euskara Filipino Français (Canada) Français (France) Gaeilge galego Hrvatski Indonesia isiZulu íslenska Italiano Kiswahili latviešu lietuvių magyar Melayu Nederlands norsk o‘zbek polski Português (Brasil) Português (Portugal) română shqip Slovenčina slovenščina srpski (latinica) 
+VEREDITO 2.b: a janela chegou no accounts.google.com. Daqui para frente e o clique do diretor.
+
+--- 2.c o que o navegador registrou no console do painel ---
+  [error] Failed to load resource: the server responded with a status of 403 ()
+  [error] Failed to load resource: the server responded with a status of 403 ()
+  [error] Failed to load resource: the server responded with a status of 403 ()
+  [error] Failed to load resource: the server responded with a status of 403 ()
+  [error] Failed to load resource: the server responded with a status of 403 ()
+
+texto da tela do painel depois do clique:
+  A Fábrica
+  Acompanhar e comandar as fábricas de agentes.
+  ENTRADA ÚNICA
+  Só a conta do diretor entra, pelo Google, que carrega o segundo fator. O painel é de uso individual.
+  henrique.vieira@soulan.com.br
+  Entrar com o Google
+  A janela do Google está abrindo.
+botao desabilitado durante a entrada: true
+
+--- 2.d procura por erro de configuracao ---
+  auth/unauthorized-domain: nao apareceu
+  auth/configuration-not-found: nao apareceu
+  auth/operation-not-allowed: nao apareceu
+  auth/popup-blocked: nao apareceu
+  auth/internal-error: nao apareceu
+  disallowed_useragent: nao apareceu
+resumo: nenhum erro de configuracao do Auth
+
+--- 3.c depois do clique no botao, e com a janela do Google aberta ---
+pedidos novos depois do clique: 16
+destinos novos:
+  a-fabrica-soulan.firebaseapp.com: 6
+  accounts.google.com: 4
+  apis.google.com: 2
+  www.googleapis.com: 2
+  identitytoolkit.googleapis.com: 1
+  ssl.gstatic.com: 1
+pedidos ao Firestore feitos pelo PAINEL (fora da sonda 3.b): 0
+VEREDITO 3.c: nem durante a entrada o painel le a base. A base so nasce quando a conta e conferida.
+

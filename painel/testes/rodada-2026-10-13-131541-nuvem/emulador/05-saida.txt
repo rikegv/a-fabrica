@@ -1,0 +1,22 @@
+ITEM 4, SEGUNDA PASSADA: UMA FRASE PARA CADA MOTIVO DE RECUSA
+hora: 2026-10-13T16:28:12.106Z
+
+--- conta diferente, outra.pessoa@exemplo.com ---
+painel de dentro desenhado: false
+mensagem: Esta conta não é a do diretor, então a sessão foi encerrada. O painel só abre para henrique.vieira@soulan.com.br, com e-mail verificado pelo Google.
+botao: Entrar com a conta do diretor
+pedidos ao Firestore desde o clique: 0
+foto: 30-recusa-conta-diferente.png
+
+--- e-mail do diretor, sem verificacao ---
+painel de dentro desenhado: false
+mensagem: Esta é a conta do diretor, mas o Google não diz que o e-mail está verificado, então a sessão foi encerrada. A regra da base exige e-mail verificado. Verifique o e-mail na conta do Google e entre de novo.
+botao: Entrar com a conta do diretor
+pedidos ao Firestore desde o clique: 0
+foto: 31-recusa-email-nao-verificado.png
+
+--- veredito ---
+as duas frases sao diferentes: true
+nenhuma das duas deixa o painel abrir: true
+nenhuma das duas le a base: true
+travessao nas duas frases, §A.11: false

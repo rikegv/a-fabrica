@@ -1,0 +1,59 @@
+ITEM 1, A CONFIGURACAO VEM DA HOSPEDAGEM E O PACOTE NAO LEVA CHAVE
+endereco: https://a-fabrica-soulan.web.app
+hora: 2026-10-13T16:16:58.316Z
+
+--- 1.a GET https://a-fabrica-soulan.web.app/__/firebase/init.json ---
+HTTP 200 OK
+  cache-control: max-age=3600
+  content-type: application/json
+  strict-transport-security: max-age=31556926; includeSubDomains; preload
+corpo, com chave e id do app mascarados:
+{
+  "apiKey": "AIzaSy<mascarado>",
+  "appId": "1:<remetente>:web:<mascarado>",
+  "authDomain": "a-fabrica-soulan.firebaseapp.com",
+  "databaseURL": "",
+  "messagingSenderId": "352717030070",
+  "projectId": "a-fabrica-soulan",
+  "storageBucket": "a-fabrica-soulan.firebasestorage.app"
+}
+
+campos que o painel exige em lerConfiguracao (apiKey, authDomain, projectId, appId):
+  apiKey: presente
+  authDomain: presente (a-fabrica-soulan.firebaseapp.com)
+  projectId: presente (a-fabrica-soulan)
+  appId: presente
+  veredito: a hospedagem entrega configuracao completa, lerConfiguracao devolve origem "hospedagem"
+
+--- 1.b GET https://a-fabrica-soulan.web.app/ ---
+HTTP 200, content-type: text/html; charset=utf-8, bytes: 6693
+contem "Entrar com o Google": true
+contem AIzaSy: false
+
+--- 1.c varredura de todo arquivo de /_next que a pagina carrega ---
+arquivos citados no HTML: 10
+bytes de JavaScript e CSS baixados e varridos: 858005
+arquivos que contem o endereco /__/firebase/init.json: 1 -> /_next/static/chunks/app/page-48755427e3a89250.js
+arquivos que contem AIzaSy: 0
+
+padroes de configuracao embutida, um por um:
+  AIzaSy: ZERO ocorrencias
+  a-fabrica-soulan.firebaseapp.com embutido: ZERO ocorrencias
+  id do app embutido: ZERO ocorrencias
+  remetente de mensagens embutido: ZERO ocorrencias
+
+--- 1.d varredura da pasta publicada no disco, painel/out ---
+arquivos em painel/out: 22
+ZERO ocorrencia de chave, authDomain, id do app ou remetente em painel/out.
+
+--- 1.e o pacote publicado nao liga no emulador ---
+arquivos servidos com o emulador ligado por variavel embutida: 0
+(o codigo le NEXT_PUBLIC_EMULADOR em tempo de construcao; o script de hospedagem constroi com ela em branco)
+
+--- VEREDITO DO ITEM 1 ---
+1. a hospedagem serve /__/firebase/init.json completo: PROVADO
+2. o JavaScript servido carrega esse endereco: PROVADO
+3. o pacote publicado nao leva chave nem configuracao embutida: PROVADO
+   logo, servido, lerConfiguracao() nao tem de onde tirar configuracao a nao ser da hospedagem,
+   porque doAmbiente() depende de process.env.NEXT_PUBLIC_* que o Next substitui em tempo de
+   construcao, e nenhum desses valores existe no pacote publicado.

@@ -1,0 +1,15 @@
+﻿ENCERRAMENTO DOS PROCESSOS QUE ESTA RODADA SUBIU, 2026-10-13 13:30:16
+
+processos que estavam escutando as portas desta rodada: 7024, 10148, 30084
+
+encerrando pid 7024 (node)
+   comando: "node"   "C:\Users\Henrique\AppData\Roaming\npm\\node_modules\firebase-tools\lib\bin\firebase.js" emulators:start --config firebase.emulador.json --only auth,firestore --project a-fabrica-soulan
+   taskkill: ÊXITO: o processo com PID 30084 (processo filho de PID 7024) foi finalizado. ÊXITO: o processo com PID 7024 (processo filho de PID 13688) foi finalizado.
+
+encerrando pid 10148 (node)
+   comando: "C:\Program Files\nodejs\node.exe" C:\Users\Henrique\a-fabrica\painel\node_modules\next\dist\server\lib\start-server.js
+   taskkill: ÊXITO: o processo com PID 10148 (processo filho de PID 31012) foi finalizado.
+
+encerrando pid 30084 ()
+   comando: 
+   taskkill: ERRO: o processo "30084" não foi encontrado.

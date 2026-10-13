@@ -90,13 +90,20 @@ export function usarEntrada(): Entrada {
             }
             const email = (quem.email ?? '').toLowerCase();
             if (email !== EMAIL_DO_DIRETOR || !quem.emailVerified) {
+              /* Dois motivos diferentes, duas frases diferentes: dizer "não é a
+                 conta do diretor" para a conta do diretor com e-mail sem
+                 verificação mandaria o diretor procurar o problema no lugar
+                 errado. */
+              const eOutraConta = email !== EMAIL_DO_DIRETOR;
               await signOut(auth);
               if (!montado.current) return;
               setUsuario(null);
               setBase(null);
               setSituacao('recusada');
               setMensagem(
-                `Esta conta não é a do diretor, então a sessão foi encerrada. O painel só abre para ${EMAIL_DO_DIRETOR}, com e-mail verificado pelo Google.`
+                eOutraConta
+                  ? `Esta conta não é a do diretor, então a sessão foi encerrada. O painel só abre para ${EMAIL_DO_DIRETOR}, com e-mail verificado pelo Google.`
+                  : 'Esta é a conta do diretor, mas o Google não diz que o e-mail está verificado, então a sessão foi encerrada. A regra da base exige e-mail verificado. Verifique o e-mail na conta do Google e entre de novo.'
               );
               return;
             }

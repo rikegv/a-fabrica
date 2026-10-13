@@ -1,0 +1,27 @@
+{
+  "firestore": {
+    "rules": "firestore.rules.copia",
+    "indexes": "firestore.indexes.copia.json"
+  },
+  "emulators": {
+    "auth": {
+      "host": "127.0.0.1",
+      "port": 9399
+    },
+    "firestore": {
+      "host": "127.0.0.1",
+      "port": 8399
+    },
+    "hub": {
+      "host": "127.0.0.1",
+      "port": 4399
+    },
+    "logging": {
+      "host": "127.0.0.1",
+      "port": 4499
+    },
+    "ui": {
+      "enabled": false
+    }
+  }
+}

@@ -1,0 +1,63 @@
+﻿Portas em escuta nesta maquina ANTES da rodada, 2026-10-13 13:15:56
+Comando: Get-NetTCPConnection -State Listen
+
+::                     135    pid 1984    svchost
+0.0.0.0                135    pid 1984    svchost
+172.22.16.1            139    pid 4       System
+26.187.29.6            139    pid 4       System
+10.18.117.213          139    pid 4       System
+192.168.102.225        139    pid 4       System
+::                     445    pid 4       System
+127.0.0.1              1434   pid 5212    sqlservr
+::1                    1434   pid 5212    sqlservr
+::                     2179   pid 4008    vmms
+0.0.0.0                2179   pid 4008    vmms
+0.0.0.0                5040   pid 9724    svchost
+0.0.0.0                7070   pid 5672    AnyDesk
+::                     7070   pid 5672    AnyDesk
+0.0.0.0                9993   pid 6288    zerotier-one_x64
+::                     9993   pid 6288    zerotier-one_x64
+127.0.0.1              11438  pid 27760   Antigravity IDE
+127.0.0.1              12588  pid 24784   Antigravity IDE
+127.0.0.1              19294  pid 16328   AdobeCollabSync
+127.0.0.1              22102  pid 27980   Antigravity IDE
+0.0.0.0                49664  pid 1664    lsass
+::                     49664  pid 1664    lsass
+::                     49665  pid 1488    wininit
+0.0.0.0                49665  pid 1488    wininit
+0.0.0.0                49666  pid 2564    svchost
+::                     49666  pid 2564    svchost
+::                     49667  pid 3204    svchost
+0.0.0.0                49667  pid 3204    svchost
+0.0.0.0                49668  pid 5320    spoolsv
+::                     49668  pid 5320    spoolsv
+127.0.0.1              49670  pid 27960   Antigravity IDE
+0.0.0.0                49673  pid 1632    services
+::                     49673  pid 1632    services
+127.0.0.1              50363  pid 27760   Antigravity IDE
+127.0.0.1              51531  pid 29704   language_server_windows_x64
+127.0.0.1              51532  pid 29704   language_server_windows_x64
+127.0.0.1              51543  pid 29704   language_server_windows_x64
+127.0.0.1              51898  pid 27772   language_server_windows_x64
+127.0.0.1              51899  pid 27772   language_server_windows_x64
+127.0.0.1              51910  pid 27772   language_server_windows_x64
+127.0.0.1              52348  pid 29324   language_server_windows_x64
+127.0.0.1              54943  pid 3452    Antigravity IDE
+127.0.0.1              54944  pid 3452    Antigravity IDE
+127.0.0.1              54965  pid 4472    language_server_windows_x64
+127.0.0.1              54966  pid 4472    language_server_windows_x64
+127.0.0.1              55079  pid 27980   Antigravity IDE
+127.0.0.1              55081  pid 29324   language_server_windows_x64
+127.0.0.1              55082  pid 29324   language_server_windows_x64
+::1                    59652  pid 23320   sqlservr
+127.0.0.1              59652  pid 23320   sqlservr
+192.168.102.225        60496  pid 6044    RvControlSvc
+127.0.0.1              62020  pid 24784   Antigravity IDE
+127.0.0.1              64457  pid 27960   Antigravity IDE
+127.0.0.1              65268  pid 24784   Antigravity IDE
+127.0.0.1              65271  pid 13404   language_server_windows_x64
+127.0.0.1              65272  pid 13404   language_server_windows_x64
+127.0.0.1              65285  pid 13404   language_server_windows_x64
+
+--- filtro que a seguranca exige: processo deste repositorio escutando fora do laco de retorno ---
+NENHUM processo de a-fabrica escutando porta nenhuma.

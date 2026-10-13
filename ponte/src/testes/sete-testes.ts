@@ -67,7 +67,12 @@ const RODADA = join(
 const FILA = join(RODADA, 'fila');
 const PROJETO = join(RODADA, 'projeto-cc');
 const SAIDA = join(RODADA, 'saida.txt');
-const MAQUINA = `maquina-teste-${selo().replace(/[:T-]/g, '')}`;
+// Marca de teste no identificador, para o diretor distinguir na base, de relance, o
+// que e rodada de prova e o que e trabalho de verdade. A trilha e inapagavel de
+// proposito, §A.17, entao estes documentos ficam la para sempre: tem de dizer no
+// proprio nome que sao teste.
+const MARCA = 'TESTE-ost6';
+const MAQUINA = `maquina-${MARCA}-${selo().replace(/[:T-]/g, '')}`;
 
 mkdirSync(FILA, { recursive: true });
 mkdirSync(PROJETO, { recursive: true });
@@ -402,7 +407,7 @@ async function principal(): Promise<void> {
   let ponte = await subirPonte('a');
 
   // ---- Teste 1 ------------------------------------------------------------
-  const f1 = `f1-${randomUUID().slice(0, 8)}`;
+  const f1 = `${MARCA}-f1-${randomUUID().slice(0, 8)}`;
   const escuta1 = ouvirAtividade(db, f1);
   const c1 = await escreverComando(db, {
     fabricaId: f1,
@@ -474,7 +479,7 @@ async function principal(): Promise<void> {
   });
 
   // ---- Teste 3 ------------------------------------------------------------
-  const f3 = `f3-${randomUUID().slice(0, 8)}`;
+  const f3 = `${MARCA}-f3-${randomUUID().slice(0, 8)}`;
   const alvo3 = join(PROJETO, 'aprovado.txt');
   const c3 = await escreverComando(db, {
     fabricaId: f3,
@@ -502,7 +507,7 @@ async function principal(): Promise<void> {
   });
 
   // ---- Teste 4 ------------------------------------------------------------
-  const f4 = `f4-${randomUUID().slice(0, 8)}`;
+  const f4 = `${MARCA}-f4-${randomUUID().slice(0, 8)}`;
   const alvo4 = join(PROJETO, 'recusado.txt');
   await escreverComando(db, {
     fabricaId: f4,
@@ -534,7 +539,7 @@ async function principal(): Promise<void> {
   // nada de atividade se perde. Parte c: o comando nao e executado duas vezes.
   await ponte.matarSeco();
   reg('ponte morta de forma seca, sem parada limpa, para simular queda');
-  const f5 = `f5-${randomUUID().slice(0, 8)}`;
+  const f5 = `${MARCA}-f5-${randomUUID().slice(0, 8)}`;
   const c5 = await escreverComando(db, {
     fabricaId: f5,
     texto: 'Responda apenas com a palavra CINCO. Nao use nenhuma ferramenta.',
@@ -581,7 +586,7 @@ async function principal(): Promise<void> {
 
   // ---- Teste 6 ------------------------------------------------------------
   // Fabrica parada esperando aprovacao, ponte parada, a base deixa de mentir.
-  const f6 = `f6-${randomUUID().slice(0, 8)}`;
+  const f6 = `${MARCA}-f6-${randomUUID().slice(0, 8)}`;
   const alvo6 = join(PROJETO, 'sobrevivente.txt');
   await escreverComando(db, {
     fabricaId: f6,

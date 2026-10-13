@@ -1,0 +1,607 @@
+ITENS 4, 5, 6 E 7, PAINEL REAL CONTRA O EMULADOR
+painel: http://127.0.0.1:3399/ (preso ao laco de retorno)
+emulador de Auth: http://127.0.0.1:9399   emulador do Firestore: http://127.0.0.1:8399
+hora: 2026-10-13T16:24:25.187Z
+
+emulador limpo: base vazia e nenhuma conta.
+
+================ ITEM 4, CONTA QUE NAO E A DO DIRETOR ================
+[marca] antes-de-tudo: 0 pedidos de rede ate aqui
+--- 4.0 a barreira, antes de qualquer entrada ---
+painel de dentro desenhado: false
+texto:
+  A Fábrica
+  
+  Acompanhar e comandar as fábricas de agentes.
+  
+  ENTRADA ÚNICA
+  
+  Só a conta do diretor entra, pelo Google, que carrega o segundo fator. O painel é de uso individual.
+  
+  henrique.vieira@soulan.com.br
+  
+  Entrar com o Google
+  
+  Configuração lida: ambiente local.
+foto: 10-barreira-desenvolvimento.png
+
+--- 4.1 entrar com conta diferente da do diretor: outra.pessoa@exemplo.com ---
+[marca] conta-diferente: 10 pedidos de rede ate aqui
+foto: 11-conta-diferente-recusada.png
+contas que existem no emulador agora: [{"email":"outra.pessoa@exemplo.com","emailVerified":true}]
+painel de dentro desenhado: false
+mensagem na tela:
+  A Fábrica
+  
+  Acompanhar e comandar as fábricas de agentes.
+  
+  ENTRADA ÚNICA
+  
+  Só a conta do diretor entra, pelo Google, que carrega o segundo fator. O painel é de uso individual.
+  
+  henrique.vieira@soulan.com.br
+  
+  Esta conta não é a do diretor, então a sessão foi encerrada. O painel só abre para henrique.vieira@soulan.com.br, com e-mail verificado pelo Google.
+  
+  Entrar com a conta do diretor
+  
+  Configuração lida: ambiente local.
+pedidos ao Firestore desde o clique de entrar: 0
+sessao guardada no navegador depois da recusa: {"base":true,"usuarios":0}
+VEREDITO 4.1: conta diferente barrada, zero leitura da base, sessao encerrada, mensagem clara.
+
+--- 4.2 entrar com o e-mail do diretor, com e-mail NAO verificado ---
+[marca] diretor-sem-verificacao: 36 pedidos de rede ate aqui
+foto: 12-diretor-sem-email-verificado.png
+contas que existem no emulador agora: [{"email":"henrique.vieira@soulan.com.br","emailVerified":false}]
+painel de dentro desenhado: false
+mensagem na tela:
+  A Fábrica
+  
+  Acompanhar e comandar as fábricas de agentes.
+  
+  ENTRADA ÚNICA
+  
+  Só a conta do diretor entra, pelo Google, que carrega o segundo fator. O painel é de uso individual.
+  
+  henrique.vieira@soulan.com.br
+  
+  Esta conta não é a do diretor, então a sessão foi encerrada. O painel só abre para henrique.vieira@soulan.com.br, com e-mail verificado pelo Google.
+  
+  Entrar com a conta do diretor
+  
+  Configuração lida: ambiente local.
+pedidos ao Firestore desde o clique de entrar: 0
+VEREDITO 4.2: e-mail do diretor sem verificacao barrado, zero leitura da base, mensagem clara.
+
+================ ITEM 5, DEPOIS DO LOGIN O PAINEL FUNCIONA ================
+[marca] diretor: 62 pedidos de rede ate aqui
+conta que entrou: [{"email":"henrique.vieira@soulan.com.br","emailVerified":true}]
+foto: 13-dentro-base-vazia-computador.png
+painel de dentro desenhado: true
+base vazia, o que a tela diz:
+  A Fábrica
+  Operação de Rike
+  Visão geral
+  Aprovações
+  Fábricas
+  Relatórios
+  Indicadores
+  Configurações
+  Sair
+  Ponte offline
+  sem máquina pareada
+  Visão geral
+  Terça, 13 de outubro · 0 fábricas no painel
+  Abrir nova fábrica
+  Abrir nova fábrica entra na Onda 2.
+  Nenhuma ponte pareada
+  O painel está ligado à base, mas nenhuma máquina se apresentou ainda. Quando a ponte iniciar, ela aparece aqui.
+  EM EXECUÇÃO
+  0
+  de 0
+  nenhuma fábrica ainda
+  AGUARDANDO VOCÊ
+  0
+  pedidos
+  nada parado
+  TEMPO SOMADO
+  0
+  min
+  desde a abertura de cada fábrica
+  CONSUMO SOMADO
+  0
+  tokens
+  todas as fábricas do painel
+  FALHAS
+  0
+  fábricas
+  no painel agora
+  Fábricas
+  Nenhuma fábrica no painel
+  
+  A ponte ainda não abriu nenhuma fábrica. Quando abrir a primeira, o cartão aparece aqui, ao vivo, sem recarregar a página.
+  
+  0
+  Nada esperando você
+  Nenhuma ponte pareada ainda. Quando uma fábrica pedir aprovação, o pedido aparece aqui.
+pedidos ao Firestore depois do login: 2 (agora e esperado que existam, sao os ouvintes)
+
+--- 5.1 a ponte escreve na base com o painel ABERTO, sem recarregar ---
+Semeado: 1 maquina, 7 fabricas, 6 passos, 4 tarefas, 3 aprovacoes.
+(node:26604) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+a pagina foi recarregada entre as duas leituras: nao, nenhum goto e nenhum reload foi chamado.
+texto da tela ANTES da escrita (resumo): A Fábrica Operação de Rike Visão geral Aprovações Fábricas Relatórios Indicadores Configurações Sair Ponte offline sem máquina pareada Visão geral Terça, 13 de outubro · 0 fábricas
+texto da tela DEPOIS da escrita (resumo): A Fábrica Operação de Rike Visão geral Aprovações 2 Fábricas 7 Relatórios Indicadores Configurações PROJETOS Portal de Vagas App do Colaborador Triagem Inteligente Folha Integração
+a tela mudou sozinha: true
+foto: 14-visao-geral-computador.png
+texto da Visao geral:
+  A Fábrica
+  Operação de Rike
+  Visão geral
+  Aprovações
+  2
+  Fábricas
+  7
+  Relatórios
+  Indicadores
+  Configurações
+  PROJETOS
+  Portal de Vagas
+  App do Colaborador
+  Triagem Inteligente
+  Folha Integração
+  Painel Financeiro
+  Base de Conhecimento
+  Site Institucional
+  Sair
+  Ponte conectada
+  notebook do diretor
+  Visão geral
+  Terça, 13 de outubro · 7 fábricas no painel
+  Abrir nova fábrica
+  Abrir nova fábrica entra na Onda 2.
+  EM EXECUÇÃO
+  2
+  de 7
+  1 concluída
+  AGUARDANDO VOCÊ
+  2
+  pedidos
+  mais antigo há 18 min
+  TEMPO SOMADO
+  12h 21
+  min
+  desde a abertura de cada fábrica
+  CONSUMO SOMADO
+  4,3
+  mi tokens
+  todas as fábricas do painel
+  FALHAS
+  1
+  fábrica
+  no painel agora
+  Fábricas
+  7 fábricas · mais urgente primeiro
+  1 de 2
+  Aguardando aprovação
+  Portal de Vagas
+  Claude Code · claude-opus-4-6
+  Parou para pedir aprovação.
+  Parado há 18 min
+  1h 12min
+  412 mil tokens
+  Aguardando aprovação
+  App do Colaborador
+  Claude Code · claude-opus-4-6
+  Parou para pedir aprovação.
+  Parado há 4 min
+  34min
+  188 mil tokens
+  Falhou
+  Triagem Inteligente
+  Claude Code · claude-sonnet-4-6
+  Falhou. Abra a fábrica para ver o último passo.
+  3h 08min
+  905 mil tokens
+  Em execução
+  Folha Integração
+  Claude Code · claude-sonnet-4-6
+  Em execução. Abra a fábrica para ver o passo atual.
+  2h 41min
+  2,4 mi tokens
+  Em execução
+  Painel Financeiro
+  Claude Code · claude-sonnet-4-6
+  Em execução. Abra a fábrica para ver o passo atual.
+  18min
+  61 mil tokens
+  Aguardando comando
+  Base de Conhecimento
+  Claude Code · claude-haiku-4-6
+  Esperando a próxima ordem.
+  26min
+  74 mil tokens
+  2
+  Aguardando você
+  Mais antiga primeiro
+  1 de 2
+  Risco médio
+  Portal de Vagas · Rodar a migração 0042 em homologação
+  parado há 18 min
+  Rodar a migração 0042, que cria a tabela documentos_do_candidato
+  POR QUE
+  Sem a tabela, o upload não tem onde gravar o arquivo do candidato.
+  IMPACTO
+  Pior caso: a tabela nasce errada em homologação. É reversível com a migração de volta.
+  O QUE SERÁ TOCADO
+  prisma/migrations/0042_documentos.sql
+  banco: homologacao.documentos_do_candidato
+  Aprovar
+  Aprovar com observação
+  Recusar
+  Responder aprovação entra na Onda 2.
+rolagem da pagina (tem de ser 0): 0
+
+--- 5.2 atualizacao ao vivo de verdade, medida no contador da tela ---
+antes da escrita: {"cartoes":6,"textoDoIndicador":"Em execução2de 71 concluída | Aguardando você2pedidosmais antigo há 18 min | Tempo somado12h 21mindesde a abertura de cada fábrica | Consumo somado4,3mi tokenstodas as fábricas do painel | Falhas1fábricano painel agora","temProvaAoVivo":false}
+foto: 15-ao-vivo-antes.png
+Escrita ao vivo: fabrica "Prova Ao Vivo" acrescentada com o painel aberto.
+depois da escrita, SEM recarregar: {"cartoes":6,"textoDoIndicador":"Em execução3de 81 concluída | Aguardando você2pedidosmais antigo há 18 min | Tempo somado12h 23mindesde a abertura de cada fábrica | Consumo somado4,3mi tokenstodas as fábricas do painel | Falhas1fábricano painel agora","temProvaAoVivo":true}
+foto: 16-ao-vivo-depois.png
+VEREDITO 5.2: a fabrica nova apareceu na tela sem recarregar. Ouvinte ao vivo provado.
+
+--- 5.3 tela da fabrica no computador ---
+foto: 17-fabrica-computador.png
+texto da tela da fabrica:
+  A Fábrica
+  Operação de Rike
+  Visão geral
+  Aprovações
+  2
+  Fábricas
+  8
+  Relatórios
+  Indicadores
+  Configurações
+  PROJETOS
+  Portal de Vagas
+  App do Colaborador
+  Triagem Inteligente
+  Folha Integração
+  Painel Financeiro
+  Prova Ao Vivo
+  Base de Conhecimento
+  Site Institucional
+  Sair
+  Ponte conectada
+  notebook do diretor
+  Posto de comando
+  Fábricas › Portal de Vagas
+  Portal de Vagas
+  Aguardando aprovação
+  Claude Code · claude-opus-4-6 · ~/projetos/portal-de-vagas
+  1h 12min
+  412 mil tokens
+  Pausar
+  Reiniciar
+  Encerrar
+  Pausar, reiniciar e encerrar entram na Onda 2.
+  Atividade
+  6
+  Tarefas
+  4
+  13:22:49
+  Rodou um comando no terminal.
+  npx prisma migrate status
+  13:18:49
+  Preparou a migração 0042 e separou o que muda em cada tabela.
+  13:15:49
+  Erro: Rodou um comando no terminal.
+  npm test -- documentos
+  13:10:49
+  Fechou um passo.
+  13:03:49
+  Escreveu o serviço de upload de documentos do candidato.
+  12:14:49
+  Implemente o upload de documentos e me peça aprovação antes de mexer no banco.
+  Mostrando os 6 passos mais recentes. O histórico completo entra numa onda seguinte.
+  Relatórios desta fábrica entram na Onda 3. A aba Alterações entra quando a ponte passar a registrar arquivos tocados.
+  Enviar
+  Esta fábrica espera você há 18 min
+  Rodar a migração 0042, que cria a tabela documentos_do_candidato
+  Aprovar
+  Recusar
+  Responder aprovação entra na Onda 2.
+  Abrir o painel Aguardando você
+  TEMPO
+  1h 12min
+  desde a abertura
+  CONSUMO
+  412
+  mil tokens
+  acumulado
+  TAREFAS
+  1
+  de 4
+  concluídas
+  PASSOS
+  48
+  registrados
+  1 pedido parado
+  Máquina
+  Ponte
+  conectada
+  Máquina
+  notebook do diretor
+  Versão da ponte
+  0.9.4
+
+atualizacao ao vivo da atividade, com a tela da fabrica aberta:
+Escrita ao vivo: passo 49 acrescentado na atividade de fab-portal.
+o passo novo estava na tela antes: false; depois da escrita: true
+foto: 18-fabrica-atividade-ao-vivo.png
+
+================ ITEM 7, NENHUMA ESCRITA E CONTROLES PARADOS ================
+--- 7.1 controles da tela da fabrica ---
+controles DESABILITADOS: [
+ "Pausar",
+ "Reiniciar",
+ "Encerrar",
+ "Comando para esta fábrica",
+ "Enviar",
+ "Aprovar",
+ "Recusar"
+]
+controles habilitados (navegacao e leitura): ["Visão geral","Aprovações2","Fábricas8","Relatórios","Indicadores","Configurações","Sair","Voltar","Atividade6","Tarefas4","Abrir o painel Aguardando você"]
+caixa de comando: {
+ "existeCaixa": true,
+ "desabilitada": true,
+ "motivoNaTela": "",
+ "motivoDaDecisao": "Responder aprovação entra na Onda 2.",
+ "motivoDasAcoes": "Pausar, reiniciar e encerrar entram na Onda 2."
+}
+
+--- 7.2 botoes de decisao na Visao geral ---
+  "Abrir nova fábrica" desabilitado: true
+  "Aprovar" desabilitado: true
+  "Aprovar com observação" desabilitado: true
+  "Recusar" desabilitado: true
+foto: 19-decisao-desabilitada-computador.png
+
+================ ITEM 5, O CELULAR ================
+foto: 20-celular-entrada.png
+entrada do celular, texto:
+  Aprovações
+  2 pedidos esperando você
+  Ponte conectada
+  2
+  Aguardando você
+  Mais antiga primeiro
+  1 de 2
+  Risco médio
+  Portal de Vagas · Rodar a migração 0042 em homologação
+  parado há 18 min
+  Rodar a migração 0042, que cria a tabela documentos_do_candidato
+  POR QUE
+  Sem a tabela, o upload não tem onde gravar o arquivo do candidato.
+  IMPACTO
+  Pior caso: a tabela nasce errada em homologação. É reversível com a migração de volta.
+  O QUE SERÁ TOCADO
+  prisma/migrations/0042_documentos.sql
+  banco: homologacao.documentos_do_candidato
+  Aprovar
+  Com observação
+  Recusar
+  Responder aprovação entra na Onda 2.
+  2
+  Aprovações
+  Fábricas
+  Relatórios
+  Mais
+rolagem da pagina no celular (tem de ser 0): 0
+controles desabilitados no celular: ["Anterior","Aprovar","Com observação","Recusar"]
+
+foto: 21-celular-fabricas.png
+foto: 22-celular-fabrica.png
+tela da fabrica no celular:
+  Portal de Vagas
+  Claude Code · claude-opus-4-6 · 1h 12min
+  Aprovação
+  412 mil tokens
+  1h 12min
+  Esperando você há 18 min
+  Ver pedido
+  Atividade
+  Tarefas
+  13:24:57
+  Passo novo escrito com o painel aberto, para provar a atualização ao vivo.
+  13:22:49
+  Rodou um comando no terminal.
+  npx prisma migrate status
+  13:18:49
+  Preparou a migração 0042 e separou o que muda em cada tabela.
+  13:15:49
+  Erro: Rodou um comando no terminal.
+  npm test -- documentos
+  Enviar
+  Pausar, reiniciar e encerrar entram na Onda 2.
+controles desabilitados: ["Comando para esta fábrica","Enviar"]
+
+================ ITEM 6, PONTE OFFLINE COM DADO REAL ================
+Heartbeat envelhecido para 5 minutos atras.
+sinal de vida da maquina envelhecido para 5 minutos atras, com as duas telas abertas.
+foto: 23-ponte-offline-computador.png
+Visao geral com a ponte offline:
+  A Fábrica
+  Operação de Rike
+  Visão geral
+  Aprovações
+  2
+  Fábricas
+  8
+  Relatórios
+  Indicadores
+  Configurações
+  PROJETOS
+  Site Institucional
+  Triagem Inteligente
+  Folha Integração
+  Portal de Vagas
+  App do Colaborador
+  Base de Conhecimento
+  Painel Financeiro
+  Prova Ao Vivo
+  Sair
+  Ponte offline
+  há 5 min
+  Visão geral
+  Terça, 13 de outubro · 8 fábricas no painel
+  Abrir nova fábrica
+  Abrir nova fábrica entra na Onda 2.
+  A ponte está offline
+  Sem sinal da máquina local há 5 min. As fábricas não andam e nenhum comando é entregue até ela voltar.
+  EM EXECUÇÃO
+  0
+  de 8
+  0 concluídas
+  AGUARDANDO VOCÊ
+  2
+  pedidos
+  mais antigo há 18 min
+  TEMPO SOMADO
+  12h 23
+  min
+  desde a abertura de cada fábrica
+  CONSUMO SOMADO
+  4,3
+  mi tokens
+  todas as fábricas do painel
+  FALHAS
+  0
+  fábricas
+  no painel agora
+  Fábricas
+  8 fábricas · mais urgente primeiro
+  1 de 2
+  Ponte offline
+  Site Institucional
+  Claude Code · claude-haiku-4-6
+  A ponte está offline, o painel não sabe o passo atual.
+  4h 02min
+  243 mil tokens
+  Ponte offline
+  Triagem Inteligente
+  Claude Code · claude-sonnet-4-6
+  A ponte está offline, o painel não sabe o passo atual.
+  3h 08min
+  905 mil tokens
+  Ponte offline
+  Folha Integração
+  Claude Code · claude-sonnet-4-6
+  A ponte está offline, o painel não sabe o passo atual.
+  2h 41min
+  2,4 mi tokens
+  Ponte offline
+  Portal de Vagas
+  Claude Code · claude-opus-4-6
+  Parou para pedir aprovação.
+  Parado há 18 min
+  1h 12min
+  412 mil tokens
+  Ponte offline
+  App do Colaborador
+  Claude Code · claude-opus-4-6
+  Parou para pedir aprovação.
+  Parado há 4 min
+  34min
+  188 mil tokens
+  Ponte offline
+  Base de Conhecimento
+  Claude Code · claude-haiku-4-6
+  A ponte está offline, o painel não sabe o passo atual.
+  26min
+  74 mil tokens
+  2
+  Aguardando você
+  Mais antiga primeiro
+  1 de 2
+  Risco médio
+  Portal de Vagas · Rodar a migração 0042 em homologação
+  parado há 18 min
+  Rodar a migração 0042, que cria a tabela documentos_do_candidato
+  POR QUE
+  Sem a tabela, o upload não tem onde gravar o arquivo do candidato.
+  IMPACTO
+  Pior caso: a tabela nasce errada em homologação. É reversível com a migração de volta.
+  O QUE SERÁ TOCADO
+  prisma/migrations/0042_documentos.sql
+  banco: homologacao.documentos_do_candidato
+  Aprovar
+  Aprovar com observação
+  Recusar
+  A ponte está offline. Responder entra na Onda 2.
+selos de estado na tela: {"selos":["Ponte offline","Ponte offline","Ponte offline","Ponte offline","Ponte offline","Ponte offline"],"cartoes":6}
+cartoes: 6, selos dizendo Ponte offline: 6
+
+foto: 24-fabrica-offline-comando-desabilitado.png
+caixa de comando com a ponte offline: {
+ "desabilitada": true,
+ "motivo": "A ponte está offline",
+ "faixa": "Ponte offline"
+}
+
+foto: 25-celular-ponte-offline.png
+celular com a ponte offline:
+  Fábricas
+  8 no painel · mais urgente primeiro
+  Ponte offline
+  há 5 min
+  A ponte está offline
+  Sem sinal da máquina há 5 min.
+  2 aprovações esperando você
+  A mais antiga está parada há 18 min.
+  Ver pedido
+  EM EXECUÇÃO
+  0
+  de 8
+  AGUARDANDO VOCÊ
+  2
+  pedidos
+  há 18 min
+  Site Institucional
+  Ponte offline
+  A ponte está offline, o painel não sabe o passo atual.
+  4h 02min · 243 mil tokens
+  Triagem Inteligente
+  Ponte offline
+  A ponte está offline, o painel não sabe o passo atual.
+  3h 08min · 905 mil tokens
+  1 de 4
+  2
+  Aprovações
+  Fábricas
+  Relatórios
+  Mais
+
+================ ITEM 7, FECHAMENTO: ZERO ESCRITA NO FIRESTORE ================
+pedidos ao emulador do Firestore na sessao inteira: 15
+por caminho:
+    15  /google.firestore.v1.Firestore/Listen/channel
+pedidos de ESCRITA (Write/channel, commit, batchWrite): 0
+
+documentos na base do emulador no fim: {"maquinas":1,"fabricas":8,"aprovacoes":3,"comandos":0,"relatorios":0}
+(tudo que esta ali foi escrito pelo semeador fora do navegador, nunca pelo painel)
+VEREDITO 7: ZERO escrita. O painel so abre canal de Listen. Com o Auth ligado, nada mudou.
+
+--- console do navegador na sessao inteira ---
+  [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+  [error] Failed to load resource: the server responded with a status of 404 (Not Found)
+  [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+  [error] Failed to load resource: the server responded with a status of 404 (Not Found)
+  [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+  [error] Failed to load resource: the server responded with a status of 404 (Not Found)
+
+
+evidencia escrita em 03-saida.txt e 03-rede-do-emulador.json

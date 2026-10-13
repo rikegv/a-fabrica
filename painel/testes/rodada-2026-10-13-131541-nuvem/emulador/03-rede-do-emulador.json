@@ -1,0 +1,152 @@
+{
+  "hora": "2026-10-13T16:25:38.912Z",
+  "totalDePedidos": 119,
+  "firestore": [
+    {
+      "metodo": "POST",
+      "url": "http://127.0.0.1:8399/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Fa-fabrica-soulan%2Fdatabases%2F(default)&RID=72675&CVER=22&X-HTTP-Session-Id=gsessionid&zx=2pyt235fm03r&t=1"
+    },
+    {
+      "metodo": "GET",
+      "url": "http://127.0.0.1:8399/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Fa-fabrica-soulan%2Fdatabases%2F(default)&RID=rpc&SID=LcwXkWAoQ4TFL84s7XVh-w%3D%3D&AID=0&CI=0&TYPE=xmlhttp&zx=fb1apb2505bf&t=1"
+    },
+    {
+      "metodo": "POST",
+      "url": "http://127.0.0.1:8399/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Fa-fabrica-soulan%2Fdatabases%2F(default)&SID=LcwXkWAoQ4TFL84s7XVh-w%3D%3D&RID=72676&AID=89&zx=iqmr0i3obmr1&t=1"
+    },
+    {
+      "metodo": "POST",
+      "url": "http://127.0.0.1:8399/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Fa-fabrica-soulan%2Fdatabases%2F(default)&SID=LcwXkWAoQ4TFL84s7XVh-w%3D%3D&RID=72677&AID=98&zx=dolf4ecbx1hn&t=1"
+    },
+    {
+      "metodo": "POST",
+      "url": "http://127.0.0.1:8399/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Fa-fabrica-soulan%2Fdatabases%2F(default)&SID=LcwXkWAoQ4TFL84s7XVh-w%3D%3D&RID=72678&AID=132&zx=ii05wk63t89m&t=1"
+    },
+    {
+      "metodo": "POST",
+      "url": "http://127.0.0.1:8399/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Fa-fabrica-soulan%2Fdatabases%2F(default)&SID=LcwXkWAoQ4TFL84s7XVh-w%3D%3D&RID=72679&AID=133&zx=q4ah05tsoxhj&t=1"
+    },
+    {
+      "metodo": "POST",
+      "url": "http://127.0.0.1:8399/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Fa-fabrica-soulan%2Fdatabases%2F(default)&RID=92766&CVER=22&X-HTTP-Session-Id=gsessionid&zx=gwr97vshe0rd&t=1"
+    },
+    {
+      "metodo": "GET",
+      "url": "http://127.0.0.1:8399/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Fa-fabrica-soulan%2Fdatabases%2F(default)&RID=rpc&SID=bwlTutrc-YuB0YBEtRQIIQ%3D%3D&AID=0&CI=0&TYPE=xmlhttp&zx=dcvnzrbp3qlg&t=1"
+    },
+    {
+      "metodo": "POST",
+      "url": "http://127.0.0.1:8399/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Fa-fabrica-soulan%2Fdatabases%2F(default)&SID=bwlTutrc-YuB0YBEtRQIIQ%3D%3D&RID=92767&AID=22&zx=bxb98zaykfno&t=1"
+    },
+    {
+      "metodo": "POST",
+      "url": "http://127.0.0.1:8399/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Fa-fabrica-soulan%2Fdatabases%2F(default)&SID=bwlTutrc-YuB0YBEtRQIIQ%3D%3D&RID=92768&AID=29&zx=deqs2hv1sjxo&t=1"
+    },
+    {
+      "metodo": "POST",
+      "url": "http://127.0.0.1:8399/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Fa-fabrica-soulan%2Fdatabases%2F(default)&SID=LcwXkWAoQ4TFL84s7XVh-w%3D%3D&RID=72680&AID=138&zx=z3xbnkdydt32&t=1"
+    },
+    {
+      "metodo": "GET",
+      "url": "http://127.0.0.1:8399/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Fa-fabrica-soulan%2Fdatabases%2F(default)&RID=rpc&SID=LcwXkWAoQ4TFL84s7XVh-w%3D%3D&AID=139&CI=0&TYPE=xmlhttp&zx=4qmti1my5q15&t=1"
+    },
+    {
+      "metodo": "POST",
+      "url": "http://127.0.0.1:8399/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Fa-fabrica-soulan%2Fdatabases%2F(default)&SID=LcwXkWAoQ4TFL84s7XVh-w%3D%3D&RID=72681&AID=139&zx=fzp1rxod1sq&t=1"
+    },
+    {
+      "metodo": "POST",
+      "url": "http://127.0.0.1:8399/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Fa-fabrica-soulan%2Fdatabases%2F(default)&SID=bwlTutrc-YuB0YBEtRQIIQ%3D%3D&RID=92769&AID=56&zx=g213ykw19b3h&t=1"
+    },
+    {
+      "metodo": "POST",
+      "url": "http://127.0.0.1:8399/google.firestore.v1.Firestore/Listen/channel?VER=8&database=projects%2Fa-fabrica-soulan%2Fdatabases%2F(default)&SID=bwlTutrc-YuB0YBEtRQIIQ%3D%3D&RID=92770&AID=57&zx=plk8hnbrd1az&t=1"
+    }
+  ],
+  "escritas": [],
+  "resultado": {
+    "contaDiferente": {
+      "dentro": false,
+      "leituraDaBase": 0,
+      "sessaoGuardada": 0,
+      "mensagem": "A Fábrica\n\nAcompanhar e comandar as fábricas de agentes.\n\nENTRADA ÚNICA\n\nSó a conta do diretor entra, pelo Google, que carrega o segundo fator. O painel é de uso individual.\n\nhenrique.vieira@soulan.com.br\n\nEsta conta não é a do diretor, então a sessão foi encerrada. O painel só abre para henrique.vieira@soulan.com.br, com e-mail verificado pelo Google.\n\nEntrar com a conta do diretor\n\nConfiguração lida: ambiente local."
+    },
+    "diretorSemVerificacao": {
+      "dentro": false,
+      "leituraDaBase": 0,
+      "contaNoEmulador": [
+        {
+          "email": "henrique.vieira@soulan.com.br",
+          "emailVerified": false
+        }
+      ],
+      "mensagem": "A Fábrica\n\nAcompanhar e comandar as fábricas de agentes.\n\nENTRADA ÚNICA\n\nSó a conta do diretor entra, pelo Google, que carrega o segundo fator. O painel é de uso individual.\n\nhenrique.vieira@soulan.com.br\n\nEsta conta não é a do diretor, então a sessão foi encerrada. O painel só abre para henrique.vieira@soulan.com.br, com e-mail verificado pelo Google.\n\nEntrar com a conta do diretor\n\nConfiguração lida: ambiente local."
+    },
+    "aoVivo": {
+      "antes": {
+        "cartoes": 6,
+        "textoDoIndicador": "Em execução2de 71 concluída | Aguardando você2pedidosmais antigo há 18 min | Tempo somado12h 21mindesde a abertura de cada fábrica | Consumo somado4,3mi tokenstodas as fábricas do painel | Falhas1fábricano painel agora",
+        "temProvaAoVivo": false
+      },
+      "depois": {
+        "cartoes": 6,
+        "textoDoIndicador": "Em execução3de 81 concluída | Aguardando você2pedidosmais antigo há 18 min | Tempo somado12h 23mindesde a abertura de cada fábrica | Consumo somado4,3mi tokenstodas as fábricas do painel | Falhas1fábricano painel agora",
+        "temProvaAoVivo": true
+      }
+    },
+    "atividadeAoVivo": {
+      "antes": false,
+      "depois": true
+    },
+    "decisao": [
+      {
+        "texto": "Abrir nova fábrica",
+        "desabilitado": true
+      },
+      {
+        "texto": "Aprovar",
+        "desabilitado": true
+      },
+      {
+        "texto": "Aprovar com observação",
+        "desabilitado": true
+      },
+      {
+        "texto": "Recusar",
+        "desabilitado": true
+      }
+    ],
+    "offline": {
+      "estados": {
+        "selos": [
+          "Ponte offline",
+          "Ponte offline",
+          "Ponte offline",
+          "Ponte offline",
+          "Ponte offline",
+          "Ponte offline"
+        ],
+        "cartoes": 6
+      },
+      "caixaOffline": {
+        "desabilitada": true,
+        "motivo": "A ponte está offline",
+        "faixa": "Ponte offline"
+      }
+    },
+    "escrita": {
+      "total": 15,
+      "escritas": 0,
+      "porCaminho": {
+        "/google.firestore.v1.Firestore/Listen/channel": 15
+      },
+      "contagem": {
+        "maquinas": 1,
+        "fabricas": 8,
+        "aprovacoes": 3,
+        "comandos": 0,
+        "relatorios": 0
+      }
+    }
+  }
+}

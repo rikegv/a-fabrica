@@ -9,23 +9,30 @@
 // nada. Em especial, esta PROIBIDO abrir servidor HTTP local de laco de retorno
 // para receber redirecionamento de OAuth, mesmo em 127.0.0.1. Por isso a escada
 // de credencial abaixo nao tem nenhum degrau de navegador com retorno local: ela
-// so le o que ja existe na maquina, ou recebe uma colagem do diretor, ou fala com
-// o emulador. Se uma solucao precisar escutar, ela esta errada.
+// recebe uma colagem do diretor, ou fala com o emulador. Se uma solucao precisar
+// escutar, ela esta errada.
 //
-// §A.9: o arquivo do firebase-tools e SO LEITURA. A ponte nunca escreve nele e
-// nunca altera configuracao que o diretor ja tem.
+// DECISAO DO DIRETOR, OST 6 parte 2, e ela e dura: esta PROIBIDO usar o token do
+// Firebase CLI como credencial da ponte. O degrau que lia o deposito do
+// firebase-tools foi REMOVIDO, nao desligado: nao existe mais funcao, constante,
+// bandeira nem caminho de codigo neste pacote que alcance aquele arquivo. Razao do
+// diretor: aquele token carrega escopo de nuvem (cloud-platform) muito maior do que
+// as regras do Firestore limitam, entao um arquivo roubado daria acesso a bem mais
+// do que o painel. A ponte entra como o diretor pelo login de CLIENTE, que e o
+// escopo exato que as regras controlam. Se o login de cliente nao der conta de
+// algum caminho, isso e achado para relatar (docs/ost6-ponte-credencial.md), nunca
+// motivo para subir de credencial.
+//
+// §A.9: a ponte nao le nem escreve configuracao que o diretor ja tem na maquina.
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import {
-  GoogleAuthProvider,
   connectAuthEmulator,
   initializeAuth,
   onIdTokenChanged,
-  signInWithCredential,
   signInWithEmailAndPassword,
   type Auth,
   type User,
@@ -44,9 +51,6 @@ const NOME_APP = 'ponte-da-fabrica';
 // Porta propria da ponte, para nao colidir com emulador de outro projeto na mesma
 // maquina. Veja ponte/emulador/firebase.json.
 const EMULADOR_AUTH = process.env.PONTE_EMULADOR_AUTH ?? 'http://127.0.0.1:9199';
-
-/** Caminho do deposito de credencial do firebase-tools. So leitura, §A.9. */
-export const CAMINHO_FIREBASE_TOOLS = join(homedir(), '.config', 'configstore', 'firebase-tools.json');
 
 export type FaseDegrau = 'antes do SDK' | 'pelo SDK';
 
@@ -94,44 +98,13 @@ export class IdentidadeRecusada extends Error {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Leitura do deposito do firebase-tools (so leitura)
-// ---------------------------------------------------------------------------
-
-export interface TokensDoCli {
-  idToken: string | null;
-  accessToken: string | null;
-  email: string | null;
-  expiraEm: number | null;
-  clienteOauth: string | null;
-}
-
-export function lerTokensDoFirebaseCli(caminho = CAMINHO_FIREBASE_TOOLS): TokensDoCli | null {
-  if (!existsSync(caminho)) return null;
-  try {
-    const bruto: unknown = JSON.parse(readFileSync(caminho, 'utf8'));
-    if (typeof bruto !== 'object' || bruto === null) return null;
-    const raiz = bruto as Record<string, unknown>;
-    const tokens = (typeof raiz['tokens'] === 'object' && raiz['tokens'] !== null
-      ? (raiz['tokens'] as Record<string, unknown>)
-      : {}) as Record<string, unknown>;
-    const user = (typeof raiz['user'] === 'object' && raiz['user'] !== null
-      ? (raiz['user'] as Record<string, unknown>)
-      : {}) as Record<string, unknown>;
-    const comoTexto = (v: unknown): string | null => (typeof v === 'string' && v.length > 0 ? v : null);
-    return {
-      idToken: comoTexto(tokens['id_token']),
-      accessToken: comoTexto(tokens['access_token']),
-      email: comoTexto(user['email']),
-      expiraEm: typeof tokens['expires_at'] === 'number' ? tokens['expires_at'] : null,
-      clienteOauth: comoTexto(user['azp']),
-    };
-  } catch {
-    return null;
-  }
-}
-
-/** Le as alegacoes de um JWT sem verificar assinatura. Serve para registro, nao para decidir. */
+/**
+ * Le as alegacoes de um JWT sem verificar assinatura.
+ *
+ * Serve para conferir a FORMA do que o Google acabou de devolver na troca de
+ * token, e para registro. Nao e a defesa: a defesa dura e a regra do Firestore,
+ * que confere o token verificado do lado do servidor.
+ */
 export function alegacoesDoJwt(jwt: string): Record<string, unknown> | null {
   const partes = jwt.split('.');
   const meio = partes[1];
@@ -159,69 +132,11 @@ function erroDe(e: unknown): string {
 }
 
 // ---------------------------------------------------------------------------
-// Degrau (a): token do Google que o firebase login do diretor ja deixou na maquina
+// Degrau de colagem unica na instalacao: credencial de sessao vinda do painel
 // ---------------------------------------------------------------------------
-
-const degrauTokenDoFirebaseCli: Degrau = {
-  nome: 'token-do-firebase-cli',
-  descricao:
-    'Troca o token do Google que o firebase login do diretor ja deixou na maquina por sessao do Firebase. ' +
-    'Nao pede nada ao diretor. So leitura do arquivo do firebase-tools.',
-  fase: 'pelo SDK',
-  aplicavel: (ctx) => !ctx.emulador && lerTokensDoFirebaseCli() !== null,
-  async tentar(ctx) {
-    const auth = ctx.auth;
-    if (!auth) return { ok: false, detalhe: 'sem instancia de autenticacao' };
-    const t = lerTokensDoFirebaseCli();
-    if (!t) return { ok: false, detalhe: `deposito do firebase-tools nao encontrado em ${CAMINHO_FIREBASE_TOOLS}` };
-    ctx.registrar(`degrau (a): deposito lido so para leitura, conta ${t.email ?? 'desconhecida'}`);
-    ctx.registrar(`degrau (a): cliente OAuth do token e ${t.clienteOauth ?? 'desconhecido'}`);
-    if (t.expiraEm !== null) {
-      const vencido = t.expiraEm < Date.now();
-      ctx.registrar(
-        `degrau (a): token do CLI expira em ${new Date(t.expiraEm).toISOString()} (${vencido ? 'VENCIDO' : 'valido'})`
-      );
-      if (vencido) {
-        return {
-          ok: false,
-          detalhe: 'token do firebase CLI vencido. A ponte nao renova esse token, para nao escrever no arquivo do diretor, §A.9.',
-          erroReal: 'token do firebase-tools vencido',
-        };
-      }
-    }
-    if (t.email !== null && t.email !== DIRETOR) {
-      return { ok: false, detalhe: `o firebase CLI esta logado como ${t.email}, nao como o diretor` };
-    }
-
-    const tentativas: { rotulo: string; credencial: ReturnType<typeof GoogleAuthProvider.credential> }[] = [];
-    if (t.idToken && t.accessToken)
-      tentativas.push({ rotulo: 'id_token mais access_token', credencial: GoogleAuthProvider.credential(t.idToken, t.accessToken) });
-    if (t.idToken) tentativas.push({ rotulo: 'so id_token', credencial: GoogleAuthProvider.credential(t.idToken) });
-    if (t.accessToken)
-      tentativas.push({ rotulo: 'so access_token', credencial: GoogleAuthProvider.credential(null, t.accessToken) });
-
-    const erros: string[] = [];
-    for (const tentativa of tentativas) {
-      try {
-        const r = await signInWithCredential(auth, tentativa.credencial);
-        return { ok: true, detalhe: `entrou com ${tentativa.rotulo}, uid ${r.user.uid}` };
-      } catch (e) {
-        const texto = `${tentativa.rotulo}: ${erroDe(e)}`;
-        erros.push(texto);
-        ctx.registrar(`degrau (a) recusado, ${texto}`);
-      }
-    }
-    return {
-      ok: false,
-      detalhe: 'o Identity Toolkit recusou o token do cliente OAuth do firebase CLI',
-      erroReal: erros.join('\n'),
-    };
-  },
-};
-
-// ---------------------------------------------------------------------------
-// Degrau (b): colagem unica na instalacao, credencial de sessao vinda do painel
-// ---------------------------------------------------------------------------
+//
+// Este e o unico degrau de nuvem que existe. O degrau que lia o token do Firebase
+// CLI foi removido por decisao do diretor (veja o cabecalho deste arquivo).
 
 interface SessaoTrocada {
   idToken: string;
@@ -253,64 +168,188 @@ async function trocarNoEndpointDeToken(apiKey: string, refreshToken: string): Pr
   return { idToken, refreshToken: novoRefresh, expiraEmMs: Date.now() + expiraEm * 1000, uid };
 }
 
-/** Aceita a colagem como token de atualizacao puro ou como JSON com o campo refreshToken. */
-export function lerColagem(bruto: string): string | null {
+/** O que a leitura da colagem devolve: ou um token de atualizacao, ou o motivo exato da recusa. */
+export type LeituraDaColagem =
+  | { ok: true; refreshToken: string; emailDeclarado: string | null; formato: 'texto puro' | 'JSON' }
+  | { ok: false; motivo: string };
+
+const PISTA_JWT = /^ey[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+
+/**
+ * Le a colagem do diretor, falha fechada e falante.
+ *
+ * Aceita duas formas: o token de atualizacao puro, ou um JSON de uma linha com
+ * refreshToken e, se quiser, email. Qualquer outra coisa e recusada com motivo
+ * legivel, porque quem le a mensagem e o diretor no meio da instalacao.
+ *
+ * Nao valida assinatura nem decide identidade: isso quem faz e a troca no endpoint
+ * de token do Google, mais a conferencia das alegacoes, mais a regra do Firestore.
+ */
+export function lerColagem(bruto: string): LeituraDaColagem {
+  if (typeof bruto !== 'string') return { ok: false, motivo: 'nada foi colado' };
   const texto = bruto.trim();
-  if (texto.length === 0) return null;
+  if (texto.length === 0) return { ok: false, motivo: 'nada foi colado, a linha veio vazia' };
+
+  let candidato = texto;
+  let emailDeclarado: string | null = null;
+  let formato: 'texto puro' | 'JSON' = 'texto puro';
+
   if (texto.startsWith('{')) {
+    formato = 'JSON';
+    let j: unknown;
     try {
-      const j: unknown = JSON.parse(texto);
-      if (typeof j === 'object' && j !== null) {
-        const o = j as Record<string, unknown>;
-        for (const campo of ['refreshToken', 'refresh_token', 'tokenDeAtualizacao']) {
-          const v = o[campo];
-          if (typeof v === 'string' && v.length > 20) return v;
-        }
-      }
+      j = JSON.parse(texto);
     } catch {
-      return null;
+      return {
+        ok: false,
+        motivo: 'a colagem comeca com { mas nao e um JSON valido, provavelmente foi copiada pela metade',
+      };
     }
-    return null;
+    if (typeof j !== 'object' || j === null) return { ok: false, motivo: 'a colagem e um JSON que nao descreve um objeto' };
+    const o = j as Record<string, unknown>;
+    const emailBruto = o['email'];
+    if (typeof emailBruto === 'string' && emailBruto.length > 0) emailDeclarado = emailBruto.trim().toLowerCase();
+    let achou: string | null = null;
+    for (const campo of ['refreshToken', 'refresh_token', 'tokenDeAtualizacao']) {
+      const v = o[campo];
+      if (typeof v === 'string' && v.trim().length > 0) {
+        achou = v.trim();
+        break;
+      }
+    }
+    if (achou === null) {
+      return {
+        ok: false,
+        motivo: `o JSON colado nao tem o campo refreshToken (campos presentes: ${Object.keys(o).join(', ') || 'nenhum'})`,
+      };
+    }
+    candidato = achou;
   }
-  return texto.length > 20 ? texto : null;
+
+  // Copiar de tela as vezes traz quebra de linha ou espaco no meio. O token nao
+  // tem espaco, entao tirar espaco em branco e seguro e evita recusa boba.
+  candidato = candidato.replace(/\s+/g, '');
+
+  if (candidato.length === 0) return { ok: false, motivo: 'a credencial colada ficou vazia depois de tirar os espacos' };
+  if (PISTA_JWT.test(candidato)) {
+    return {
+      ok: false,
+      motivo:
+        'o que foi colado e um token de identificacao (JWT de tres partes), e a ponte precisa do token de ATUALIZACAO da sessao. ' +
+        'O token de identificacao vence em uma hora e nao serve para a ponte renovar sozinha.',
+    };
+  }
+  if (candidato.length < 40) {
+    return {
+      ok: false,
+      motivo: `a credencial colada tem so ${candidato.length} caractere(s), curta demais para um token de atualizacao, provavelmente foi cortada na copia`,
+    };
+  }
+  if (!/^[A-Za-z0-9_.:\-]+$/.test(candidato)) {
+    return {
+      ok: false,
+      motivo: 'a credencial colada tem caractere que token de atualizacao nao tem, provavelmente veio texto da pagina junto',
+    };
+  }
+  if (emailDeclarado !== null && emailDeclarado !== DIRETOR) {
+    return { ok: false, motivo: `o JSON colado diz que a conta e ${emailDeclarado}, e so o diretor entra, §A.6` };
+  }
+  return { ok: true, refreshToken: candidato, emailDeclarado, formato };
+}
+
+export interface AlegacoesConferidas {
+  ok: boolean;
+  motivo: string;
+  email: string | null;
+  verificado: boolean;
+  projeto: string | null;
+  provedor: string | null;
+}
+
+/**
+ * Confere as alegacoes da sessao que o Google acabou de devolver: tem de ser o
+ * e-mail do diretor, com e-mail verificado, e do PROJETO desta ponte. Qualquer
+ * desvio e recusa, §A.6. Funcao pura, para dar para provar sem rede.
+ */
+export function conferirAlegacoesDaSessao(
+  alegacoes: Record<string, unknown>,
+  projectId: string
+): AlegacoesConferidas {
+  // Comparacao de texto EXATA, igual a da regra do Firestore, que compara
+  // request.auth.token.email com o texto do e-mail do diretor. Aceitar aqui uma
+  // variacao que a regra recusa seria pior que recusar: a ponte subiria e toda
+  // escrita dela seria negada na base, sem motivo visivel.
+  const email = typeof alegacoes['email'] === 'string' ? alegacoes['email'] : null;
+  const verificado = alegacoes['email_verified'] === true;
+  const projeto = typeof alegacoes['aud'] === 'string' ? alegacoes['aud'] : null;
+  const firebase = typeof alegacoes['firebase'] === 'object' && alegacoes['firebase'] !== null
+    ? (alegacoes['firebase'] as Record<string, unknown>)
+    : {};
+  const provedor = typeof firebase['sign_in_provider'] === 'string' ? firebase['sign_in_provider'] : null;
+  const base = { email, verificado, projeto, provedor };
+  if (email === null) return { ...base, ok: false, motivo: 'a sessao devolvida nao tem e-mail nenhum' };
+  if (email !== DIRETOR) return { ...base, ok: false, motivo: `a credencial colada e da conta ${email}, nao do diretor, §A.6` };
+  if (!verificado) return { ...base, ok: false, motivo: 'a credencial colada tem e-mail nao verificado, e o verificado e obrigatorio, §A.6' };
+  if (projeto !== projectId) {
+    return { ...base, ok: false, motivo: `a credencial colada e do projeto ${projeto ?? 'desconhecido'}, e esta ponte e do projeto ${projectId}` };
+  }
+  return { ...base, ok: true, motivo: `conta ${email}, e-mail verificado, projeto ${projeto}, provedor ${provedor ?? 'nao declarado'}` };
 }
 
 const degrauColagemNaInstalacao: Degrau = {
   nome: 'colagem-na-instalacao',
   descricao:
-    'O diretor abre o painel no navegador, ja logado como ele, e cola na instalacao a credencial de sessao que o painel mostra. ' +
-    'A ponte troca essa credencial por sessao propria no endpoint de token seguro, por conexao de saida.',
+    'O diretor abre o painel no navegador, ja logado como ele, e cola na instalacao a credencial de sessao daquela sessao de navegador. ' +
+    'A ponte troca essa credencial por sessao propria no endpoint de token seguro, por conexao de SAIDA, confere que a conta e a do diretor ' +
+    'com e-mail verificado e que a sessao e deste projeto, e so entao grava.',
   fase: 'antes do SDK',
-  aplicavel: (ctx) => !ctx.emulador && ctx.colagem !== null && lerColagem(ctx.colagem) !== null,
+  aplicavel: (ctx) => !ctx.emulador && ctx.colagem !== null,
   async tentar(ctx) {
-    const refresh = ctx.colagem ? lerColagem(ctx.colagem) : null;
-    if (!refresh) return { ok: false, detalhe: 'nada colado, ou colagem fora de formato' };
-    try {
-      const s = await trocarNoEndpointDeToken(ctx.config.apiKey, refresh);
-      const alegacoes = alegacoesDoJwt(s.idToken) ?? {};
-      const email = typeof alegacoes['email'] === 'string' ? alegacoes['email'] : null;
-      const verificado = alegacoes['email_verified'] === true;
-      ctx.registrar(`degrau (b): sessao trocada, conta ${email ?? 'desconhecida'}, e-mail verificado ${verificado}`);
-      if (email !== DIRETOR) return { ok: false, detalhe: `a credencial colada e da conta ${email ?? 'desconhecida'}, nao do diretor` };
-      if (!verificado) return { ok: false, detalhe: 'a credencial colada tem e-mail nao verificado' };
-      // Grava a sessao no formato que o proprio SDK le na abertura. Dali em diante
-      // o SDK renova sozinho.
-      ctx.sessao.escrever(ctx.sessao.chaveDoUsuario(ctx.config.apiKey, NOME_APP), {
-        uid: s.uid,
-        email,
-        emailVerified: true,
-        isAnonymous: false,
-        providerData: [{ providerId: 'google.com', uid: email, displayName: null, email, phoneNumber: null, photoURL: null }],
-        stsTokenManager: { refreshToken: s.refreshToken, accessToken: s.idToken, expirationTime: s.expiraEmMs },
-        createdAt: String(Date.now()),
-        lastLoginAt: String(Date.now()),
-        apiKey: ctx.config.apiKey,
-        appName: NOME_APP,
-      });
-      return { ok: true, detalhe: `sessao gravada para ${email}` };
-    } catch (e) {
-      return { ok: false, detalhe: 'o endpoint de token recusou a credencial colada', erroReal: erroDe(e) };
+    const leitura = lerColagem(ctx.colagem ?? '');
+    if (!leitura.ok) {
+      return { ok: false, detalhe: `a colagem foi recusada antes de qualquer chamada: ${leitura.motivo}` };
     }
+    ctx.registrar(
+      `colagem lida em formato de ${leitura.formato}, ${leitura.refreshToken.length} caractere(s), ` +
+        `conta declarada ${leitura.emailDeclarado ?? 'nao declarada'}`
+    );
+    let s: SessaoTrocada;
+    try {
+      s = await trocarNoEndpointDeToken(ctx.config.apiKey, leitura.refreshToken);
+    } catch (e) {
+      return {
+        ok: false,
+        detalhe:
+          'o endpoint de token do Google recusou a credencial colada. ' +
+          'Isso acontece quando a credencial venceu, foi revogada, e de outro projeto ou foi copiada pela metade. ' +
+          'Copie de novo no painel ja logado e cole outra vez.',
+        erroReal: erroDe(e),
+      };
+    }
+    const alegacoes = alegacoesDoJwt(s.idToken);
+    if (alegacoes === null) {
+      return { ok: false, detalhe: 'o endpoint de token devolveu uma sessao que a ponte nao conseguiu ler, recusado por seguranca' };
+    }
+    const conferido = conferirAlegacoesDaSessao(alegacoes, ctx.config.projectId);
+    ctx.registrar(`sessao trocada e conferida: ${conferido.motivo}`);
+    if (!conferido.ok) return { ok: false, detalhe: conferido.motivo };
+    const email = conferido.email as string;
+    // So aqui, com tudo conferido, a sessao vai para o disco. Colagem recusada nao
+    // deixa nada gravado. O formato e o que o proprio SDK le na abertura: dali em
+    // diante o SDK renova sozinho e a colagem nunca se repete.
+    ctx.sessao.escrever(ctx.sessao.chaveDoUsuario(ctx.config.apiKey, NOME_APP), {
+      uid: s.uid,
+      email,
+      emailVerified: true,
+      isAnonymous: false,
+      providerData: [{ providerId: 'google.com', uid: email, displayName: null, email, phoneNumber: null, photoURL: null }],
+      stsTokenManager: { refreshToken: s.refreshToken, accessToken: s.idToken, expirationTime: s.expiraEmMs },
+      createdAt: String(Date.now()),
+      lastLoginAt: String(Date.now()),
+      apiKey: ctx.config.apiKey,
+      appName: NOME_APP,
+    });
+    return { ok: true, detalhe: `sessao gravada para ${email}, uid ${s.uid}` };
   },
 };
 
@@ -387,8 +426,15 @@ const degrauEmulador: Degrau = {
   },
 };
 
-/** A escada, em ordem de preferencia. O primeiro degrau que funcionar vence. */
-export const ESCADA: Degrau[] = [degrauEmulador, degrauTokenDoFirebaseCli, degrauColagemNaInstalacao];
+/**
+ * A escada, em ordem de preferencia. O primeiro degrau que funcionar vence.
+ *
+ * ESCOPO PURO DE FIREBASE, e so. Nenhum degrau le credencial de nuvem, nenhum
+ * degrau pede escopo de nuvem, nenhum degrau toca arquivo de outra ferramenta.
+ * Fora desta lista, o unico caminho de identidade e a sessao ja salva, que o SDK
+ * renova sozinho.
+ */
+export const ESCADA: Degrau[] = [degrauEmulador, degrauColagemNaInstalacao];
 
 // ---------------------------------------------------------------------------
 // Abertura da identidade
@@ -485,7 +531,8 @@ export async function abrirIdentidade(opcoes: OpcoesIdentidade = {}): Promise<Id
   if (!usuarioBruto) {
     throw new IdentidadeRecusada(
       'nenhum degrau da escada de credencial entregou sessao. A ponte nao sobe sem identidade do diretor, §A.6. ' +
-        'Rode a instalacao da ponte para fazer o login uma vez.',
+        'Rode a instalacao com a colagem, uma vez so: ' +
+        'powershell -ExecutionPolicy Bypass -File ponte\\instalar.ps1 -Colar',
       relato
     );
   }

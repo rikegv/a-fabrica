@@ -121,32 +121,45 @@ Write-Host "   maquina pareada com id $maquinaId, configuracao gravada em $cfg"
 Write-Host '4. Login de uma vez, a ponte entra como voce, sem chave de servico'
 Push-Location $raiz
 $loginOk = $false
+$codigoLogin = -1
 try {
   if ($Colar) {
     node dist/entrar.js --colar
   } else {
     node dist/entrar.js
   }
-  $loginOk = ($LASTEXITCODE -eq 0)
+  $codigoLogin = $LASTEXITCODE
+  $loginOk = ($codigoLogin -eq 0)
 } finally {
   Pop-Location
 }
 
+if ($codigoLogin -eq 4) {
+  Write-Host ''
+  Write-Host 'A credencial colada foi recusada pela forma, e NADA foi gravado na maquina.'
+  Write-Host 'O motivo exato esta na linha acima. Copie a credencial inteira no painel e rode de novo:'
+  Write-Host '   powershell -ExecutionPolicy Bypass -File ponte\instalar.ps1 -Colar'
+}
+if ($codigoLogin -eq 2) {
+  Write-Host ''
+  Write-Host 'A ponte nao tem configuracao local. Rode a instalacao de novo sem -Colar primeiro.'
+}
+
 if (-not $loginOk) {
   Write-Host ''
-  Write-Host 'A instalacao seguiu, mas a ponte ainda nao tem sessao sua.'
-  Write-Host 'Resolva assim, nesta ordem, e o resto da instalacao ja esta feito:'
+  Write-Host 'A instalacao seguiu, mas a ponte ainda nao tem sessao sua. Falta um passo, uma vez so.'
+  Write-Host 'O resto da instalacao ja esta feito, inclusive a tarefa que sobe a ponte sozinha.'
   Write-Host ''
-  Write-Host '  Clique 1, uma vez so, no console do Firebase:'
-  Write-Host '    abra https://console.firebase.google.com/project/a-fabrica-soulan/authentication/providers'
-  Write-Host '    clique em Comecar, escolha Google na lista de provedores, clique em Ativar e depois em Salvar.'
+  Write-Host '  Passo unico, no seu navegador e aqui:'
+  Write-Host '    1. abra https://a-fabrica-soulan.web.app e entre com a sua conta do Google'
+  Write-Host '    2. com o painel aberto, copie a credencial de sessao daquela sessao de navegador'
+  Write-Host '    3. rode, nesta pasta, e cole quando ele pedir:'
+  Write-Host '       powershell -ExecutionPolicy Bypass -File ponte\instalar.ps1 -Colar'
   Write-Host ''
-  Write-Host '  Passo 2, no terminal, nesta pasta:'
-  Write-Host '    powershell -ExecutionPolicy Bypass -File ponte\instalar.ps1'
-  Write-Host ''
-  Write-Host '  Passo 3, so se o passo 2 ainda recusar: abra o painel no navegador, ja logado como voce,'
-  Write-Host '    copie a credencial de sessao que ele mostra e rode'
-  Write-Host '    powershell -ExecutionPolicy Bypass -File ponte\instalar.ps1 -Colar'
+  Write-Host '  Por que a colagem, e nao um login automatico: a ponte entra como voce pelo login de CLIENTE,'
+  Write-Host '  que e o escopo exato que as regras do Firestore controlam. Ela nao usa o token do Firebase CLI,'
+  Write-Host '  que carrega escopo de nuvem muito maior. E nao usa janela de navegador com retorno local,'
+  Write-Host '  porque a ponte nunca escuta porta, §A.6.'
 }
 
 # ---------------------------------------------------------------------------
@@ -180,5 +193,5 @@ if ($loginOk) {
   Write-Host 'Pronto. A ponte esta no ar e sobe sozinha quando o computador liga.'
 } else {
   Write-Host ''
-  Write-Host 'Instalacao concluida, menos a sessao. Depois do clique 1 acima, rode a instalacao de novo e a ponte sobe.'
+  Write-Host 'Instalacao concluida, menos a sessao. Faca o passo unico acima e a ponte sobe.'
 }

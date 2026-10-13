@@ -1,0 +1,210 @@
+{
+  "endereco": "https://a-fabrica-soulan.web.app/",
+  "hora": "2026-10-13T16:18:34.369Z",
+  "totalDePedidos": 36,
+  "pedidos": [
+    {
+      "metodo": "GET",
+      "url": "https://a-fabrica-soulan.web.app/",
+      "tipo": "document"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://a-fabrica-soulan.web.app/_next/static/css/eccdd7b899fb3640.css",
+      "tipo": "stylesheet"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://a-fabrica-soulan.web.app/_next/static/chunks/webpack-41724c6f5ce24d04.js",
+      "tipo": "script"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://a-fabrica-soulan.web.app/_next/static/chunks/fd9d1056-88c8a1669018f964.js",
+      "tipo": "script"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://a-fabrica-soulan.web.app/_next/static/chunks/117-fc53ebbd280db30e.js",
+      "tipo": "script"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://a-fabrica-soulan.web.app/_next/static/chunks/main-app-420f529edf8f0f74.js",
+      "tipo": "script"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://a-fabrica-soulan.web.app/_next/static/chunks/69806262-9b1bf237d90a1c6a.js",
+      "tipo": "script"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://a-fabrica-soulan.web.app/_next/static/chunks/bc9e92e6-eefd28af5d48e094.js",
+      "tipo": "script"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://a-fabrica-soulan.web.app/_next/static/chunks/943-d0fd642c66a592b1.js",
+      "tipo": "script"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://a-fabrica-soulan.web.app/_next/static/chunks/app/page-48755427e3a89250.js",
+      "tipo": "script"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap",
+      "tipo": "stylesheet"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://fonts.gstatic.com/s/manrope/v20/xn7gYHE41ni1AdIRggexSg.woff2",
+      "tipo": "font"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwg.woff2",
+      "tipo": "font"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://a-fabrica-soulan.web.app/__/firebase/init.json",
+      "tipo": "fetch"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://a-fabrica-soulan.web.app/__/firebase/init.json",
+      "tipo": "fetch"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://firestore.googleapis.com/v1/projects/a-fabrica-soulan/databases/(default)/documents/maquinas?key=AIzaSy<mascarado>",
+      "tipo": "fetch"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://firestore.googleapis.com/v1/projects/a-fabrica-soulan/databases/(default)/documents/fabricas?key=AIzaSy<mascarado>",
+      "tipo": "fetch"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://firestore.googleapis.com/v1/projects/a-fabrica-soulan/databases/(default)/documents/aprovacoes?key=AIzaSy<mascarado>",
+      "tipo": "fetch"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://firestore.googleapis.com/v1/projects/a-fabrica-soulan/databases/(default)/documents/comandos?key=AIzaSy<mascarado>",
+      "tipo": "fetch"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://firestore.googleapis.com/v1/projects/a-fabrica-soulan/databases/(default)/documents/relatorios?key=AIzaSy<mascarado>",
+      "tipo": "fetch"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://apis.google.com/js/api.js?onload=__iframefcb252689",
+      "tipo": "script"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://apis.google.com/_/scs/abc-static/_/js/k=gapi.lb.pt_BR.cJh52CUvOfY.O/m=gapi_iframes/rt=j/sv=1/d=1/ed=1/rs=AHpOoo8nOUxxpeOyAkDVrBRQTMyPMKduUw/cb=gapi.loaded_0?le=scs",
+      "tipo": "script"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://a-fabrica-soulan.firebaseapp.com/__/auth/iframe?apiKey=<mascarado><mascarado>&appName=%5BDEFAULT%5D&v=10.14.1&eid=p&usegapi=1&jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.pt_BR.cJh52CUvOfY.O%2Fd%3D1%2Frs%3DAHpOoo8nOUxxpeOyAkDVrBRQTMyPMKduUw%2Fm%3D__features__",
+      "tipo": "document"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://a-fabrica-soulan.firebaseapp.com/__/auth/handler?apiKey=<mascarado><mascarado>&appName=%5BDEFAULT%5D&authType=signInViaPopup&redirectUrl=https%3A%2F%2Fa-fabrica-soulan.web.app%2F&v=10.14.1&eventId=9442568205&providerId=google.com&customParameters=%7B%22prompt%22%3A%22select_account%22%2C%22login_hint%22%3A%22henrique.vieira%40soulan.com.br%22%7D&scopes=profile",
+      "tipo": "document"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://identitytoolkit.googleapis.com/v1/projects?key=AIzaSy<mascarado>",
+      "tipo": "fetch"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://a-fabrica-soulan.firebaseapp.com/__/auth/iframe.js",
+      "tipo": "script"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://a-fabrica-soulan.firebaseapp.com/__/auth/experiments.js",
+      "tipo": "script"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://a-fabrica-soulan.firebaseapp.com/__/auth/handler.js",
+      "tipo": "script"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://www.googleapis.com/identitytoolkit/v3/relyingparty/getProjectConfig?key=AIzaSy<mascarado>&cb=1791908311298",
+      "tipo": "xhr"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://a-fabrica-soulan.firebaseapp.com/__/firebase/init.json",
+      "tipo": "xhr"
+    },
+    {
+      "metodo": "POST",
+      "url": "https://www.googleapis.com/identitytoolkit/v3/relyingparty/createAuthUri?key=AIzaSy<mascarado>",
+      "tipo": "xhr"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=<mascarado>&redirect_uri=https%3A%2F%2Fa-fabrica-soulan.firebaseapp.com%2F__%2Fauth%2Fhandler&state=AMbdmDl4BK7vO0uot9Ogn92jspOauO4WLXUoXVboqkZUvHBPAHcVBc-Bk8Ye3_z8jy4smLEu1OPdh8Q1pSACz2Fb9lrSfOz8H2CTnSWX69s7vDDx3r_4FPNDydA-2z9ps0XrnNHSG8MPwg5YrvOm6EWl8mEff1Xih393db7Ev5c9c2-YF-jgfDh-OxvuEdGWfSKqOK5mJDvvpNIPU0UziI7HN52L2zAdumSruRPM7XRNJlRUtllHS8mnM1Y1ORWOX7p6gTpRzbzGxmqUA61WSFznXTwPsEzRrosEUKB_VKe47mAaKAmmVPwKfIe77pwgQdoV0qfVbmuuX7w&scope=openid%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email%20profile&prompt=select_account&login_hint=henrique.vieira%40soulan.com.br&context_uri=https%3A%2F%2Fa-fabrica-soulan.web.app",
+      "tipo": "document"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://accounts.google.com/v3/signin/identifier?opparams=%253Fcontext_uri%253Dhttps%25253A%25252F%25252Fa-fabrica-soulan.web.app&dsh=S221894435%3A1791908312478051&client_id=<mascarado>&login_hint=henrique.vieira%40soulan.com.br&o2v=1&prompt=select_account&redirect_uri=https%3A%2F%2Fa-fabrica-soulan.firebaseapp.com%2F__%2Fauth%2Fhandler&response_type=code&scope=openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+profile&service=lso&state=AMbdmDl4BK7vO0uot9Ogn92jspOauO4WLXUoXVboqkZUvHBPAHcVBc-Bk8Ye3_z8jy4smLEu1OPdh8Q1pSACz2Fb9lrSfOz8H2CTnSWX69s7vDDx3r_4FPNDydA-2z9ps0XrnNHSG8MPwg5YrvOm6EWl8mEff1Xih393db7Ev5c9c2-YF-jgfDh-OxvuEdGWfSKqOK5mJDvvpNIPU0UziI7HN52L2zAdumSruRPM7XRNJlRUtllHS8mnM1Y1ORWOX7p6gTpRzbzGxmqUA61WSFznXTwPsEzRrosEUKB_VKe47mAaKAmmVPwKfIe77pwgQdoV0qfVbmuuX7w&flowName=GeneralOAuthLite&continue=https%3A%2F%2Faccounts.google.com%2Fsignin%2Foauth%2Flegacy%2Fconsent%3Fauthuser%3Dunknown%26part%3DAJi8hAP0qG1thF-M1OshrwnCBO4GvXLuoe7hwaPilaupkZeQlBUxh9fE0pe6bnfSBJ8SEA7fx6lszYKa4ZxfnyKlnBDv-HKZrYS7YWONDFeMRQ_2k72X94BXx2qZAvNdH9OucLpKKw20i2Mrbp6hLOMYPzWhJS-VTQrnOl7wt3EQMiJUtARkihCX4VOpIlb9kp_8oNgdzKq1LyaVegZr96Py6kTtgwGghAMJn04CEgydJxdZOlZOZVJopNfAOiypHai2O99goD5vvPTqJ2Lhh_zbpHQofaNBwNgahYK6q5cZxPSMr6nr9dlV5Cnq9OX4VETy80tnTkhm3JJMvpBEkWSl1e5trzq-Rhd3O6KkZStwxaaQZrSLGqVGJvMd1Vz-v5_VI5D9v4z2r0HmRPG8fAS4Z-z51HqK9Xvkk3jj3KCdz6fprkZXHL3TB-0JncT44POvM8YfLYsAHOjkRS87ptn6LDq3-b6JfyTS_Hv6-YhxXPP4QK5uEFQ%26flowName%3DGeneralOAuthFlow%26as%3DS221894435%253A1791908312478051%26client_id%3D352717030070-49jae7r30p580tuu64bsa6a5dkb7up0h.apps.googleusercontent.com%23&app_domain=https%3A%2F%2Fa-fabrica-soulan.firebaseapp.com&rart=ANgoxcfFc3j_fsxHf9f4rl8KJmIobykxEdykbMZdy9Wv-nG548yAoYSVIpqWUp9oVec8Dp9arKS0EQP62vQiIwXGCpcyaQW-yv2i4wosVqVCm0cy-wMjS80",
+      "tipo": "document"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://ssl.gstatic.com/images/branding/googleg/2x/googleg_standard_color_14dp.png",
+      "tipo": "image"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://accounts.google.com/_/bscframe",
+      "tipo": "document"
+    },
+    {
+      "metodo": "GET",
+      "url": "https://accounts.google.com/generate_204?aYc0sw",
+      "tipo": "image"
+    }
+  ],
+  "falhas": [],
+  "console": [
+    {
+      "tipo": "error",
+      "texto": "Failed to load resource: the server responded with a status of 403 ()"
+    },
+    {
+      "tipo": "error",
+      "texto": "Failed to load resource: the server responded with a status of 403 ()"
+    },
+    {
+      "tipo": "error",
+      "texto": "Failed to load resource: the server responded with a status of 403 ()"
+    },
+    {
+      "tipo": "error",
+      "texto": "Failed to load resource: the server responded with a status of 403 ()"
+    },
+    {
+      "tipo": "error",
+      "texto": "Failed to load resource: the server responded with a status of 403 ()"
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+﻿CONFERENCIA DE PORTAS, 2026-10-13 13:31:20
+Comandos: Get-NetTCPConnection -State Listen, Get-CimInstance Win32_Process
+
+--- 1. as portas que ESTA rodada subiu: 3399 painel, 8399 e 9399 emuladores, 4399, 4499, 9150 ---
+NENHUMA. Todas as portas desta rodada estao fechadas.
+
+--- 2. qualquer processo do repositorio C:\Users\Henrique\a-fabrica vivo ---
+NENHUM. Nenhum servidor de desenvolvimento e nenhum emulador desta rodada continua vivo.
+
+--- 3. toda escuta FORA do laco de retorno nesta maquina, com o dono ---
+::                     135    pid 1984    svchost
+0.0.0.0                135    pid 1984    svchost
+192.168.102.225        139    pid 4       System
+26.187.29.6            139    pid 4       System
+172.22.16.1            139    pid 4       System
+10.18.117.213          139    pid 4       System
+::                     445    pid 4       System
+0.0.0.0                2179   pid 4008    vmms
+::                     2179   pid 4008    vmms
+0.0.0.0                5040   pid 9724    svchost
+0.0.0.0                7070   pid 5672    AnyDesk
+::                     7070   pid 5672    AnyDesk
+::                     9993   pid 6288    zerotier-one_x64
+0.0.0.0                9993   pid 6288    zerotier-one_x64
+0.0.0.0                49664  pid 1664    lsass
+::                     49664  pid 1664    lsass
+::                     49665  pid 1488    wininit
+0.0.0.0                49665  pid 1488    wininit
+::                     49666  pid 2564    svchost
+0.0.0.0                49666  pid 2564    svchost
+::                     49667  pid 3204    svchost
+0.0.0.0                49667  pid 3204    svchost
+::                     49668  pid 5320    spoolsv
+0.0.0.0                49668  pid 5320    spoolsv
+::                     49673  pid 1632    services
+0.0.0.0                49673  pid 1632    services
+192.168.102.225        60496  pid 6044    RvControlSvc
+Nenhuma dessas linhas e deste repositorio: sao servicos do Windows, AnyDesk, ZeroTier, Hyper-V e impressora,
+todos ligados antes da rodada, identicos a portas-antes.txt.
+
+--- 4. emulador de OUTRO agente, que NAO e desta rodada e que eu nao encerro ---
+127.0.0.1:4699 pid 26080
+127.0.0.1:4799 pid 26080
+127.0.0.1:54247 pid 31184
+127.0.0.1:54248 pid 31184
+127.0.0.1:8199 pid 31184
+127.0.0.1:9151 pid 31184
+127.0.0.1:9299 pid 26080
+Esses sao de outra rodada, em C:\Users\Henrique\a-fabrica-lab, de outro agente trabalhando em paralelo agora.
+Todos presos a 127.0.0.1, entao nenhum abre porta de entrada. Nao encerro processo de outro agente.

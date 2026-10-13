@@ -1,0 +1,18 @@
+﻿Portas em escuta DURANTE a rodada, 2026-10-13 13:20:01
+Esperado: tudo que esta rodada subiu escuta so em 127.0.0.1, §A.6.
+
+porta 3399   em 127.0.0.1    pid 10148  
+   comando: "C:\Program Files\nodejs\node.exe" C:\Users\Henrique\a-fabrica\painel\node_modules\next\dist\server\lib\start-server.js
+porta 4399   em 127.0.0.1    pid 7024   
+   comando: "node"   "C:\Users\Henrique\AppData\Roaming\npm\\node_modules\firebase-tools\lib\bin\firebase.js" emulators:start --config firebase.emulador.json --only auth,firestore --project a-fabrica-soulan
+porta 4499   em 127.0.0.1    pid 7024   
+   comando: "node"   "C:\Users\Henrique\AppData\Roaming\npm\\node_modules\firebase-tools\lib\bin\firebase.js" emulators:start --config firebase.emulador.json --only auth,firestore --project a-fabrica-soulan
+porta 8399   em 127.0.0.1    pid 30084  
+   comando: java -Dgoogle.cloud_firestore.debug_log_level=FINE -Duser.language=en -jar C:\Users\Henrique\.cache\firebase\emulators\cloud-firestore-emulator-v1.20.4.jar --host 127.0.0.1 --port 8399 --websocket_port 9150 --project_id a-fabrica-soulan --rules C:\Users\Henrique\a-fabrica\painel\testes\rodada-2026-10-13-131541-nuvem\emulador\firestore.rules.copia --single_project_mode true
+porta 9150   em 127.0.0.1    pid 30084  
+   comando: java -Dgoogle.cloud_firestore.debug_log_level=FINE -Duser.language=en -jar C:\Users\Henrique\.cache\firebase\emulators\cloud-firestore-emulator-v1.20.4.jar --host 127.0.0.1 --port 8399 --websocket_port 9150 --project_id a-fabrica-soulan --rules C:\Users\Henrique\a-fabrica\painel\testes\rodada-2026-10-13-131541-nuvem\emulador\firestore.rules.copia --single_project_mode true
+porta 9399   em 127.0.0.1    pid 7024   
+   comando: "node"   "C:\Users\Henrique\AppData\Roaming\npm\\node_modules\firebase-tools\lib\bin\firebase.js" emulators:start --config firebase.emulador.json --only auth,firestore --project a-fabrica-soulan
+
+--- qualquer processo deste repositorio escutando FORA do laco de retorno ---
+NENHUM. Zero processo de a-fabrica escutando fora de 127.0.0.1 ou ::1.

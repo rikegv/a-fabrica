@@ -1,0 +1,63 @@
+COMPLEMENTO DOS ITENS 6 E 7, A CAIXA DE COMANDO DIZ POR QUE ESTA PARADA
+hora: 2026-10-13T16:26:39.680Z
+
+Semeado: 1 maquina, 7 fabricas, 6 passos, 4 tarefas, 3 aprovacoes.
+(node:24780) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+--- ponte CONECTADA, computador ---
+{
+ "existe": true,
+ "desabilitada": true,
+ "rotulo": "Comando para esta fábrica",
+ "motivoNoCampo": "Mandar comando entra na Onda 2. Nesta onda o painel é de leitura.",
+ "classe": "gf-cmd gf-cmd-off",
+ "botaoEnviarDesabilitado": true
+}
+foto: 26-caixa-ponte-conectada.png
+
+--- ponte CONECTADA, celular ---
+{
+ "existe": true,
+ "desabilitada": true,
+ "rotulo": "Comando para esta fábrica",
+ "motivoNoCampo": "Mandar comando entra na Onda 2. Nesta onda o painel é de leitura.",
+ "classe": "gf-cmd gf-cmd-off",
+ "botaoEnviarDesabilitado": true
+}
+foto: 27-celular-caixa-ponte-conectada.png
+
+Heartbeat envelhecido para 5 minutos atras.
+sinal de vida envelhecido para 5 minutos atras, com as duas telas abertas e sem recarregar.
+--- ponte OFFLINE, computador ---
+{
+ "existe": true,
+ "desabilitada": true,
+ "rotulo": "Comando para esta fábrica",
+ "motivoNoCampo": "A ponte está offline, nenhuma ordem sai daqui. Mandar comando entra na Onda 2.",
+ "classe": "gf-cmd gf-cmd-off",
+ "botaoEnviarDesabilitado": true
+}
+foto: 28-caixa-ponte-offline.png
+
+--- ponte OFFLINE, celular ---
+{
+ "existe": true,
+ "desabilitada": true,
+ "rotulo": "Comando para esta fábrica",
+ "motivoNoCampo": "A ponte está offline, nenhuma ordem sai daqui. Mandar comando entra na Onda 2.",
+ "classe": "gf-cmd gf-cmd-off",
+ "botaoEnviarDesabilitado": true
+}
+foto: 29-celular-caixa-ponte-offline.png
+
+--- veredito ---
+computador, ponte conectada: desabilitada nos dois estados
+o motivo muda quando a ponte cai: true
+  conectada: "Mandar comando entra na Onda 2. Nesta onda o painel é de leitura."
+  offline:   "A ponte está offline, nenhuma ordem sai daqui. Mandar comando entra na Onda 2."
+celular, o motivo muda tambem: true
+  conectada: "Mandar comando entra na Onda 2. Nesta onda o painel é de leitura."
+  offline:   "A ponte está offline, nenhuma ordem sai daqui. Mandar comando entra na Onda 2."
+travessao em algum desses textos, §A.11: false
+
+evidencia escrita em 04-saida.txt
