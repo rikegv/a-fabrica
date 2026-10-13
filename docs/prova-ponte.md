@@ -1,3 +1,5 @@
+> SUPERADO pela OST 4. Todo o conteudo deste documento trata do agy, a linha de comando do Antigravity. O diretor nao usa o agy: as fabricas rodam no Claude Code, e e o Claude Code que a ponte pilota. Este documento fica como registro honesto do que foi investigado, nada dele vira base. A prova valida esta em docs/prova-claude-code.md.
+
 # Prova de conceito da ponte (OST 1, Parte 2)
 
 Agente responsavel: ponte. Investigacao com prova real, em sessao viva, usando a CLI oficial do Antigravity, o `agy`. Cota autorizada pelo diretor para rodar as sessoes de teste. Pasta cobaia descartavel `a-fabrica-lab/projeto-bobo`. Nenhum projeto real usado. Esta OST nao constroi produto.

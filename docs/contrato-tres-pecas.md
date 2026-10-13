@@ -147,7 +147,7 @@ Toda fila, `comandos` e `aprovacoes`, carrega `maquinaId`. A ponte so le e escre
 
 ## Formato de origem dos dados, ja provado
 
-Atividade, modelo e consumo vem do stream-json do agy (eventos init, step_update, result), provado na OST 1. O pacote de aprovacao vem do hook PreToolUse mais o transcript, provado na OST 2. Este contrato apenas acomoda esses formatos nas colecoes acima, sem reabrir o que ja foi provado.
+ATUALIZADO pela OST 4: a origem dos dados e o Claude Code, nao o agy. Atividade, estado e consumo vem do fluxo do kit oficial para Node (eventos init, stream_event, assistant, result), e o pacote de aprovacao vem do callback canUseTool mais o texto ao vivo, tudo provado em docs/prova-claude-code.md. As colecoes e o fluxo deste contrato continuam validos, so troca a origem dos dados. O mapeamento exato de cada evento do Claude Code para as colecoes esta na secao "Formato real dos dados" de docs/prova-claude-code.md.
 
 ## Dependencias e paralelismo
 Com este contrato fechado, backend e ponte seguem em paralelo. O backend e dono das colecoes e das regras; a ponte e dona de escrever e ler conforme a tabela de propriedade. O unico ponto de sincronismo e este documento. Falta, para backend e ponte concluirem e serem provados ao vivo, o identificador do projeto Firebase, que o diretor informa, e a autenticacao unica do diretor na instalacao.

@@ -38,4 +38,14 @@ Seguranca: APROVADO COM RESSALVA. O veto da OST 1 cai, nenhum caminho provado ex
 
 Recomendacao: a Onda 1 pode comecar. Proposta de revisao do §A.6 e das tres regras operacionais em docs/proposta-revisao-a6.md. CLAUDE.md nao alterado.
 
+## 2026-10-12, OST 4, correcao de rota para Claude Code
+
+Agentes: ponte executou, seguranca auditou. Erro de rota aceito: as fabricas rodam no Claude Code, nao no agy. O trabalho do agy fica como registro superado.
+
+Parte 1: CLAUDE.md corrigido. §A.2 e §A.3, execucao no Claude Code pelo kit oficial para Node. §A.6, acrescentadas as regras do portao (falha fechada, modo fixado e conferido, verificacao na abertura, sem pre-autorizacao). §A.9 e §A.10 ajustados ao Claude Code. §A.17 a §A.19, as tres regras operacionais permanentes. prova-ponte.md marcado como superado; proposta de pre-autorizacao marcada como descartada.
+
+Parte 2: sete provas no Claude Code em sessao viva, pelo @anthropic-ai/claude-agent-sdk, portao via canUseTool, modo fixado em default e conferido no init, ambiente limpo das variaveis de aninhamento. Todas passaram, mais a verificacao do portao na abertura. Detalhe e saida real em docs/prova-claude-code.md e prototipo-ponte/claude-code. Seguranca: APROVADO COM RESSALVA, sem furo aberto, tres ressalvas a costurar na ponte de producao.
+
+Parte 3, Onda 1 Parte A: iniciada. Contrato confirmado para Claude Code, regras do Firestore e config em firebase/, plano e comando de login unico em docs/onda1-parte-a-plano.md. Parada no unico passo que a fabrica nao faz: o login interativo do diretor no Firebase (projeto a-fabrica-soulan). Depois do login, a fabrica cria o projeto, aplica regras, promove a ponte a servico, roda os oito testes e aciona a seguranca.
+
 <!-- Nova entrada acima desta linha. Formato: ## AAAA-MM-DD, título curto -->

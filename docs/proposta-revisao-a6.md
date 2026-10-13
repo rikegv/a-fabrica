@@ -1,3 +1,5 @@
+> ATUALIZADO pela OST 4. A parte que falava de PRE-AUTORIZACAO MINIMA esta DESCARTADA: era remendo para a limitacao do agy, e o diretor nao usa o agy. No Claude Code nao existe pre-autorizacao. As regras de falha fechada, portao e as tres regras operacionais foram incorporadas ao CLAUDE.md pela OST 4 (§A.6, §A.17 a §A.19). Este documento fica como registro.
+
 # Proposta de revisao do CLAUDE.md, a partir da OST 2
 
 Proposta apenas. NAO altera o CLAUDE.md. Entra no arquivo quando o diretor aprovar, no fechamento combinado. Baseada no que a OST 2 provou em sessao viva.

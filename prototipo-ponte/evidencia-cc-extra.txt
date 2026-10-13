@@ -1,0 +1,11 @@
+=== complemento da prova 2: subagente ===
+SUBAGENTE eventos capturados: 4
+  - atividade dentro do subagente (parent=toolu_01, thinking)
+  - atividade dentro do subagente (parent=toolu_01, tool_use)
+  - atividade dentro do subagente (parent=toolu_01, thinking)
+  - atividade dentro do subagente (parent=toolu_01, text)
+subagente detectado= true
+
+=== verificacao do portao na abertura (§A.6) ===
+VERIFICA PORTAO modo=default: portao_chamado=3 isca_executou=false => portao_vivo=true => PODE abrir
+VERIFICA PORTAO modo=bypassPermissions: portao_chamado=0 isca_executou=true => portao_vivo=false => RECUSA abrir

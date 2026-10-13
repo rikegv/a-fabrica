@@ -1,0 +1,3 @@
+portao: pedido de risco chegou, segurando ate a resposta do diretor...
+portao: resposta chegou apos 320 s, liberando
+prova 5: EXECUTOU apos espera longa, sessao sobreviveu (total 328s, espera 320s)

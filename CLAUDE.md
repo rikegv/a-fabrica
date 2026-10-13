@@ -25,14 +25,14 @@ Nuvem: Firebase. Auth para login, Firestore para estado ao vivo, Cloud Functions
 
 Ponte local: Node 20 e TypeScript, serviço contínuo na máquina do diretor.
 
-Execução das fábricas: Antigravity em linha de comando (agy).
+Execução das fábricas: Claude Code. A ponte fala com o Claude Code, de preferência pelo kit oficial para Node. O Antigravity é apenas a janela do editor que o diretor usa; não é o que roda as fábricas.
 
 ## A.3 Arquitetura em três peças
 PEÇA 1, PAINEL WEB. Interface. Não executa nada sozinho, apenas mostra e registra ordens.
 
 PEÇA 2, BASE NA NUVEM (Firestore). Ponto de encontro. Guarda estado das fábricas, fila de comandos, fila de aprovações, atividade e relatórios.
 
-PEÇA 3, PONTE LOCAL. Serviço na máquina do diretor. Abre e executa as fábricas via agy, envia para a base tudo que a fábrica produz, e lê da base os comandos e as aprovações.
+PEÇA 3, PONTE LOCAL. Serviço na máquina do diretor. Abre e executa as fábricas no Claude Code, envia para a base tudo que a fábrica produz, e lê da base os comandos e as aprovações.
 
 REGRA DE OURO DO FLUXO: o painel nunca fala direto com a fábrica. Painel escreve na base, ponte lê e executa. Ponte escreve na base, painel lê e mostra. É isso que permite comandar do celular.
 
@@ -85,6 +85,14 @@ Nenhum segredo, chave ou credencial entra no código ou no repositório.
 
 Não existe aprovação automática nesta versão.
 
+Aprovação pelo portão, regra dura. Toda chamada de risco passa por um portão que a segura até o diretor responder. Nada de risco executa sem resposta explícita dele. Não existe pré-autorização de comando.
+
+Falha fechada, obrigatória. O portão tem de estar configurado para recusar em caso de falha, e não liberar. Qualquer erro, resposta ausente, resposta malformada, tempo esgotado ou portão que não respondeu resulta em recusa.
+
+Modo de permissão fixado na mão, sempre. Nunca deixar no padrão, porque o padrão varia conforme o ambiente e em alguns casos libera sozinho. A ponte fixa o modo em toda abertura de fábrica, e confere que ficou fixado.
+
+Verificação do portão na abertura. Antes de abrir qualquer fábrica, a ponte confirma que o portão está ativo e respondendo. Sem confirmação, não abre, e registra o motivo.
+
 ## A.7 Gate de deploy
 O hook PreToolUse nasce amarrado em .claude/settings.json ao scripts/gate-deploy.sh, cobrindo git push, deploy, firebase deploy e docker push. Sem flag em .claude/state/READY_*, bloqueia com exit 2. Teste obrigatório: push sem flag tem de ser bloqueado de fato. Nenhum agente contorna esse gate.
 
@@ -100,12 +108,14 @@ ONDA 4, INDICADORES.
 ONDA 5, EVOLUÇÃO. Comandos salvos e estudo de mover a execução para máquina dedicada na nuvem.
 
 ## A.9 Plano B, obrigatório
-As fábricas continuam rodando sobre as mesmas pastas de projeto, as mesmas regras e a mesma configuração usadas hoje pelo Antigravity. Se o painel sair do ar, o diretor abre a janela do Antigravity e segue sem perda.
+As fábricas continuam rodando sobre as mesmas pastas de projeto e a mesma configuração que o diretor usa hoje. Se o painel sair do ar, o diretor abre o Claude Code na mão, como faz hoje, e segue sem perda. O Antigravity segue sendo a janela do editor.
 
-Nada criado por este projeto pode alterar configuração existente do Antigravity na máquina. Só acrescentar, nunca modificar o que já está lá.
+Nada criado por este projeto pode alterar configuração existente na máquina do diretor, nem do Claude Code nem do Antigravity. Só acrescentar, nunca modificar nem remover o que já está lá.
 
 ## A.10 Limitação conhecida e registrada
 Enquanto a execução for local, o painel depende da máquina ligada e acordada. Se o computador dormir, as fábricas param mesmo com o painel acessível pelo celular. O painel precisa mostrar isso na tela com o indicador de ponte conectada ou ponte offline.
+
+Esta limitação continua valendo com o Claude Code: a execução é local, então depende da máquina ligada e acordada, do mesmo jeito.
 
 ## A.11 Travessão PROIBIDO (regra permanente)
 Nunca usar travessão em título, botão, rótulo, mensagem, descrição ou qualquer texto que o usuário lê na tela. Usar pontuação correta em português no lugar, vírgula, ponto ou dois pontos conforme a frase pedir. Não substituir mecanicamente por outro símbolo.
@@ -124,3 +134,12 @@ Todo relatório diz qual agente fez cada parte.
 
 ## A.16 Relatório de fechamento (regra permanente)
 Todo fechamento de tarefa traz: o que foi solicitado, o que foi feito, o que ficou faltando, decisões tomadas durante a execução, arquivos e áreas alteradas, problemas encontrados e próximo passo recomendado. Texto legível, não registro técnico bruto.
+
+## A.17 Não apagar para limpar (regra permanente)
+A fábrica não apaga arquivo para preparar um teste ou uma rodada. Cada rodada cria a sua própria pasta nova, com data e hora no nome, e escreve lá dentro. Nada é sobrescrito, nada é apagado. A evidência de cada rodada fica preservada.
+
+## A.18 Quando apagar for inevitável (regra permanente)
+Escreva o caminho completo, por extenso, sem atalho de variável, e apague arquivo por arquivo, nomeado. Nunca apague usando curinga sobre um caminho guardado em variável.
+
+## A.19 Onde mora a fila (regra permanente)
+A fila de pedidos e respostas da ponte vive dentro da pasta da rodada, nunca numa pasta fixa reaproveitada. Fila nova a cada rodada, sem herança da anterior.

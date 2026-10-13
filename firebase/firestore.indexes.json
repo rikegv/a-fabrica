@@ -1,0 +1,23 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "comandos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "maquinaId", "order": "ASCENDING" },
+        { "fieldPath": "situacao", "order": "ASCENDING" },
+        { "fieldPath": "criadoEm", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "aprovacoes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "maquinaId", "order": "ASCENDING" },
+        { "fieldPath": "situacao", "order": "ASCENDING" },
+        { "fieldPath": "criadoEm", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

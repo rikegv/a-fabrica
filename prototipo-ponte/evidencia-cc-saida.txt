@@ -1,0 +1,16 @@
+
+=== PROVA NO CLAUDE CODE, resultados ===
+OK    prova 1 abrir sem janela         sessao=4fc671bb estado=success modo_fixado=default out_tokens=51 custo=0.0094926
+OK    prova 2 enxergar ao vivo         3 eventos, 1o 4651ms ultimo 9510ms, subagente=false
+OK    prova 3a aprovar executa         portao=1 arquivo_criado=true
+OK    prova 3b recusar nao executa     portao=1 negou=1 arquivo_criado=false
+OK    prova 4 sem-resposta             portao=2 negou=2 arquivo_criado=false (esperado: nao criado)
+OK    prova 4 lixo                     portao=3 negou=3 arquivo_criado=false (esperado: nao criado)
+OK    prova 4 morre                    portao=1 negou=0 arquivo_criado=false (esperado: nao criado)
+OK    prova 4 ausente                  portao=0 negou=0 arquivo_criado=false (esperado: nao criado)
+OK    prova 4 modo-bypass (risco)      modo permissivo sem portao: arquivo_criado=true (mostra por que fixar o modo e obrigatorio)
+OK    prova 6 comandar de novo         retomou=53716c83 lembrou=true 2o-processo-recusado=true
+OK    prova 7 pacote de aprovacao      pacote capturado do fluxo ao vivo
+OK    prova 7 risco deduzido           risco=medio (origem ponte), toca=["nada identificado"]
+
+Modo fixado em default e conferido no init. Em default, so-leitura e liberado, acao de risco passa pelo portao. Evidencia por rodada em a-fabrica-lab/rodadas.
