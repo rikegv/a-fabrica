@@ -146,3 +146,6 @@ A fila de pedidos e respostas da ponte vive dentro da pasta da rodada, nunca num
 
 ## A.20 Projeto da nuvem sempre explícito (regra permanente)
 O gcloud da máquina do diretor aponta por padrão para dash-iff, que é um sistema real em produção. Todo comando de gcloud ou firebase desta fábrica diz o projeto de forma explícita, sempre, com --project a-fabrica-soulan. Nunca confiar no projeto padrão. Nunca rodar gcloud config set project. Se um comando não aceitar o projeto explícito, parar e avisar, não rodar.
+
+## A.21 Push de branch de feature é livre (regra permanente)
+Branch de feature sobe livre, a qualquer momento, sem esperar validação. É assim que o diretor lê e confere o trabalho no GitHub, em vez de depender de resumo no chat. A main continua protegida: só recebe trabalho validado. O gate de deploy continua valendo em todo push, com flag de liberação e remoção da flag depois.
