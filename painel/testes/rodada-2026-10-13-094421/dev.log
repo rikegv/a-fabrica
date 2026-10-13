@@ -1,0 +1,35 @@
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.4s
+ ○ Compiling / ...
+ ✓ Compiled / in 7.9s (814 modules)
+ GET / 200 in 8486ms
+ GET / 200 in 48ms
+ ⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 595ms (817 modules)
+ GET /__/firebase/init.json 404 in 799ms
+ GET / 200 in 343ms
+ GET /__/firebase/init.json 404 in 89ms
+ GET / 200 in 68ms
+ GET /__/firebase/init.json 404 in 40ms
+ GET / 200 in 50ms
+ GET /__/firebase/init.json 404 in 52ms
+ GET / 200 in 65ms
+ GET /__/firebase/init.json 404 in 55ms
+ ✓ Compiled in 508ms (814 modules)
+ ✓ Compiled in 229ms (814 modules)
+ ✓ Compiled in 315ms (814 modules)
+ ✓ Compiled in 663ms (814 modules)
+ ✓ Compiled in 311ms (814 modules)
+ ✓ Compiled in 279ms (814 modules)
+ ✓ Compiled in 316ms (814 modules)
+ ✓ Compiled in 204ms (814 modules)
+ ✓ Compiled in 320ms (814 modules)
+ ✓ Compiled in 292ms (814 modules)
+ ✓ Compiled in 571ms (297 modules)
+ ✓ Compiled in 102ms (297 modules)

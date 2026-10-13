@@ -1,0 +1,131 @@
+{
+  "celular-aprovacoes": {
+    "rolagemDaPagina": 0,
+    "alvosAbaixoDe44": [
+      {
+        "texto": "Anterior",
+        "altura": 30,
+        "largura": 30
+      },
+      {
+        "texto": "Próxima",
+        "altura": 30,
+        "largura": 30
+      }
+    ],
+    "totalDeAlvos": 9
+  },
+  "celular-fabricas": {
+    "rolagemDaPagina": 0,
+    "alvosAbaixoDe44": [
+      {
+        "texto": "Página anterior",
+        "altura": 30,
+        "largura": 30
+      },
+      {
+        "texto": "Próxima página",
+        "altura": 30,
+        "largura": 30
+      }
+    ],
+    "totalDeAlvos": 10
+  },
+  "computador-visao-geral": {
+    "rolagemDaPagina": 0,
+    "alvosAbaixoDe44": [
+      {
+        "texto": "Visão geral",
+        "altura": 40,
+        "largura": 222
+      },
+      {
+        "texto": "Aprovações2",
+        "altura": 40,
+        "largura": 222
+      },
+      {
+        "texto": "Fábricas7",
+        "altura": 40,
+        "largura": 222
+      },
+      {
+        "texto": "Relatórios",
+        "altura": 40,
+        "largura": 222
+      },
+      {
+        "texto": "Indicadores",
+        "altura": 40,
+        "largura": 222
+      },
+      {
+        "texto": "Configurações",
+        "altura": 40,
+        "largura": 222
+      },
+      {
+        "texto": "Sair",
+        "altura": 34,
+        "largura": 206
+      },
+      {
+        "texto": "Abrir nova fábrica",
+        "altura": 34,
+        "largura": 170
+      },
+      {
+        "texto": "Página anterior",
+        "altura": 30,
+        "largura": 30
+      },
+      {
+        "texto": "Próxima página",
+        "altura": 30,
+        "largura": 30
+      },
+      {
+        "texto": "Anterior",
+        "altura": 30,
+        "largura": 30
+      },
+      {
+        "texto": "Próxima",
+        "altura": 30,
+        "largura": 30
+      },
+      {
+        "texto": "Aprovar",
+        "altura": 34,
+        "largura": 358
+      },
+      {
+        "texto": "Aprovar com observação",
+        "altura": 34,
+        "largura": 180
+      },
+      {
+        "texto": "Recusar",
+        "altura": 34,
+        "largura": 170
+      }
+    ],
+    "totalDeAlvos": 21
+  },
+  "celular-fabrica": {
+    "rolagemDaPagina": 0,
+    "alvosAbaixoDe44": [
+      {
+        "texto": "Atividade",
+        "altura": 40,
+        "largura": 174
+      },
+      {
+        "texto": "Tarefas",
+        "altura": 40,
+        "largura": 174
+      }
+    ],
+    "totalDeAlvos": 6
+  }
+}

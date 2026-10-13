@@ -1,0 +1,87 @@
+
+> painel-a-fabrica@0.1.0 predev
+> node scripts/gerar-estilos.mjs
+
+Estilos gerados de tokens.json: app/tokens.gerado.css, app/componentes.gerado.css, src/tema/tokens.gerado.ts
+
+> painel-a-fabrica@0.1.0 dev
+> next dev --port 3210
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3210
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.3s
+ ○ Compiling / ...
+ ✓ Compiled / in 5.5s (814 modules)
+ GET / 200 in 5895ms
+ GET / 200 in 44ms
+ ⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1216ms (817 modules)
+ GET /__/firebase/init.json 404 in 1354ms
+ GET / 200 in 156ms
+ GET /__/firebase/init.json 404 in 56ms
+ GET / 200 in 46ms
+ GET /__/firebase/init.json 404 in 22ms
+ GET / 200 in 75ms
+ GET /__/firebase/init.json 404 in 40ms
+ GET / 200 in 54ms
+ GET /__/firebase/init.json 404 in 38ms
+ ✓ Compiled in 580ms (814 modules)
+ ✓ Compiled in 363ms (814 modules)
+ ✓ Compiled in 238ms (814 modules)
+ ✓ Compiled in 453ms (814 modules)
+ GET / 200 in 255ms
+ ✓ Compiled /_not-found in 468ms (801 modules)
+ GET /__/firebase/init.json 404 in 599ms
+ GET / 200 in 176ms
+ GET /__/firebase/init.json 404 in 66ms
+ ✓ Compiled in 293ms (817 modules)
+ ✓ Compiled in 374ms (814 modules)
+ ✓ Compiled in 330ms (814 modules)
+ ✓ Compiled in 307ms (814 modules)
+ ✓ Compiled in 315ms (814 modules)
+ ✓ Compiled in 400ms (814 modules)
+ GET / 200 in 100ms
+ ✓ Compiled /_not-found in 165ms (801 modules)
+ GET /__/firebase/init.json 404 in 238ms
+ GET / 200 in 68ms
+ GET /__/firebase/init.json 404 in 25ms
+ GET / 200 in 67ms
+ GET /__/firebase/init.json 404 in 35ms
+ ✓ Compiled in 518ms (816 modules)
+ ✓ Compiled in 310ms (814 modules)
+ ✓ Compiled in 274ms (814 modules)
+ ✓ Compiled in 380ms (814 modules)
+ GET / 200 in 163ms
+ ✓ Compiled /_not-found in 257ms (801 modules)
+ GET /__/firebase/init.json 404 in 352ms
+ GET /_next/static/webpack/32646b54b337878e.webpack.hot-update.json 404 in 226ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET / 200 in 98ms
+ GET /__/firebase/init.json 404 in 63ms
+ GET / 200 in 72ms
+ GET /__/firebase/init.json 404 in 55ms
+ ✓ Compiled in 559ms (299 modules)
+ GET / 200 in 65ms
+ GET /__/firebase/init.json 404 in 40ms
+ ✓ Compiled in 508ms (299 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Henrique\a-fabrica\painel\.next\cache\webpack\client-development\1.pack.gz_' -> 'C:\Users\Henrique\a-fabrica\painel\.next\cache\webpack\client-development\1.pack.gz'
+ GET / 200 in 61ms
+ GET /__/firebase/init.json 404 in 32ms
+ GET / 200 in 43ms
+ GET /__/firebase/init.json 404 in 30ms
+ GET / 200 in 36ms
+ GET /__/firebase/init.json 404 in 57ms
+ ✓ Compiled in 652ms (814 modules)
+ GET / 200 in 232ms
+ ✓ Compiled /_not-found in 157ms (801 modules)
+ GET /__/firebase/init.json 404 in 262ms
+ ✓ Compiled in 501ms (299 modules)
+ ✓ Compiled in 483ms (299 modules)
+ ✓ Compiled in 722ms (297 modules)
+ ✓ Compiled in 473ms (297 modules)
+[?25h

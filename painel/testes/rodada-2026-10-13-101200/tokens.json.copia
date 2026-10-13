@@ -1,0 +1,618 @@
+{
+ "name": "Gerenciador de Fábricas",
+ "version": 2,
+ "color": {
+  "themes": [
+   {
+    "id": "dark",
+    "name": "Escuro"
+   },
+   {
+    "id": "light",
+    "name": "Claro"
+   }
+  ],
+  "tokens": [
+   {
+    "name": "bg-000",
+    "value": {
+     "dark": "#05060a",
+     "light": "#eef0f4"
+    },
+    "usage": "Fundo da aplicação, por baixo do brilho ambiente. A página nunca rola sobre ele."
+   },
+   {
+    "name": "bg-100",
+    "value": {
+     "dark": "#0c0e14",
+     "light": "#ffffff"
+    },
+    "usage": "Superfície sólida: painel de leitura de relatório, campos, menus abertos."
+   },
+   {
+    "name": "bg-200",
+    "value": {
+     "dark": "#13161e",
+     "light": "#f4f5f8"
+    },
+    "usage": "Superfície sólida elevada: hover de linha e item ativo dentro de painel sólido."
+   },
+   {
+    "name": "bg-300",
+    "value": {
+     "dark": "#1b1f29",
+     "light": "#e7eaef"
+    },
+    "usage": "Campo de texto e trilho de progresso."
+   },
+   {
+    "name": "glass",
+    "value": {
+     "dark": "#ffffff0d",
+     "light": "#ffffffb8"
+    },
+    "usage": "Vidro padrão: menu lateral, barra superior, cartões de fábrica e KPIs. Sempre com blur-glass por trás."
+   },
+   {
+    "name": "glass-strong",
+    "value": {
+     "dark": "#ffffff14",
+     "light": "#ffffffe6"
+    },
+    "usage": "Vidro em destaque: item ativo do menu, hover de cartão, painel Aguardando você."
+   },
+   {
+    "name": "glass-line",
+    "value": {
+     "dark": "#ffffff1a",
+     "light": "#0c0e1414"
+    },
+    "usage": "Borda fina do vidro. Decorativa, não carrega significado."
+   },
+   {
+    "name": "glass-highlight",
+    "value": {
+     "dark": "#ffffff33",
+     "light": "#ffffffff"
+    },
+    "usage": "Fio de luz de 1px na borda superior interna do vidro. É o que faz o vidro parecer vidro."
+   },
+   {
+    "name": "glow-warm",
+    "value": {
+     "dark": "#f5b93e1f",
+     "light": "#f0ab2b26"
+    },
+    "usage": "Brilho ambiente quente, canto superior direito do fundo, atrás do painel de aprovações. Só fundo."
+   },
+   {
+    "name": "glow-cool",
+    "value": {
+     "dark": "#5cb4f01e",
+     "light": "#1767a814"
+    },
+    "usage": "Brilho ambiente frio, canto inferior esquerdo do fundo. Só fundo."
+   },
+   {
+    "name": "line-100",
+    "value": {
+     "dark": "#ffffff12",
+     "light": "#0c0e1412"
+    },
+    "usage": "Divisor fino entre linhas e seções. Decorativo."
+   },
+   {
+    "name": "line-200",
+    "value": {
+     "dark": "#7a8392",
+     "light": "#7d8590"
+    },
+    "usage": "Borda de controle (botão secundário, campo). Pelo menos 3:1 sobre o vidro e as superfícies."
+   },
+   {
+    "name": "ink",
+    "value": {
+     "dark": "#f2f3f5",
+     "light": "#0c0e14"
+    },
+    "usage": "Texto principal sobre bg-000, bg-100, bg-200, bg-300, glass e glass-strong."
+   },
+   {
+    "name": "ink-muted",
+    "value": {
+     "dark": "#a3abb6",
+     "light": "#4a525d"
+    },
+    "usage": "Texto secundário, metadados e rótulos sobre bg-000, bg-100, bg-200, glass e glass-strong."
+   },
+   {
+    "name": "ink-faint",
+    "value": {
+     "dark": "#8b94a0",
+     "light": "#5f6772"
+    },
+    "usage": "Texto terciário (hora, unidade de KPI) sobre bg-100, bg-200 e glass. Nunca para informação que exige ação."
+   },
+   {
+    "name": "focus",
+    "value": {
+     "dark": "#8cc8ff",
+     "light": "#1a64c8"
+    },
+    "usage": "Anel de foco, 2px sólido, deslocado 2px. Pelo menos 3:1 sobre todas as superfícies."
+   },
+   {
+    "name": "state-running",
+    "value": {
+     "dark": "#5cb4f0",
+     "light": "#1767a8"
+    },
+    "usage": "Estado Em execução: ponto, ícone e texto do selo sobre glass, bg-100, bg-200 e state-running-bg."
+   },
+   {
+    "name": "state-running-bg",
+    "value": {
+     "dark": "#5cb4f01f",
+     "light": "#1767a814"
+    },
+    "usage": "Fundo tingido do estado Em execução: selo e realce. Texto sobre ele usa state-running ou ink."
+   },
+   {
+    "name": "state-approval",
+    "value": {
+     "dark": "#f5b93e",
+     "light": "#8f5a00"
+    },
+    "usage": "Estado Aguardando aprovação: ponto, ícone e texto do selo sobre glass, bg-100, bg-200 e state-approval-bg."
+   },
+   {
+    "name": "state-approval-bg",
+    "value": {
+     "dark": "#f5b93e1f",
+     "light": "#8f5a0014"
+    },
+    "usage": "Fundo tingido do estado Aguardando aprovação: selo e realce. Texto sobre ele usa state-approval ou ink."
+   },
+   {
+    "name": "state-idle",
+    "value": {
+     "dark": "#a5aeb9",
+     "light": "#5b636e"
+    },
+    "usage": "Estado Aguardando comando (ociosa): ponto, ícone e texto do selo sobre glass, bg-100, bg-200 e state-idle-bg."
+   },
+   {
+    "name": "state-idle-bg",
+    "value": {
+     "dark": "#a5aeb91f",
+     "light": "#5b636e14"
+    },
+    "usage": "Fundo tingido do estado Aguardando comando (ociosa): selo e realce. Texto sobre ele usa state-idle ou ink."
+   },
+   {
+    "name": "state-done",
+    "value": {
+     "dark": "#4cc795",
+     "light": "#17734f"
+    },
+    "usage": "Estado Concluída: ponto, ícone e texto do selo sobre glass, bg-100, bg-200 e state-done-bg."
+   },
+   {
+    "name": "state-done-bg",
+    "value": {
+     "dark": "#4cc7951f",
+     "light": "#17734f14"
+    },
+    "usage": "Fundo tingido do estado Concluída: selo e realce. Texto sobre ele usa state-done ou ink."
+   },
+   {
+    "name": "state-failed",
+    "value": {
+     "dark": "#ff7676",
+     "light": "#c22b31"
+    },
+    "usage": "Estado Falhou: ponto, ícone e texto do selo sobre glass, bg-100, bg-200 e state-failed-bg."
+   },
+   {
+    "name": "state-failed-bg",
+    "value": {
+     "dark": "#ff76761f",
+     "light": "#c22b3114"
+    },
+    "usage": "Fundo tingido do estado Falhou: selo e realce. Texto sobre ele usa state-failed ou ink."
+   },
+   {
+    "name": "state-offline",
+    "value": {
+     "dark": "#c3a0f5",
+     "light": "#7243b8"
+    },
+    "usage": "Estado Ponte offline: ponto, ícone e texto do selo sobre glass, bg-100, bg-200 e state-offline-bg."
+   },
+   {
+    "name": "state-offline-bg",
+    "value": {
+     "dark": "#c3a0f51f",
+     "light": "#7243b814"
+    },
+    "usage": "Fundo tingido do estado Ponte offline: selo e realce. Texto sobre ele usa state-offline ou ink."
+   },
+   {
+    "name": "state-approval-solid",
+    "value": {
+     "dark": "#f5b93e",
+     "light": "#f0ab2b"
+    },
+    "usage": "Preenchimento sólido de alerta: contador de aprovações no menu, na barra do celular e no painel Aguardando você."
+   },
+   {
+    "name": "on-approval",
+    "value": {
+     "dark": "#1a1200",
+     "light": "#1a1200"
+    },
+    "usage": "Texto e ícone sobre state-approval-solid."
+   },
+   {
+    "name": "on-failed",
+    "value": {
+     "dark": "#1f0606",
+     "light": "#ffffff"
+    },
+    "usage": "Texto sobre o preenchimento sólido state-failed."
+   },
+   {
+    "name": "on-offline",
+    "value": {
+     "dark": "#1a0f2b",
+     "light": "#ffffff"
+    },
+    "usage": "Texto sobre o preenchimento sólido state-offline (faixa de ponte offline)."
+   },
+   {
+    "name": "action",
+    "value": {
+     "dark": "#f2f3f5",
+     "light": "#0c0e14"
+    },
+    "usage": "Botão primário (Aprovar, Enviar, Abrir nova fábrica). Neutro: a cor é reservada para estado."
+   },
+   {
+    "name": "on-action",
+    "value": {
+     "dark": "#05060a",
+     "light": "#ffffff"
+    },
+    "usage": "Texto do botão primário sobre action."
+   },
+   {
+    "name": "risk-low",
+    "value": {
+     "dark": "{state-done}",
+     "light": "{state-done}"
+    },
+    "usage": "Risco baixo: texto e marca da etiqueta de risco."
+   },
+   {
+    "name": "risk-medium",
+    "value": {
+     "dark": "{state-approval}",
+     "light": "{state-approval}"
+    },
+    "usage": "Risco médio: texto e marca da etiqueta de risco."
+   },
+   {
+    "name": "risk-high",
+    "value": {
+     "dark": "{state-failed}",
+     "light": "{state-failed}"
+    },
+    "usage": "Risco alto: texto e marca da etiqueta; o pedido ganha borda nessa cor."
+   },
+   {
+    "name": "diff-add",
+    "value": {
+     "dark": "#4cc795",
+     "light": "#17734f"
+    },
+    "usage": "Linhas adicionadas na aba Alterações."
+   },
+   {
+    "name": "diff-del",
+    "value": {
+     "dark": "#ff8a8a",
+     "light": "#c22b31"
+    },
+    "usage": "Linhas removidas na aba Alterações."
+   },
+   {
+    "name": "chart-line",
+    "value": {
+     "dark": "#d7dbe1",
+     "light": "#2a303a"
+    },
+    "usage": "Linha de sparkline e gráfico dos KPIs. Neutra: o KPI não é estado."
+   },
+   {
+    "name": "chart-fill",
+    "value": {
+     "dark": "#d7dbe114",
+     "light": "#2a303a0f"
+    },
+    "usage": "Área sob a linha do sparkline."
+   }
+  ]
+ },
+ "type": {
+  "fonts": [],
+  "families": {
+   "sans": "Manrope, \"Segoe UI\", system-ui, sans-serif",
+   "mono": "\"JetBrains Mono\", ui-monospace, \"SF Mono\", Menlo, monospace"
+  },
+  "groups": [
+   {
+    "name": "Números",
+    "family": "sans",
+    "styles": [
+     {
+      "name": "kpi",
+      "fontSize": "34px",
+      "lineHeight": "38px",
+      "fontWeight": 300,
+      "letterSpacing": "-0.03em",
+      "sample": "7h 18",
+      "usage": "Valor principal do KPI. Peso leve e grande: é o que dá o ar premium. Algarismos tabulares."
+     },
+     {
+      "name": "kpi-unit",
+      "fontSize": "14px",
+      "lineHeight": "20px",
+      "fontWeight": 500,
+      "sample": "min",
+      "usage": "Unidade ao lado do valor do KPI, em ink-faint."
+     }
+    ]
+   },
+   {
+    "name": "Títulos",
+    "family": "sans",
+    "styles": [
+     {
+      "name": "title-lg",
+      "fontSize": "22px",
+      "lineHeight": "28px",
+      "fontWeight": 600,
+      "letterSpacing": "-0.02em",
+      "sample": "Visão geral",
+      "usage": "Título de tela, na barra superior. Um por tela."
+     },
+     {
+      "name": "title-md",
+      "fontSize": "16px",
+      "lineHeight": "22px",
+      "fontWeight": 600,
+      "letterSpacing": "-0.01em",
+      "sample": "Aguardando você",
+      "usage": "Título de painel e nome do projeto no cabeçalho da fábrica."
+     },
+     {
+      "name": "title-sm",
+      "fontSize": "14px",
+      "lineHeight": "20px",
+      "fontWeight": 600,
+      "sample": "Rodar migração no banco de homologação",
+      "usage": "Título de cartão de fábrica e de pedido de aprovação."
+     }
+    ]
+   },
+   {
+    "name": "Interface",
+    "family": "sans",
+    "styles": [
+     {
+      "name": "body",
+      "fontSize": "13.5px",
+      "lineHeight": "20px",
+      "fontWeight": 400,
+      "sample": "Escrevendo testes do módulo de admissão.",
+      "usage": "Texto de interface: o que a fábrica está fazendo, descrições curtas."
+     },
+     {
+      "name": "body-strong",
+      "fontSize": "13.5px",
+      "lineHeight": "20px",
+      "fontWeight": 600,
+      "sample": "Aprovar com observação",
+      "usage": "Botões, itens de menu e ênfase."
+     },
+     {
+      "name": "caption",
+      "fontSize": "12px",
+      "lineHeight": "16px",
+      "fontWeight": 500,
+      "sample": "há 12 min · Claude Code",
+      "usage": "Metadados e rótulos de campo."
+     },
+     {
+      "name": "label",
+      "fontSize": "10.5px",
+      "lineHeight": "14px",
+      "fontWeight": 700,
+      "letterSpacing": "0.09em",
+      "sample": "IMPACTO",
+      "usage": "Rótulo em caixa alta: título de KPI, seção do menu, blocos do pedido."
+     }
+    ]
+   },
+   {
+    "name": "Leitura",
+    "family": "sans",
+    "styles": [
+     {
+      "name": "prose",
+      "fontSize": "16px",
+      "lineHeight": "27px",
+      "fontWeight": 400,
+      "sample": "A fábrica concluiu a refatoração do fluxo de documentos e deixou dois pontos para revisão.",
+      "usage": "Relatórios. Coluna de no máximo 68 caracteres, sobre bg-100 sólido, nunca sobre vidro."
+     },
+     {
+      "name": "prose-heading",
+      "fontSize": "19px",
+      "lineHeight": "27px",
+      "fontWeight": 700,
+      "letterSpacing": "-0.01em",
+      "sample": "Resumo do dia",
+      "usage": "Subtítulo dentro de relatório."
+     }
+    ]
+   },
+   {
+    "name": "Dados",
+    "family": "mono",
+    "styles": [
+     {
+      "name": "mono",
+      "fontSize": "12px",
+      "lineHeight": "18px",
+      "fontWeight": 400,
+      "sample": "src/admissao/documentos.ts",
+      "usage": "Caminhos, comandos, horários e consumo."
+     }
+    ]
+   }
+  ]
+ },
+ "spacing": {
+  "tokens": [
+   {
+    "name": "space-1",
+    "value": "4px",
+    "usage": "Ícone ao lado de texto, gap dentro de selo."
+   },
+   {
+    "name": "space-2",
+    "value": "8px",
+    "usage": "Gap entre itens de linha e entre botões."
+   },
+   {
+    "name": "space-3",
+    "value": "12px",
+    "usage": "Gap da grade de cartões; padding de cartão no celular."
+   },
+   {
+    "name": "space-4",
+    "value": "16px",
+    "usage": "Padding de cartão e de KPI; margem lateral do celular."
+   },
+   {
+    "name": "space-5",
+    "value": "20px",
+    "usage": "Padding de painel e gap entre regiões da tela."
+   },
+   {
+    "name": "space-6",
+    "value": "24px",
+    "usage": "Margem interna da área de conteúdo no computador."
+   }
+  ]
+ },
+ "radius": {
+  "tokens": [
+   {
+    "name": "radius-sm",
+    "value": "6px",
+    "usage": "Selo, etiqueta de risco, código inline, contador."
+   },
+   {
+    "name": "radius-md",
+    "value": "10px",
+    "usage": "Botão, campo, item de menu."
+   },
+   {
+    "name": "radius-lg",
+    "value": "16px",
+    "usage": "Cartão de fábrica, KPI, pedido de aprovação."
+   },
+   {
+    "name": "radius-xl",
+    "value": "22px",
+    "usage": "Painéis grandes: menu lateral flutuante, painel Aguardando você, leitor de relatório."
+   },
+   {
+    "name": "radius-pill",
+    "value": "999px",
+    "usage": "Indicador da ponte e trilho de progresso."
+   }
+  ]
+ },
+ "shadow": {
+  "tokens": [
+   {
+    "name": "shadow-glass",
+    "value": {
+     "dark": "0 1px 0 rgba(255,255,255,0.06) inset, 0 20px 40px rgba(0,0,0,0.35)",
+     "light": "0 1px 0 rgba(255,255,255,0.9) inset, 0 12px 32px rgba(20,24,34,0.08)"
+    },
+    "usage": "Profundidade de todo painel de vidro: fio de luz interno no topo e sombra longa e suave."
+   },
+   {
+    "name": "shadow-pop",
+    "value": {
+     "dark": "0 24px 60px rgba(0,0,0,0.6)",
+     "light": "0 24px 60px rgba(20,24,34,0.18)"
+    },
+    "usage": "Só o que flutua acima do vidro: menu aberto, diálogo de confirmação."
+   }
+  ]
+ },
+ "blur": {
+  "note": "Valor de backdrop-filter: blur(). Use com glass e glass-strong.",
+  "tokens": [
+   {
+    "name": "blur-glass",
+    "value": "20px",
+    "usage": "Vidro padrão: menu lateral, barra superior, cartões e KPIs."
+   },
+   {
+    "name": "blur-strong",
+    "value": "36px",
+    "usage": "Barra inferior do celular e diálogos, que passam por cima de conteúdo."
+   }
+  ]
+ },
+ "size": {
+  "tokens": [
+   {
+    "name": "size-control",
+    "value": "34px",
+    "usage": "Altura de botão e campo no computador."
+   },
+   {
+    "name": "size-touch",
+    "value": "44px",
+    "usage": "Altura mínima de alvo tocável no celular."
+   },
+   {
+    "name": "size-sidebar",
+    "value": "248px",
+    "usage": "Largura do menu lateral aberto."
+   },
+   {
+    "name": "size-rail",
+    "value": "72px",
+    "usage": "Largura do menu lateral recolhido (só ícones), abaixo de 1280px."
+   },
+   {
+    "name": "size-topbar",
+    "value": "60px",
+    "usage": "Altura da barra superior."
+   },
+   {
+    "name": "size-reading",
+    "value": "720px",
+    "usage": "Largura máxima da coluna de leitura de relatório."
+   }
+  ]
+ }
+}

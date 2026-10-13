@@ -1,0 +1,30 @@
+{
+  "name": "painel-a-fabrica",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Painel web da Fabrica: Next.js 14 App Router, React 18, TypeScript, Tailwind. Saida estatica para o Hosting do Firebase.",
+  "scripts": {
+    "estilos": "node scripts/gerar-estilos.mjs",
+    "prebuild": "node scripts/gerar-estilos.mjs",
+    "predev": "node scripts/gerar-estilos.mjs",
+    "dev": "next dev",
+    "build": "next build",
+    "construir-para-hospedagem": "node scripts/construir-para-hospedagem.mjs",
+    "tipos": "tsc --noEmit"
+  },
+  "dependencies": {
+    "firebase": "10.14.1",
+    "next": "14.2.35",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "20.16.11",
+    "@types/react": "18.3.11",
+    "@types/react-dom": "18.3.1",
+    "autoprefixer": "10.4.20",
+    "postcss": "8.4.47",
+    "tailwindcss": "3.4.14",
+    "typescript": "5.6.3"
+  }
+}

@@ -1,0 +1,52 @@
+@import './tokens.gerado.css';
+@import './componentes.gerado.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tela unica, §A.11 do pacote do designer: a pagina nunca rola. */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-000);
+  overscroll-behavior: none;
+}
+
+#raiz {
+  height: 100%;
+}
+
+/* Rolagem interna autorizada pelo manual, no celular baixo, nos detalhes do
+   pedido acima dos botoes fixos. Nada mais rola. */
+.gf-ap-content {
+  overscroll-behavior: contain;
+}
+
+/* Alvo de toque de 44px no celular. O CSS do pacote desenha o botao de icone com
+   30px e a aba com 40px: serve no computador, fica pequeno no dedo. Dentro da
+   casca do celular os dois sobem para a medida de toque de tokens.json. */
+.gf-mapp .gf-iconbtn {
+  width: var(--size-touch);
+  height: var(--size-touch);
+}
+
+.gf-mapp .gf-tab {
+  height: var(--size-touch);
+}
+
+/* O nome da maquina pode ser longo. No pe do menu o indicador da ponte corta no
+   fim em vez de furar a borda do menu. */
+.gf-side-foot .gf-bridge {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.gf-side-foot .gf-bridge-detail {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
