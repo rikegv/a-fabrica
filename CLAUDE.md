@@ -143,3 +143,6 @@ Escreva o caminho completo, por extenso, sem atalho de variável, e apague arqui
 
 ## A.19 Onde mora a fila (regra permanente)
 A fila de pedidos e respostas da ponte vive dentro da pasta da rodada, nunca numa pasta fixa reaproveitada. Fila nova a cada rodada, sem herança da anterior.
+
+## A.20 Projeto da nuvem sempre explícito (regra permanente)
+O gcloud da máquina do diretor aponta por padrão para dash-iff, que é um sistema real em produção. Todo comando de gcloud ou firebase desta fábrica diz o projeto de forma explícita, sempre, com --project a-fabrica-soulan. Nunca confiar no projeto padrão. Nunca rodar gcloud config set project. Se um comando não aceitar o projeto explícito, parar e avisar, não rodar.
