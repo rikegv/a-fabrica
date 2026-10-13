@@ -1,8 +1,9 @@
 rules_version = '2';
 
-// Regras do Firestore da Fabrica (OST 3, Parte 2, Passo 2).
-// RASCUNHO para revisao do diretor e da seguranca. Ainda NAO implantado:
-// o deploy depende do identificador do projeto Firebase, que o diretor informa.
+// Regras do Firestore da Fabrica.
+// IMPLANTADAS no projeto a-fabrica-soulan na OST 5 (sempre com --project explicito,
+// §A.20). Provadas pelo emulador em firebase/testes (12/12). Fonte da verdade do
+// controle de acesso: conta unica do diretor, trilha imutavel.
 //
 // Principios, §A.6:
 //  - Conta unica. So o e-mail do diretor, com e-mail verificado.

@@ -44,7 +44,10 @@ export async function abrirFabrica({ cwd, prompt, resumeId, portao, onEvento }) 
   if (!prova.vivo) { const e = new Error('portao nao confirmado na abertura, fabrica nao nasce'); e.prova = prova; throw e; }
 
   const estado = { sessionId: null, usage: null, resultado: null, modoConferido: false, textoAoVivo: '' };
-  const options = { ...opcoesBase(cwd), canUseTool: portao, maxTurns: 12 };
+  // Defesa em profundidade: nenhuma ferramenta passa pelo portao antes do init
+  // confirmar o modo fixado. Se o init nao chegou, nega por seguranca.
+  const portaoSeguro = async (t, i) => (estado.modoConferido ? portao(t, i) : { behavior: 'deny', message: 'modo nao conferido no init, negado por seguranca' });
+  const options = { ...opcoesBase(cwd), canUseTool: portaoSeguro, maxTurns: 12 };
   if (resumeId) options.resume = resumeId;
 
   for await (const m of query({ prompt, options })) {
