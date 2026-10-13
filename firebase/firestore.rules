@@ -1,0 +1,92 @@
+rules_version = '2';
+
+// Regras do Firestore da Fabrica (OST 3, Parte 2, Passo 2).
+// RASCUNHO para revisao do diretor e da seguranca. Ainda NAO implantado:
+// o deploy depende do identificador do projeto Firebase, que o diretor informa.
+//
+// Principios, §A.6:
+//  - Conta unica. So o e-mail do diretor, com e-mail verificado.
+//  - Nega todo o resto por padrao.
+//  - Cada documento tem um unico dono de escrita (ver contrato-tres-pecas.md).
+//  - Trilha de comando e aprovacao imutavel: nao se apaga nem se reescreve.
+//  - A fila carrega maquinaId; a ponte so mexe na fila da sua maquina.
+//
+// Observacao honesta para a seguranca: sob conta unica, sem chave de servico e
+// com a ponte entrando como o proprio diretor, a separacao por maquina e escopo
+// logico, nao isolamento entre pessoas, porque so existe uma pessoa. A protecao
+// dura e a conta unica com segundo fator e o nega tudo. O segundo fator e
+// exigido na camada de Auth, nao aqui.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function diretor() {
+      return request.auth != null
+        && request.auth.token.email == 'henrique.vieira@soulan.com.br'
+        && request.auth.token.email_verified == true;
+    }
+
+    // Campos imutaveis preservados numa atualizacao.
+    function mantem(campos) {
+      return campos.toSet().difference(
+        request.resource.data.diff(resource.data).affectedKeys()
+      ).size() == campos.size();
+    }
+
+    match /maquinas/{maquinaId} {
+      allow read, write: if diretor();
+    }
+
+    match /fabricas/{fabricaId} {
+      allow read, write: if diretor();
+      match /tarefas/{tarefaId} {
+        allow read, write: if diretor();
+      }
+      match /atividade/{seq} {
+        allow read, create: if diretor();
+        allow update, delete: if false; // so adiciona, a trilha de atividade nao muda
+      }
+    }
+
+    // Comando: diretor cria pendente; a ponte so marca entregue, uma vez.
+    match /comandos/{comandoId} {
+      allow read: if diretor();
+      allow create: if diretor()
+        && request.resource.data.situacao == 'pendente'
+        && request.resource.data.keys().hasAll(
+             ['fabricaId','maquinaId','texto','situacao','criadoEm','origem']);
+      allow update: if diretor()
+        && resource.data.situacao == 'pendente'
+        && request.resource.data.situacao == 'entregue'
+        && mantem(['fabricaId','maquinaId','texto','criadoEm','origem']);
+      allow delete: if false; // a trilha nao se apaga
+    }
+
+    // Aprovacao: a ponte cria o pedido; o diretor responde, uma vez.
+    match /aprovacoes/{aprovacaoId} {
+      allow read: if diretor();
+      allow create: if diretor()
+        && request.resource.data.situacao == 'pendente'
+        && request.resource.data.resposta == null
+        && request.resource.data.keys().hasAll(
+             ['fabricaId','maquinaId','pacote','situacao','criadoEm','origem']);
+      allow update: if diretor()
+        && resource.data.situacao == 'pendente'
+        && request.resource.data.situacao == 'respondida'
+        && request.resource.data.resposta in ['aprovado','recusado','aprovado com observacao']
+        && mantem(['fabricaId','maquinaId','pacote','criadoEm','origem']);
+      allow delete: if false; // a trilha nao se apaga
+    }
+
+    // Relatorio de fechamento: so a ponte cria, nao muda depois.
+    match /relatorios/{relatorioId} {
+      allow read, create: if diretor();
+      allow update, delete: if false;
+    }
+
+    // Tudo o mais, negado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
