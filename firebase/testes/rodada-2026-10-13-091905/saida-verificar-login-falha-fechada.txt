@@ -1,0 +1,23 @@
+=== PRONTIDAO DO LOGIN, projeto a-fabrica-soulan ===
+Momento da verificacao: 2026-10-13T12:22:27.715Z
+
+  NAO  token do gcloud: gcloud nao devolveu token de acesso para o projeto a-fabrica-soulan
+  NAO  Authentication ligado: nao verificado, sem token, falha fechada
+  NAO  provedor Google ativo: nao verificado, sem token, falha fechada
+  NAO  dominios autorizados do login: nao verificado, sem token, falha fechada
+
+VEREDITO: LOGIN NAO PRONTO. 4 de 4 verificacoes falharam. Nenhum teste ao vivo com login deve rodar agora.
+
+Antes de tudo, autenticar o gcloud na maquina: gcloud auth login
+Passo do diretor no console, nesta ordem:
+  1. Abrir https://console.firebase.google.com/project/a-fabrica-soulan/authentication
+  2. Clicar em "Get started", ou "Vamos comecar", na tela do Authentication.
+  3. Na aba "Sign-in method", ou "Metodo de login", escolher o provedor Google.
+  4. Ligar a chave "Enable", ou "Ativar".
+  5. Em "Project support email", ou "E-mail de suporte do projeto", escolher henrique.vieira@soulan.com.br.
+  6. Salvar.
+  7. Rodar este verificador de novo: node verificar-login.mjs
+
+Observacao do backend: inicializar o Authentication por programa e recusado com BILLING_NOT_ENABLED,
+porque o Identity Platform exige plano pago para a API administrativa. O caminho e o clique do diretor
+no console, no plano gratuito, pela tela do Authentication.

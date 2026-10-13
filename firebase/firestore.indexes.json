@@ -17,6 +17,22 @@
         { "fieldPath": "situacao", "order": "ASCENDING" },
         { "fieldPath": "criadoEm", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "aprovacoes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "situacao", "order": "ASCENDING" },
+        { "fieldPath": "criadoEm", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "aprovacoes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "situacao", "order": "ASCENDING" },
+        { "fieldPath": "criadoEm", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

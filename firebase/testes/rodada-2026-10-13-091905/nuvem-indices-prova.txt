@@ -1,0 +1,28 @@
+### B, aprovacoes: situacao == pendente ORDENADO por criadoEm (fila do painel, todas as maquinas)
+[{
+  "error": {
+    "code": 400,
+    "message": "The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/a-fabrica-soulan/firestore/indexes?create_composite=ClNwcm9qZWN0cy9hLWZhYnJpY2Etc291bGFuL2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy9hcHJvdmFjb2VzL2luZGV4ZXMvXxABGgwKCHNpdHVhY2FvEAEaDAoIY3JpYWRvRW0QAhoMCghfX25hbWVfXxAC",
+    "status": "FAILED_PRECONDITION"
+  }
+}
+]
+### F, comandos: fabricaId == f1 ORDENADO por criadoEm asc (tela da fabrica)
+[{
+  "error": {
+    "code": 400,
+    "message": "The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/a-fabrica-soulan/firestore/indexes?create_composite=ClFwcm9qZWN0cy9hLWZhYnJpY2Etc291bGFuL2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy9jb21hbmRvcy9pbmRleGVzL18QARoNCglmYWJyaWNhSWQQARoMCghjcmlhZG9FbRABGgwKCF9fbmFtZV9fEAE",
+    "status": "FAILED_PRECONDITION"
+  }
+}
+]
+[{
+  "readTime": "2026-10-13T12:27:45.543193Z"
+}
+][{
+  "readTime": "2026-10-13T12:27:45.727639Z"
+}
+][{
+  "readTime": "2026-10-13T12:36:16.916239Z"
+}
+]

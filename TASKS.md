@@ -4,6 +4,9 @@ Fila de trabalho da fábrica. Pendentes no topo, concluídas no rodapé. Cada ta
 
 ## Pendentes
 <!-- Formato: - [ ] Título, onda, agentes, situação -->
+- [ ] OST 6 Bloco 1, ligar a ponte na base, Onda 1, agentes ponte e backend, em execucao
+- [ ] OST 6 Bloco 2, o painel de verdade na stack do §A.2, Onda 1, agente frontend, em execucao
+- [ ] OST 6 Bloco 3, matar o canal preview-madrugada e publicar o painel de verdade, Onda 1, agente devops, aguarda o Bloco 2
 
 ## Concluídas
 <!-- Formato: - [x] Título, onda, agentes, data -->

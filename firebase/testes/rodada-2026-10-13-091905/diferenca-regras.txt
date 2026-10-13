@@ -1,0 +1,15 @@
+--- firebase/firestore.rules	2026-10-12 23:26:36.335258900 -0300
++++ firebase/testes/rodada-2026-10-13-091905/nuvem-firestore.rules	2026-10-13 09:19:15.858829000 -0300
+@@ -1,9 +1,8 @@
+ rules_version = '2';
+ 
+-// Regras do Firestore da Fabrica.
+-// IMPLANTADAS no projeto a-fabrica-soulan na OST 5 (sempre com --project explicito,
+-// §A.20). Provadas pelo emulador em firebase/testes (12/12). Fonte da verdade do
+-// controle de acesso: conta unica do diretor, trilha imutavel.
++// Regras do Firestore da Fabrica (OST 3, Parte 2, Passo 2).
++// RASCUNHO para revisao do diretor e da seguranca. Ainda NAO implantado:
++// o deploy depende do identificador do projeto Firebase, que o diretor informa.
+ //
+ // Principios, §A.6:
+ //  - Conta unica. So o e-mail do diretor, com e-mail verificado.

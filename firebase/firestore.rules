@@ -1,22 +1,38 @@
 rules_version = '2';
 
 // Regras do Firestore da Fabrica.
-// IMPLANTADAS no projeto a-fabrica-soulan na OST 5 (sempre com --project explicito,
-// §A.20). Provadas pelo emulador em firebase/testes (12/12). Fonte da verdade do
-// controle de acesso: conta unica do diretor, trilha imutavel.
+//
+// ESTADO REAL, conferido na OST 6 Bloco 1 contra a nuvem, nao contra comentario:
+// o conjunto publicado em projects/a-fabrica-soulan/releases/cloud.firestore foi
+// baixado e comparado linha a linha. O corpo das regras estava identico; divergia
+// so o comentario de cabecalho. Prova em
+// firebase/testes/rodada-2026-10-13-091905/diferenca-regras.txt.
+//
+// ESTA VERSAO, com o endurecimento da OST 6, AINDA NAO ESTA NA NUVEM. Quem publica
+// e o coordenador, com a flag do gate, §A.7. Nenhum agente publica por conta propria.
 //
 // Principios, §A.6:
-//  - Conta unica. So o e-mail do diretor, com e-mail verificado.
-//  - Nega todo o resto por padrao.
-//  - Cada documento tem um unico dono de escrita (ver contrato-tres-pecas.md).
-//  - Trilha de comando e aprovacao imutavel: nao se apaga nem se reescreve.
-//  - A fila carrega maquinaId; a ponte so mexe na fila da sua maquina.
+//  - Conta unica. So o e-mail do diretor, com e-mail verificado. Nega todo o resto.
+//  - Cada documento tem um unico dono de escrita (ver docs/contrato-tres-pecas.md).
+//  - Trilha de comando e aprovacao imutavel: nao se apaga, nao se reescreve, e a
+//    hora e do servidor, nao do cliente. Toda hora de trilha tem de ser escrita com
+//    serverTimestamp(), senao a escrita e negada. Isso impede hora forjada.
+//  - Comando entrega uma vez. Aprovacao responde uma vez. Depois, documento congelado.
+//  - Toda resposta de aprovacao carrega hora do servidor e quem respondeu, em
+//    respondidoPor. Sem origem da resposta, a escrita e negada.
+//  - A fila carrega maquinaId, que nao muda depois de criado.
 //
-// Observacao honesta para a seguranca: sob conta unica, sem chave de servico e
-// com a ponte entrando como o proprio diretor, a separacao por maquina e escopo
-// logico, nao isolamento entre pessoas, porque so existe uma pessoa. A protecao
-// dura e a conta unica com segundo fator e o nega tudo. O segundo fator e
-// exigido na camada de Auth, nao aqui.
+// A nova realidade da OST 6: a ponte entra como o PROPRIO DIRETOR, pelo SDK cliente,
+// de dentro do Node, e o painel entra como o diretor pelo navegador. Os dois chegam
+// aqui com o mesmo principal. Portanto estas regras nao separam ponte de painel por
+// identidade, e sim por forma do documento e por transicao de estado permitida.
+//
+// Observacao honesta para a seguranca, sem vender protecao que nao existe: sob conta
+// unica, sem chave de servico, nao existe isolamento entre pessoas, porque so existe
+// uma pessoa. maquinaId e escopo logico, nao fronteira de seguranca: quem tem a conta
+// do diretor alcanca a fila de qualquer maquina. A protecao dura e a conta unica com
+// segundo fator, exigido na camada de Auth, mais o nega tudo daqui, mais a trilha que
+// nao se apaga e cuja hora vem do servidor.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -34,31 +50,56 @@ service cloud.firestore {
       ).size() == campos.size();
     }
 
+    function textoPreenchido(valor) {
+      return valor is string && valor.size() > 0;
+    }
+
+    // Maquina: sinal de vida escrito pela ponte. A hora de visto por ultimo e do
+    // servidor, senao a tela poderia mostrar ponte viva com hora inventada, §A.10.
     match /maquinas/{maquinaId} {
-      allow read, write: if diretor();
+      allow read: if diretor();
+      allow create, update: if diretor()
+        && request.resource.data.vistoPorUltimo == request.time
+        && request.resource.data.estadoPonte in ['online', 'offline'];
+      allow delete: if false; // registro de maquina nao se apaga
     }
 
     match /fabricas/{fabricaId} {
-      allow read, write: if diretor();
+      allow read: if diretor();
+      allow create, update: if diretor()
+        && request.resource.data.atualizadoEm == request.time;
+      allow delete: if false; // fabrica encerrada vira estado concluida, nao desaparece
+
       match /tarefas/{tarefaId} {
-        allow read, write: if diretor();
+        allow read, create, update: if diretor();
+        allow delete: if false;
       }
-      match /atividade/{seq} {
-        allow read, create: if diretor();
-        allow update, delete: if false; // so adiciona, a trilha de atividade nao muda
+
+      // Atividade so adiciona, em ordem de tempo do servidor.
+      match /atividade/{passoId} {
+        allow read: if diretor();
+        allow create: if diretor() && request.resource.data.em == request.time;
+        allow update, delete: if false;
       }
     }
 
-    // Comando: diretor cria pendente; a ponte so marca entregue, uma vez.
+    // Comando: o diretor cria pendente pelo painel; a ponte marca entregue, uma vez.
     match /comandos/{comandoId} {
       allow read: if diretor();
       allow create: if diretor()
-        && request.resource.data.situacao == 'pendente'
         && request.resource.data.keys().hasAll(
-             ['fabricaId','maquinaId','texto','situacao','criadoEm','origem']);
+             ['fabricaId','maquinaId','texto','situacao','criadoEm','origem'])
+        && request.resource.data.situacao == 'pendente'
+        && request.resource.data.criadoEm == request.time
+        && request.resource.data.get('entregueEm', null) == null
+        && textoPreenchido(request.resource.data.fabricaId)
+        && textoPreenchido(request.resource.data.maquinaId)
+        && textoPreenchido(request.resource.data.texto)
+        && textoPreenchido(request.resource.data.origem);
       allow update: if diretor()
         && resource.data.situacao == 'pendente'
         && request.resource.data.situacao == 'entregue'
+        && request.resource.data.entregueEm == request.time
         && mantem(['fabricaId','maquinaId','texto','criadoEm','origem']);
       allow delete: if false; // a trilha nao se apaga
     }
@@ -67,25 +108,34 @@ service cloud.firestore {
     match /aprovacoes/{aprovacaoId} {
       allow read: if diretor();
       allow create: if diretor()
-        && request.resource.data.situacao == 'pendente'
-        && request.resource.data.get('resposta', null) == null
         && request.resource.data.keys().hasAll(
-             ['fabricaId','maquinaId','pacote','situacao','criadoEm','origem']);
+             ['fabricaId','maquinaId','pacote','situacao','criadoEm','origem'])
+        && request.resource.data.situacao == 'pendente'
+        && request.resource.data.criadoEm == request.time
+        && request.resource.data.get('resposta', null) == null
+        && request.resource.data.get('respondidoEm', null) == null
+        && request.resource.data.get('respondidoPor', null) == null
+        && textoPreenchido(request.resource.data.fabricaId)
+        && textoPreenchido(request.resource.data.maquinaId)
+        && textoPreenchido(request.resource.data.origem);
       allow update: if diretor()
         && resource.data.situacao == 'pendente'
         && request.resource.data.situacao == 'respondida'
         && request.resource.data.resposta in ['aprovado','recusado','aprovado com observacao']
+        && request.resource.data.respondidoEm == request.time
+        && textoPreenchido(request.resource.data.respondidoPor)
         && mantem(['fabricaId','maquinaId','pacote','criadoEm','origem']);
       allow delete: if false; // a trilha nao se apaga
     }
 
-    // Relatorio de fechamento: so a ponte cria, nao muda depois.
+    // Relatorio de fechamento: criado uma vez, nao muda depois, §A.16.
     match /relatorios/{relatorioId} {
-      allow read, create: if diretor();
+      allow read: if diretor();
+      allow create: if diretor() && request.resource.data.criadoEm == request.time;
       allow update, delete: if false;
     }
 
-    // Tudo o mais, negado.
+    // Tudo o mais, negado. Vale tambem para subcolecao desconhecida dentro de fabricas.
     match /{document=**} {
       allow read, write: if false;
     }

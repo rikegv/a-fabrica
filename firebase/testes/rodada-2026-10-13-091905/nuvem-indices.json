@@ -1,0 +1,50 @@
+[
+  {
+    "density": "SPARSE_ALL",
+    "fields": [
+      {
+        "fieldPath": "maquinaId",
+        "order": "ASCENDING"
+      },
+      {
+        "fieldPath": "situacao",
+        "order": "ASCENDING"
+      },
+      {
+        "fieldPath": "criadoEm",
+        "order": "ASCENDING"
+      },
+      {
+        "fieldPath": "__name__",
+        "order": "ASCENDING"
+      }
+    ],
+    "name": "projects/a-fabrica-soulan/databases/(default)/collectionGroups/comandos/indexes/CICAgOjXh4EK",
+    "queryScope": "COLLECTION",
+    "state": "READY"
+  },
+  {
+    "density": "SPARSE_ALL",
+    "fields": [
+      {
+        "fieldPath": "maquinaId",
+        "order": "ASCENDING"
+      },
+      {
+        "fieldPath": "situacao",
+        "order": "ASCENDING"
+      },
+      {
+        "fieldPath": "criadoEm",
+        "order": "ASCENDING"
+      },
+      {
+        "fieldPath": "__name__",
+        "order": "ASCENDING"
+      }
+    ],
+    "name": "projects/a-fabrica-soulan/databases/(default)/collectionGroups/aprovacoes/indexes/CICAgJiUpoMK",
+    "queryScope": "COLLECTION",
+    "state": "READY"
+  }
+]

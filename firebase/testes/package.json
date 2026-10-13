@@ -1,0 +1,17 @@
+{
+  "name": "a-fabrica-testes-base",
+  "private": true,
+  "type": "module",
+  "version": "0.2.0",
+  "description": "Testes da peca 2, base na nuvem: regras do Firestore no emulador e escritas reais da ponte. A versao do SDK firebase acompanha a da ponte, para provar a regra contra o cliente que roda de verdade.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "login": "node verificar-login.mjs",
+    "regras": "firebase emulators:exec --only firestore --project a-fabrica-soulan \"node regras.test.mjs\"",
+    "ponte": "firebase emulators:exec --only firestore,auth --project a-fabrica-soulan \"node --experimental-transform-types --import ./registrar-resolucao.mjs ponte-real.test.mjs\""
+  },
+  "dependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.0.0"
+  }
+}

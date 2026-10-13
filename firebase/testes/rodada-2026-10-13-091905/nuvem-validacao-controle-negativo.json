@@ -1,0 +1,15 @@
+{
+  "issues": [
+    {
+      "sourcePosition": {
+        "fileName": "firestore.rules",
+        "line": 43,
+        "column": 9,
+        "currentOffset": 2337,
+        "endOffset": 2338
+      },
+      "description": "Unexpected '&&'.",
+      "severity": "ERROR"
+    }
+  ]
+}

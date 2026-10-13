@@ -1,0 +1,40 @@
+=== ESCRITA REAL DA PONTE E DO PAINEL CONTRA A REGRA, emulador, projeto a-fabrica-soulan ===
+Momento: 2026-10-13T12:41:25.005Z
+Arquivo da ponte sob teste: ponte/src/base.ts, importado sem alteracao.
+PASSOU: 35 | FALHOU: 0 | TOTAL: 35
+  OK    0.1 ponte entra como o proprio diretor, pelo SDK cliente, com e-mail verificado
+  OK    1.1 heartbeat real grava maquinas com hora do servidor
+  OK    1.2 ponte cria a fabrica em execucao
+  OK    1.3 ponte grava modelo e conversa na mesma fabrica
+  OK    1.4 ponte fecha a fabrica com consumo
+  OK    1.5 ponte marca fabrica que falhou
+  OK    1.6 ponte adiciona passos de atividade
+  OK    1.7 ponte publica pedido de aprovacao com o pacote completo
+  OK    1.8 ponte conta os pendentes da sua maquina
+  OK    2.1 painel cria comando pendente, hora do servidor e origem
+  OK    2.2 painel NAO cria comando com hora do cliente
+  OK    2.3 painel NAO cria comando ja entregue
+  OK    2.4 painel NAO apaga comando da trilha
+  OK    2.5 ouvinte real da ponte ve o comando pendente da sua maquina
+  OK    2.6 ponte toma o comando em transacao e marca entregue
+  OK    2.7 tomar o mesmo comando DE NOVO nao entrega duas vezes
+  OK    2.8 painel responde a aprovacao uma vez
+  OK    2.9 painel NAO responde a mesma aprovacao duas vezes
+  OK    2.10 resposta sem dizer quem respondeu e NEGADA
+  OK    2.11 painel NAO apaga aprovacao da trilha
+  OK    3.1 portao: pedido da ponte, resposta do painel, ponte recebe allow
+  OK    3.2 portao: recusa do painel chega como deny
+  OK    3.3 portao falha fechada: sem resposta no tempo, recusa
+  OK    4.1 reconciliacao recusa pendente de sessao morta e marca a fabrica offline
+  OK    4.2 reconciliacao NAO mexe em pedido de sessao viva
+  OK    4.3 parada limpa marca offline e poe a fabrica viva em ponte offline
+  OK    5.1 ouvinte do painel em fabricas, ordenado por atualizadoEm
+  OK    5.2 ouvinte do painel na atividade de uma fabrica, ordenado por seq
+  OK    5.3 ouvinte do painel na fila de aprovacoes pendentes, ordenado por criadoEm
+  OK    6.1 outra conta NAO grava fabrica usando o codigo real da ponte
+  OK    6.2 outra conta NAO adiciona atividade usando o codigo real da ponte
+  OK    6.3 outra conta NAO publica pedido de aprovacao
+  OK    6.4 outra conta NAO le a fabrica
+  OK    6.5 outra conta NAO ve comando nenhum pelo ouvinte real da ponte
+  OK    6.6 outra conta NAO toma comando (falha fechada, devolve nulo)
+VEREDITO: a escrita real da ponte e do painel passa, e a conta que nao e do diretor e barrada em tudo.

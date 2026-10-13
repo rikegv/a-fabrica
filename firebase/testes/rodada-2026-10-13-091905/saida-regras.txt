@@ -1,0 +1,80 @@
+=== REGRAS DO FIRESTORE, emulador, projeto a-fabrica-soulan ===
+Momento: 2026-10-13T12:41:02.233Z
+PASSOU: 76 | FALHOU: 0 | TOTAL: 76
+  OK    1.1 diretor cria comando
+  OK    1.2 diretor le comando
+  OK    1.3 outro e-mail NAO le comando
+  OK    1.4 outro e-mail NAO cria comando
+  OK    1.5 diretor com e-mail NAO verificado NAO le
+  OK    1.6 diretor com e-mail NAO verificado NAO escreve
+  OK    1.7 autenticado sem e-mail no token NAO le
+  OK    1.8 anonimo NAO le
+  OK    1.9 anonimo NAO escreve
+  OK    1.10 e-mail parecido com o do diretor NAO le
+  OK    1.11 e-mail do diretor em maiusculas NAO le
+  OK    1.12 outro e-mail NAO le maquinas
+  OK    1.13 outro e-mail NAO le fabricas
+  OK    1.14 outro e-mail NAO le atividade
+  OK    1.15 outro e-mail NAO le aprovacoes
+  OK    1.16 outro e-mail NAO le relatorios
+  OK    1.17 outro e-mail NAO le tarefas
+  OK    2.1 comando com hora forjada pelo cliente NEGADO
+  OK    2.2 comando sem origem NEGADO
+  OK    2.3 comando criado ja como entregue NEGADO
+  OK    2.4 comando criado com entregueEm preenchido NEGADO
+  OK    2.5 comando com texto vazio NEGADO
+  OK    2.6 comando sem maquinaId NEGADO
+  OK    2.7 marcar entregue com hora forjada NEGADO
+  OK    2.8 marcar entregue trocando o texto NEGADO
+  OK    2.9 marcar entregue trocando criadoEm NEGADO
+  OK    2.10 marcar entregue com hora do servidor PASSA
+  OK    2.11 marcar entregue DE NOVO NEGADO (entrega uma vez)
+  OK    2.12 voltar comando entregue para pendente NEGADO
+  OK    2.13 apagar comando NEGADO (trilha)
+  OK    3.1 ponte cria pedido de aprovacao
+  OK    3.2 pedido com hora forjada NEGADO
+  OK    3.3 pedido sem pacote NEGADO
+  OK    3.4 pedido nascendo ja respondido NEGADO (nao existe pre-autorizacao)
+  OK    3.5 pedido nascendo com resposta preenchida NEGADO
+  OK    3.6 resposta com valor fora da lista NEGADA
+  OK    3.7 resposta com hora forjada NEGADA
+  OK    3.8 resposta que reescreve o pacote NEGADA
+  OK    3.9 responder sem mudar a situacao NEGADO
+  OK    3.9b resposta sem dizer quem respondeu NEGADA (trilha de origem)
+  OK    3.9c pedido nascendo com respondidoPor preenchido NEGADO
+  OK    3.10 painel responde uma vez PASSA
+  OK    3.11 responder DUAS VEZES NEGADO
+  OK    3.12 trocar a resposta depois NEGADO
+  OK    3.13 apagar aprovacao NEGADO (trilha)
+  OK    3.14 recusa por reconciliacao PASSA (pedido novo)
+  OK    4.1 heartbeat da ponte PASSA
+  OK    4.2 heartbeat com hora forjada NEGADO
+  OK    4.3 estado de ponte fora da lista NEGADO
+  OK    4.4 parada limpa marca offline PASSA
+  OK    4.5 apagar maquina NEGADO
+  OK    4.6 fabrica criada pela ponte PASSA
+  OK    4.7 fabrica com hora forjada NEGADA
+  OK    4.8 apagar fabrica NEGADO
+  OK    4.9 atividade adiciona passo PASSA
+  OK    4.10 atividade com hora forjada NEGADA
+  OK    4.11 atividade NAO se altera
+  OK    4.12 atividade NAO se apaga
+  OK    4.13 tarefa criada PASSA
+  OK    4.14 tarefa muda de situacao PASSA
+  OK    4.15 apagar tarefa NEGADO
+  OK    5.1 relatorio de tarefa PASSA
+  OK    5.2 relatorio diario PASSA
+  OK    5.3 relatorio com hora forjada NEGADO
+  OK    5.4 relatorio NAO se altera
+  OK    5.5 relatorio NAO se apaga
+  OK    6.1 colecao fora do modelo NEGADA ao diretor
+  OK    6.2 leitura de colecao fora do modelo NEGADA
+  OK    6.3 subcolecao desconhecida dentro de fabricas NEGADA
+  OK    6.4 usuarios ou perfis NEGADO (nao existe papel neste sistema)
+  OK    7.1 painel lista fabricas por atualizadoEm
+  OK    7.2 painel lista atividade de uma fabrica por seq
+  OK    7.3 painel lista aprovacoes pendentes por criadoEm
+  OK    7.4 ponte lista comandos pendentes da sua maquina
+  OK    7.5 outro e-mail NAO lista fabricas
+  OK    7.6 anonimo NAO lista aprovacoes pendentes
+VEREDITO: REGRA PROVADA no emulador. Publicacao e do coordenador, com a flag do gate.

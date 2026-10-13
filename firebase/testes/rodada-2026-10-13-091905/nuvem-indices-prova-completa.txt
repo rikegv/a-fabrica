@@ -1,0 +1,62 @@
+PROVA DE COBERTURA DE INDICE CONTRA O BANCO DE VERDADE, projeto a-fabrica-soulan
+Momento: 2026-10-13T12:42:13Z
+Metodo: consulta de leitura por REST com o token do gcloud. Nenhuma escrita. O Firestore
+recusa com FAILED_PRECONDITION quando falta indice, mesmo com a colecao vazia.
+
+### A, aprovacoes: maquinaId == m1 E situacao == pendente, sem ordenacao. Usada pela ponte.
+[{
+  "readTime": "2026-10-13T12:42:14.231716Z"
+}
+]
+### B, aprovacoes: situacao == pendente ORDENADO por criadoEm desc. Fila do painel, todas as maquinas. FALTA INDICE.
+[{
+  "error": {
+    "code": 400,
+    "message": "The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/a-fabrica-soulan/firestore/indexes?create_composite=ClNwcm9qZWN0cy9hLWZhYnJpY2Etc291bGFuL2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy9hcHJvdmFjb2VzL2luZGV4ZXMvXxABGgwKCHNpdHVhY2FvEAEaDAoIY3JpYWRvRW0QAhoMCghfX25hbWVfXxAC",
+    "status": "FAILED_PRECONDITION"
+  }
+}
+]
+### C, fabricas: todas ORDENADO por atualizadoEm desc. Ouvinte da visao geral.
+[{
+  "readTime": "2026-10-13T12:42:14.837697Z"
+}
+]
+### D, fabricas: maquinaId == m1 ORDENADO por atualizadoEm desc. FALTA INDICE, proposta em docs/ost6-base-indices-propostos.json.
+[{
+  "error": {
+    "code": 400,
+    "message": "The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/a-fabrica-soulan/firestore/indexes?create_composite=ClFwcm9qZWN0cy9hLWZhYnJpY2Etc291bGFuL2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy9mYWJyaWNhcy9pbmRleGVzL18QARoNCgltYXF1aW5hSWQQARoQCgxhdHVhbGl6YWRvRW0QAhoMCghfX25hbWVfXxAC",
+    "status": "FAILED_PRECONDITION"
+  }
+}
+]
+### E, comandos: maquinaId == m1 E situacao == pendente, sem ordenacao. Ouvinte da ponte.
+[{
+  "readTime": "2026-10-13T12:42:15.260956Z"
+}
+]
+### F, comandos: fabricaId == f1 ORDENADO por criadoEm asc. Tela da fabrica. FALTA INDICE, proposta em docs/ost6-base-indices-propostos.json.
+[{
+  "error": {
+    "code": 400,
+    "message": "The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/a-fabrica-soulan/firestore/indexes?create_composite=ClFwcm9qZWN0cy9hLWZhYnJpY2Etc291bGFuL2RhdGFiYXNlcy8oZGVmYXVsdCkvY29sbGVjdGlvbkdyb3Vwcy9jb21hbmRvcy9pbmRleGVzL18QARoNCglmYWJyaWNhSWQQARoMCghjcmlhZG9FbRABGgwKCF9fbmFtZV9fEAE",
+    "status": "FAILED_PRECONDITION"
+  }
+}
+]
+### G, atividade de uma fabrica: ORDENADO por seq asc. Ouvinte da tela da fabrica.
+[{
+  "readTime": "2026-10-13T12:42:15.714689Z"
+}
+]
+### H, aprovacoes: maquinaId == m1 E situacao == pendente ORDENADO por criadoEm asc.
+[{
+  "readTime": "2026-10-13T12:42:15.894303Z"
+}
+]
+### I, fabricas: maquinaId == m1 E estado == em execucao, sem ordenacao. Reconciliacao real da ponte.
+[{
+  "readTime": "2026-10-13T12:42:16.050144Z"
+}
+]

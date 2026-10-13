@@ -1,0 +1,22 @@
+=== PRONTIDAO DO LOGIN, projeto a-fabrica-soulan ===
+Momento da verificacao: 2026-10-13T12:22:13.520Z
+
+  OK   token do gcloud: token de acesso obtido na maquina, nada gravado
+  NAO  Authentication ligado: a API de identidade responde CONFIGURATION_NOT_FOUND, HTTP 404, o Authentication nunca foi inicializado neste projeto
+  NAO  provedor Google ativo: nao ha lista de provedores porque o Authentication nao esta ligado, HTTP 404
+  NAO  dominios autorizados do login: a porta do cliente responde CONFIGURATION_NOT_FOUND, HTTP 400, o login do painel e da ponte ainda nao funciona
+
+VEREDITO: LOGIN NAO PRONTO. 3 de 4 verificacoes falharam. Nenhum teste ao vivo com login deve rodar agora.
+
+Passo do diretor no console, nesta ordem:
+  1. Abrir https://console.firebase.google.com/project/a-fabrica-soulan/authentication
+  2. Clicar em "Get started", ou "Vamos comecar", na tela do Authentication.
+  3. Na aba "Sign-in method", ou "Metodo de login", escolher o provedor Google.
+  4. Ligar a chave "Enable", ou "Ativar".
+  5. Em "Project support email", ou "E-mail de suporte do projeto", escolher henrique.vieira@soulan.com.br.
+  6. Salvar.
+  7. Rodar este verificador de novo: node verificar-login.mjs
+
+Observacao do backend: inicializar o Authentication por programa e recusado com BILLING_NOT_ENABLED,
+porque o Identity Platform exige plano pago para a API administrativa. O caminho e o clique do diretor
+no console, no plano gratuito, pela tela do Authentication.

@@ -1,0 +1,10 @@
+{
+  "releases": [
+    {
+      "name": "projects/a-fabrica-soulan/releases/cloud.firestore",
+      "rulesetName": "projects/a-fabrica-soulan/rulesets/f57036e6-6929-41b3-a5a6-81f6d2436ef8",
+      "createTime": "2026-10-13T01:46:55.576020Z",
+      "updateTime": "2026-10-13T02:18:45.454548Z"
+    }
+  ]
+}

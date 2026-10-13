@@ -1,0 +1,9 @@
+# Saida da compilacao da ponte
+dist/
+
+# Copias de trabalho do emulador: a fonte da verdade e firebase/firestore.rules
+emulador/firestore.rules
+emulador/firestore.indexes.json
+
+# Registros do emulador
+*-debug.log

@@ -1,0 +1,23 @@
+{
+  "_leia_me": "PROPOSTA, nao esta em vigor. §A.12: a OST 6 Bloco 1 pediu prova dos tres ouvintes do painel (fabricas, atividade de uma fabrica, aprovacoes pendentes). Estes dois indices nao sao desses tres, mas as consultas abaixo foram provadas contra a nuvem e HOJE FALHAM com FAILED_PRECONDITION, a query requires an index. Se o diretor aprovar, basta mover os dois blocos de _indices_propostos para a lista indexes de firebase/firestore.indexes.json e o coordenador publica com a flag do gate. Prova em firebase/testes/rodada-2026-10-13-091905/nuvem-indices-prova.txt, consultas D e F.",
+  "_indices_propostos": [
+    {
+      "_para_que": "Tela da fabrica, F2: listar os comandos daquela fabrica em ordem de tempo. Consulta: comandos where fabricaId == X orderBy criadoEm.",
+      "collectionGroup": "comandos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "fabricaId", "order": "ASCENDING" },
+        { "fieldPath": "criadoEm", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "_para_que": "Visao geral filtrada por maquina, F1 com F7: listar as fabricas de uma maquina, mais recentes primeiro. Consulta: fabricas where maquinaId == X orderBy atualizadoEm desc. Sem filtro de maquina a consulta ja funciona hoje, provada na consulta C.",
+      "collectionGroup": "fabricas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "maquinaId", "order": "ASCENDING" },
+        { "fieldPath": "atualizadoEm", "order": "DESCENDING" }
+      ]
+    }
+  ]
+}

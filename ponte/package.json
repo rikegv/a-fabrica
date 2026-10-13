@@ -2,15 +2,25 @@
   "name": "a-fabrica-ponte",
   "private": true,
   "type": "module",
-  "version": "0.1.0",
-  "description": "Ponte local da Fabrica: pilota o Claude Code e conversa com a base no Firestore. So conexao de saida.",
+  "version": "0.2.0",
+  "description": "Ponte local da Fabrica: pilota o Claude Code e conversa com a base no Firestore. TypeScript estrito, Node 20, so conexao de saida.",
   "engines": { "node": ">=20" },
   "scripts": {
-    "ponte": "node src/ponte.mjs",
-    "ponte:emulador": "cross-env PONTE_EMULADOR=1 node src/ponte.mjs"
+    "tipos": "tsc --noEmit -p tsconfig.json",
+    "compilar": "tsc -p tsconfig.json",
+    "ponte": "node dist/ponte.js",
+    "ponte:emulador": "cross-env PONTE_EMULADOR=1 node dist/ponte.js",
+    "entrar": "node dist/entrar.js",
+    "testes": "node dist/testes/sete-testes.js",
+    "testes:emulador": "cross-env PONTE_EMULADOR=1 node dist/testes/sete-testes.js"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.3.296",
     "firebase": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "cross-env": "^7.0.3",
+    "typescript": "^5.6.0"
   }
 }
