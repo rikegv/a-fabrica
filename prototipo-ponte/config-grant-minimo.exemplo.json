@@ -1,0 +1,10 @@
+{
+  "userSettings": {
+    "globalPermissionGrants": {
+      "allow": [
+        "command(regex:^echo prova-de-aprovacao$)",
+        "command(regex:^echo PORTAO-ISCA-OK$)"
+      ]
+    }
+  }
+}

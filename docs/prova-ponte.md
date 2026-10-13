@@ -356,3 +356,118 @@ O veto cai se, e so se, todas forem satisfeitas e provadas por evidencia:
 
 ## Conclusao da ponte, reconciliada com o veto
 A inversao prova que aprovar por fora executa e que, com o hook presente, tudo falha fechado. Mas a seguranca VETOU a inversao como base da Onda 2 enquanto o furo do hook ausente puder executar um pre-concedido sem o diretor. Portanto: a Onda 2 NAO deve ser construida sobre a inversao ainda. O caminho e atacar as cinco condicoes, com a numero 1 (garantia de portao antes de abrir, e recusar abrir sem portao) e a numero 2 (pre-grant minimo) como as que fecham o furo principal. So depois disso, com a evidencia na mao, vale propor a revisao do §A.6.
+
+---
+
+# OST 2: Portao a prova e pacote de aprovacao completo
+
+Agente responsavel: ponte. Seguranca audita ao final. Sessao viva com `agy` 1.3.3, cota autorizada.
+
+Regras operacionais da fabrica aplicadas nesta OST: cada rodada de teste cria a sua pasta nova e datada em `a-fabrica-lab/rodadas/`, com a fila dentro; nada e apagado para limpar; a pre-autorizacao vive num HOME descartavel, nunca na config global (§A.9).
+
+## Desenho do portao
+O `agy` fica pre-autorizado no minimo, num config descartavel. O hook `PreToolUse` e o PORTAO: segura toda chamada de risco, monta o pacote de aprovacao, grava o pedido na fila da rodada, espera a resposta do diretor vinda de fora, e so entao libera ou recusa. Falha fechada por construcao.
+
+Prova positiva do portao, exigencia nova: antes de abrir qualquer fabrica, a ponte dispara uma isca, `echo PORTAO-ISCA-OK`, que o hook vivo recusa com um motivo exato ("Isca do portao"). A ponte so abre a fabrica se ver esse motivo exato. Isca que executa, ou bloqueio sem o motivo exato, significa portao nao confirmado, e a ponte RECUSA abrir. So o hook vivo e correto produz o sinal; hook ausente, removido ou quebrado nao produz.
+
+## Pre-autorizacao minima, documentada
+Concedido exatamente dois comandos, ancorados, inertes, nada alem (arquivo `prototipo-ponte/config-grant-minimo.exemplo.json`):
+
+```json
+{ "userSettings": { "globalPermissionGrants": { "allow": [
+  "command(regex:^echo prova-de-aprovacao$)",
+  "command(regex:^echo PORTAO-ISCA-OK$)"
+] } } }
+```
+
+Por que cada um:
+- `echo PORTAO-ISCA-OK`: a isca da prova positiva. Precisa ser pre-autorizada para que, se o portao estiver ausente, ela EXECUTE e a ponte detecte a ausencia. Comando inerte, so imprime.
+- `echo prova-de-aprovacao`: o comando das provas de aprovar e recusar. Inerte, so imprime.
+
+Nada de curinga, nada de regex largo, nada que libere categoria. Provado estreito: `echo comando-nao-autorizado` foi negado, so os dois exatos passam. Como o pre-grant so cobre dois echoes inertes, mesmo o pior caso de falha aberta nao executa nada de risco.
+
+## Os seis resultados, saida real
+
+De `prototipo-ponte/evidencia/saida-portao.txt` (provas 1 a 5) e `saida-espera-longa.txt` (prova 6):
+
+```
+OK    prova 3 isca bloqueada, abre   isca bloqueada pelo portao, pode abrir
+OK    prova 1 aprovar executa        aprovado por fora e EXECUTOU
+OK    prova 2 recusar nao executa    recusado por fora, NAO executou
+OK    prova 4 config-removida        portao nao confirmado, ponte RECUSA abrir (isca executou=true)
+OK    prova 4 gancho-ausente         portao nao confirmado, ponte RECUSA abrir (isca executou=false)
+OK    prova 4 gancho-quebrado        portao nao confirmado, ponte RECUSA abrir (isca executou=false)
+OK    prova 5 gancho morre no meio   gancho morto no meio, NADA executou
+prova 6: EXECUTOU apos espera longa, sessao sobreviveu (total 331s)  passo parado 326.9s
+```
+
+1. Portao ativo, aprovar por fora EXECUTA. O diretor aprova, o comando roda.
+2. Portao ativo, recusar por fora NAO executa.
+3. Isca bloqueada na abertura, a fabrica pode abrir.
+4. Isca NAO confirmada, a ponte RECUSA abrir, nos tres casos: config do hook removida (isca chega a executar, pelo pre-grant, e e pega), gancho ausente (script sumido), gancho quebrado (script invalido). Nos tres, sem o sinal exato do portao, a ponte nao abre. E assim que o furo da OST 1 fica fechado na abertura.
+5. Gancho morto no meio da sessao, com uma chamada de risco depois, NADA executou. O `agy` bloqueia quando o hook morre.
+6. Espera longa acima de cinco minutos: a sessao sobreviveu a 320 s parada e executou apos a aprovacao. O passo da ferramenta ficou parado 326,9 s. Teto configurado no `timeout` do `hooks.json`, em 600 s.
+
+## Pacote de aprovacao completo, capturado de verdade
+
+O hook monta o pacote lendo o comando e o transcript da conversa, e marca a origem de cada campo. Regra de honestidade: `fato` e capturado do `agy`; `ponte` e deducao, nunca declaracao do agente. Risco e impacto sao sempre deducao da ponte.
+
+Pacote real, comando de escrita (`prototipo-ponte/evidencia/pacote-medio.json`):
+
+```json
+{
+  "oQue":    { "valor": "Set-Content -Path \"relatorio-final.txt\" -Value \"resumo\" -Encoding utf8", "origem": "fato" },
+  "resumo":  { "valor": "Create text file", "origem": "fato" },
+  "tarefa":  { "valor": "Crie o arquivo relatorio-final.txt com o texto resumo, usando o shell.", "origem": "fato" },
+  "fabrica": { "valor": "2b6d31de-...", "origem": "fato" },
+  "agenteDisse": { "valor": null, "origem": "fato" },
+  "porQue":  { "valor": "O agente nao narrou motivo; a ponte infere pela tarefa.", "origem": "ponte" },
+  "impacto": { "valor": "Cria ou altera arquivo ou estado local.", "origem": "ponte" },
+  "oQueSeraTocado": { "valor": ["relatorio-final.txt"], "origem": "fato mais leitura da ponte" },
+  "risco":   { "valor": "medio", "origem": "ponte" },
+  "tempoParadoMs": { "valor": 0, "origem": "fato" }
+}
+```
+
+Pacote real, comando de rede (`prototipo-ponte/evidencia/pacote-alto.json`), resumido:
+
+```json
+{
+  "oQue":   { "valor": "Invoke-WebRequest -Uri \"http://exemplo.com\" -OutFile \"exemplo.html\"", "origem": "fato" },
+  "impacto":{ "valor": "Pode apagar, publicar ou acessar rede, efeito dificil de desfazer.", "origem": "ponte" },
+  "oQueSeraTocado": { "valor": ["//exemplo.com", "exemplo.html"], "origem": "fato mais leitura da ponte" },
+  "risco":  { "valor": "alto", "origem": "ponte" }
+}
+```
+
+O pacote traz: o que vai fazer (fato), resumo (fato), a tarefa e a fabrica de origem (fato), o que o agente disse antes, quando disse (fato, aqui null porque o agente nao narrou), por que, deducao da ponte, impacto, deducao, o que sera tocado, fato mais leitura, nivel de risco baixo, medio ou alto, deducao da ponte, e o tempo parado. Honestidade preservada: risco e impacto vem marcados como leitura da ponte, nunca como declaracao do agente. Quando o agente nao narra, o pacote diz isso em vez de inventar.
+
+## Parecer de seguranca da OST 2 (agente seguranca)
+
+### Veredito: APROVADO COM RESSALVA
+
+O furo que motivou o veto da OST 1 esta fechado para o que importa. A seguranca nao encontrou, nas evidencias, nenhum caminho em que uma chamada de risco execute sem o diretor ter respondido. As cinco condicoes levantadas no veto estao satisfeitas com evidencia, entao, pela regra do proprio veto ("cai se e so se todas forem satisfeitas e provadas"), o veto cai.
+
+Foco unico, resposta: nao ha caminho provado de execucao de risco sem resposta do diretor. O unico canal que escapa do hook e o pre-grant, agora reduzido a dois comandos literais ancorados e inertes (`^echo prova-de-aprovacao$` e `^echo PORTAO-ISCA-OK$`). Qualquer comando fora desses dois nao esta pre-concedido: com hook presente, fica preso ate o diretor responder; com hook ausente, o agy headless auto nega. Os dois literais que poderiam escapar so imprimem texto, e a ancoragem literal nao permite injecao por sufixo. Pior caso de falha aberta: imprimir uma linha, nunca um comando de risco.
+
+O furo mecanico da OST 1 (hook ausente deixa o pre-concedido rodar) ainda existe, provado em `saida-portao.txt` prova 4 config removida. O que mudou o veredito: a ponte detecta isso na abertura pela prova positiva e recusa abrir, e o raio do furo residual e so texto inerte.
+
+### Condicao por condicao
+1. Garantia de portao antes de abrir: SATISFEITA. Isca bloqueada pelo motivo exato, e recusa de abrir nos tres casos de falha.
+2. Pre-grant minimo, nunca curinga: SATISFEITA. Dois comandos literais ancorados inertes.
+3. Verificacao do portao durante a sessao: SATISFEITA. Gancho morto no meio, nada executou. Ressalva: so a morte do processo foi testada, nao a remocao do registro com a sessao viva.
+4. Isolamento do grant fora da config real (§A.9): SATISFEITA no laboratorio, com HOME descartavel. Em producao fica como obrigacao de build.
+5. Pacote do §A.4 completo: SATISFEITA. Pacote com porque, impacto e risco, marcando fato e deducao.
+
+### Ressalvas, fronteira para a Onda 2 (nao sao furo provado)
+1. A seguranca repousa no comportamento empirico do agy 1.3.3 (hook invocado a cada chamada, nao pre-concedido auto negado em headless). Reconfirmar a cada versao do agy.
+2. A prova cobre so `run_command`. Cada outra categoria de ferramenta de risco (escrita, rede, MCP) precisa ser confirmada passando pelo portao na Onda 2.
+3. Prova 5 testou a morte do processo do hook, nao a remocao do registro com sessao viva. Precisa reverificacao continua, ou manter o pre-grant inerte.
+4. Regra dura da Onda 2: o pre-grant so e seguro enquanto inerte. Pre-grant jamais contem comando de risco. No instante em que um build pre-conceder algo com efeito, o furo reabre com raio real.
+5. Cosmetico: `tempoParadoMs` sai 0 no snapshot do pacote; o tempo parado real fica no `hook.log`.
+
+## Recomendacao final do agente ponte: a Onda 1 pode comecar?
+
+Sim. O portao esta auditado e aprovado com ressalva, e o furo da OST 1 esta fechado por duas camadas: prova positiva do portao na abertura, e pre-grant reduzido a comandos inertes. A Onda 1 (§A.8, enxergar em modo leitura) nao depende sequer do portao, e as provas 1, 2 e 4 da prova de conceito ja sustentam enxergar e comandar. O comandar e aprovar da Onda 2 agora tem um desenho de portao provado e aprovado, com as cinco ressalvas acima como obrigacoes de build, a principal sendo: o pre-grant jamais contem comando de risco, e a ponte nunca abre fabrica sem a prova positiva do portao passar.
+
+A proposta de texto para o §A.6, com a regra da falha fechada, a prova positiva do portao na abertura e o limite da pre-autorizacao minima, mais as tres regras operacionais da fabrica, esta em `docs/proposta-revisao-a6.md`. Proposta apenas, o CLAUDE.md nao foi alterado nesta OST.

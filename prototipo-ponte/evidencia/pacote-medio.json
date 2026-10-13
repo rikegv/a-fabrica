@@ -1,0 +1,58 @@
+{
+  "pacote": {
+    "capturadoEm": "2026-10-13T00:02:34.190Z",
+    "marcacao": "Campos com origem fato foram capturados do agy. Campos com origem ponte sao leitura da ponte, nao declaracao do agente. Risco e impacto sao sempre deducao da ponte.",
+    "oQue": {
+      "valor": "Set-Content -Path \"relatorio-final.txt\" -Value \"resumo\" -Encoding utf8",
+      "origem": "fato"
+    },
+    "resumo": {
+      "valor": "Create text file",
+      "origem": "fato"
+    },
+    "tarefa": {
+      "valor": "Crie o arquivo relatorio-final.txt com o texto resumo, usando o shell.",
+      "origem": "fato"
+    },
+    "fabrica": {
+      "valor": "2b6d31de-3cb6-4d4d-9d7e-898bcd72de6e",
+      "origem": "fato"
+    },
+    "workspace": {
+      "valor": [
+        "C:/Users/Henrique/a-fabrica-lab/projeto-bobo"
+      ],
+      "origem": "fato"
+    },
+    "agenteDisse": {
+      "valor": null,
+      "origem": "fato"
+    },
+    "porQue": {
+      "valor": "O agente nao narrou motivo antes de pedir; a ponte infere o motivo pela tarefa.",
+      "origem": "ponte"
+    },
+    "impacto": {
+      "valor": "Cria ou altera arquivo ou estado local.",
+      "origem": "ponte"
+    },
+    "oQueSeraTocado": {
+      "valor": [
+        "relatorio-final.txt"
+      ],
+      "origem": "fato mais leitura da ponte"
+    },
+    "risco": {
+      "valor": "medio",
+      "origem": "ponte"
+    },
+    "tempoParadoMs": {
+      "valor": 0,
+      "origem": "fato"
+    }
+  },
+  "bruto": {
+    "ferramenta": "run_command",
+    "conversationId": "2b6d31de-3cb6-4d4d-9d7e-898bcd72de6e"
+  }
+}

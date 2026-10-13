@@ -1,0 +1,5 @@
+portao confirmado. abrindo sessao e deixando o diretor demorar 320 s
+aprovacao escrita apos 320 s de espera real
+
+prova 6: EXECUTOU apos espera longa, sessao sobreviveu (total 331s)
+duracoes no stream: "duration_seconds":3.1734322 "duration_seconds":326.9268428

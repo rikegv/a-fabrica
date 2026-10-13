@@ -1,0 +1,59 @@
+{
+  "pacote": {
+    "capturadoEm": "2026-10-13T00:02:43.319Z",
+    "marcacao": "Campos com origem fato foram capturados do agy. Campos com origem ponte sao leitura da ponte, nao declaracao do agente. Risco e impacto sao sempre deducao da ponte.",
+    "oQue": {
+      "valor": "Invoke-WebRequest -Uri \"http://exemplo.com\" -OutFile \"exemplo.html\"",
+      "origem": "fato"
+    },
+    "resumo": {
+      "valor": "Download webpage to file",
+      "origem": "fato"
+    },
+    "tarefa": {
+      "valor": "Baixe o conteudo de http://exemplo.com para um arquivo, usando o shell.",
+      "origem": "fato"
+    },
+    "fabrica": {
+      "valor": "9746847f-a811-48bf-93f9-cbe3b2eafc80",
+      "origem": "fato"
+    },
+    "workspace": {
+      "valor": [
+        "C:/Users/Henrique/a-fabrica-lab/projeto-bobo"
+      ],
+      "origem": "fato"
+    },
+    "agenteDisse": {
+      "valor": null,
+      "origem": "fato"
+    },
+    "porQue": {
+      "valor": "O agente nao narrou motivo antes de pedir; a ponte infere o motivo pela tarefa.",
+      "origem": "ponte"
+    },
+    "impacto": {
+      "valor": "Pode apagar, publicar ou acessar rede, efeito dificil de desfazer.",
+      "origem": "ponte"
+    },
+    "oQueSeraTocado": {
+      "valor": [
+        "//exemplo.com",
+        "exemplo.html"
+      ],
+      "origem": "fato mais leitura da ponte"
+    },
+    "risco": {
+      "valor": "alto",
+      "origem": "ponte"
+    },
+    "tempoParadoMs": {
+      "valor": 0,
+      "origem": "fato"
+    }
+  },
+  "bruto": {
+    "ferramenta": "run_command",
+    "conversationId": "9746847f-a811-48bf-93f9-cbe3b2eafc80"
+  }
+}

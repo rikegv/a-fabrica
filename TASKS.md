@@ -12,3 +12,4 @@ Fila de trabalho da fábrica. Pendentes no topo, concluídas no rodapé. Cada ta
 - [x] OST 1 Parte 2, prova de conceito da ponte, agente ponte, 2026-10-12
 - [x] OST 1 Parte 2 tarefa 1, subir feature e main (validado), 2026-10-12
 - [x] OST 1 Parte 2 tarefa 2, spike da aprovacao invertida, agente ponte e seguranca, 2026-10-12
+- [x] OST 2, fechar o furo do portao, agente ponte e seguranca, 2026-10-12

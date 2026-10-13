@@ -1,0 +1,12 @@
+
+=== PORTAO A PROVA, resultados (provas 1 a 5) ===
+OK    prova 3 isca bloqueada, abre   isca bloqueada pelo portao, pode abrir
+OK    prova 1 aprovar executa        aprovado por fora e EXECUTOU
+OK    prova 2 recusar nao executa    recusado por fora, NAO executou
+OK    prova 4 config-removida        portao nao confirmado, ponte RECUSA abrir (isca executou=true)
+OK    prova 4 gancho-ausente         portao nao confirmado, ponte RECUSA abrir (isca executou=false)
+OK    prova 4 gancho-quebrado        portao nao confirmado, ponte RECUSA abrir (isca executou=false)
+OK    prova 5 gancho morre no meio   gancho morto no meio, NADA executou
+
+Pre-autorizado (minimo): echo prova-de-aprovacao e echo PORTAO-ISCA-OK, ancorados, nada alem.
+Evidencia por rodada em a-fabrica-lab/rodadas/. Prova 6 (espera longa) em ponte-espera-longa.mjs.

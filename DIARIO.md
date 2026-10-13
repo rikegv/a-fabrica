@@ -22,4 +22,20 @@ Correção da rodada anterior: o `agy` existe e é a CLI oficial, só não estav
 
 Entregue: protótipo prototipo-ponte/ponte-poc.mjs reescrito para pilotar o agy, o hook pretool-hook.mjs, evidências em prototipo-ponte/evidencia/, e docs/prova-ponte.md reescrito do zero. CLAUDE.md não alterado, conforme a OST.
 
+## 2026-10-12, OST 2, fechar o furo do portao
+
+Agentes: ponte executou, seguranca auditou ao final.
+
+Parte 1: spike da OST 1 subido para feature e main (7afffbf), gate reativado.
+
+Parte 2, portao a prova, seis provas em sessao viva com agy, todas OK (saida real em docs/prova-ponte.md e prototipo-ponte/evidencia): aprovar por fora executa; recusar nao executa; isca bloqueada abre; isca nao confirmada recusa abrir nos tres casos (config removida, gancho ausente, gancho quebrado); gancho morto no meio nada executa; espera longa de 320s sobreviveu. Pre-autorizacao minima, dois echoes inertes ancorados, sem curinga.
+
+Parte 3, pacote de aprovacao completo capturado de verdade, com o que, por que, impacto, o que sera tocado, risco baixo/medio/alto, tarefa e fabrica, tempo parado, marcando fato versus deducao da ponte.
+
+Regras operacionais aplicadas: cada rodada em pasta nova e datada em a-fabrica-lab/rodadas, fila dentro, nada apagado para limpar.
+
+Seguranca: APROVADO COM RESSALVA. O veto da OST 1 cai, nenhum caminho provado executa risco sem o diretor, cinco condicoes satisfeitas. Ressalvas de fronteira para a Onda 2, com destaque: pre-grant jamais contem comando de risco.
+
+Recomendacao: a Onda 1 pode comecar. Proposta de revisao do §A.6 e das tres regras operacionais em docs/proposta-revisao-a6.md. CLAUDE.md nao alterado.
+
 <!-- Nova entrada acima desta linha. Formato: ## AAAA-MM-DD, título curto -->
