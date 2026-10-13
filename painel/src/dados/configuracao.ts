@@ -9,7 +9,15 @@
  *    .gitignore ja ignora .env.* e *.local. O repositorio leva apenas o
  *    .env.example, com os nomes das variaveis e valores vazios.
  *
- * Nenhuma chave, nenhum appId e nenhum authDomain aparece em arquivo versionado.
+ * Nenhuma chave e nenhum authDomain aparece em arquivo versionado.
+ *
+ * Ressalva da seguranca da OST 6, corrigida aqui para nao afirmar o que e falso:
+ * o identificador do app APARECE em arquivo versionado, em ponte/instalar.ps1,
+ * porque a instalacao precisa dele para pedir a configuracao ao proprio Firebase.
+ * Isso e aceito de proposito: o identificador do app nao e segredo, ele vai dentro
+ * do init.json que o Hosting serve publicamente para qualquer navegador. Quem
+ * protege a base e a regra do Firestore mais a conta unica, nao o sigilo desse
+ * identificador. O que nunca entra no repositorio e a chave e a sessao.
  */
 
 export interface ConfiguracaoFirebase {

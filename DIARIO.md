@@ -48,4 +48,24 @@ Parte 2: sete provas no Claude Code em sessao viva, pelo @anthropic-ai/claude-ag
 
 Parte 3, Onda 1 Parte A: iniciada. Contrato confirmado para Claude Code, regras do Firestore e config em firebase/, plano e comando de login unico em docs/onda1-parte-a-plano.md. Parada no unico passo que a fabrica nao faz: o login interativo do diretor no Firebase (projeto a-fabrica-soulan). Depois do login, a fabrica cria o projeto, aplica regras, promove a ponte a servico, roda os oito testes e aciona a seguranca.
 
+## 2026-10-13, OST 6, ligar a ponte na base e o painel de verdade
+
+Agentes: ponte e backend em paralelo no Bloco 1, frontend no Bloco 2, coordenador no Bloco 3 e na publicação, seguranca na auditoria final.
+
+Duas decisões da madrugada revertidas pelo diretor e cumpridas: a pré-visualização em cima do protótipo morreu, e a ponte voltou para TypeScript.
+
+Coordenador: descobriu que o app web do Firebase não existia no projeto e criou, sem ele não há entrada de cliente nem para a ponte nem para o painel. Diagnosticou o bloqueio real do Bloco 1: o Authentication nunca foi inicializado em a-fabrica-soulan, a API de identidade responde CONFIGURATION_NOT_FOUND e a inicialização por programa é recusada com BILLING_NOT_ENABLED, porque o Identity Platform exige plano pago. Logo, é clique do diretor no console, e ficou registrado como pendência com o passo exato. Decidiu a arquitetura da entrada do cliente para não travar a ponte: provedor Google, sessão persistida em arquivo local fora do repositório, renovação pelo próprio SDK, e proibição expressa de servidor local de laço de retorno, porque escutar porta fere o §A.6.
+
+Ponte: entrada do cliente sem chave de serviço, com persistência própria do SDK e escada de credencial explícita. Porte completo para TypeScript estrito, sem any nos caminhos de decisão. As três ressalvas provadas ao vivo depois do porte. Os .mjs movidos, não apagados, §A.17. Instalação de um passo rodada de verdade, com tarefa agendada criada e sinal de vida chegando na base. Os sete testes da OST: 7 de 7 com sessão viva do Claude Code e a base no emulador. NENHUM contra a base real, porque o login não existe ainda. Isso está dito sem maquiar.
+
+Backend: provou o estado real da nuvem por API, não por comentário. Endureceu as regras, com hora do servidor obrigatória na trilha, respondidoPor obrigatório e aprovação nascendo sem resposta. Auditou contra o arquivo real da ponte: 76 casos de regra e 35 de escrita real, todos passando. Verificador de prontidão do login com falha fechada provada.
+
+Frontend: painel de verdade em Next.js 14, React 18, TypeScript e Tailwind, com tokens.json como fonte única, provado trocando a cor. Escopo da Onda 1 e nada mais, em modo leitura, com zero escritas no Firestore em todo o código. Login obrigatório com conta única. Dois furos achados por medição no navegador: uma linha de texto com altura zero e alvos de toque de 30 e 40 pontos, abaixo dos 44 do manual.
+
+Bloco 3: o protótipo público morreu nas duas frentes onde vivia. O canal preview-madrugada foi apagado, não deixado expirar, e o endereço antigo responde 404. O canal live, que também servia o protótipo sem login, passou a servir o painel de verdade com login exigido, em https://a-fabrica-soulan.web.app.
+
+Seguranca: APROVADO COM RESSALVA. Nenhum caminho executa risco sem resposta do diretor, as três ressalvas continuam duras depois do porte, a ponte não abre porta, a regra na nuvem nega todo mundo fora da conta do diretor (403 provado ao vivo), o painel exige login na fonte de dados e não só na tela, e não há segredo no repositório. Dez ressalvas, três bloqueando a main. Duas foram resolvidas na hora pelo coordenador: o legado em .mjs deixou de ser executável sem perder um byte, e as portas de entrada que os agentes tinham deixado vivas na máquina foram encerradas, inclusive um servidor de desenvolvimento escutando em todas as interfaces. A terceira, prova do segundo fator da conta Google, é do diretor.
+
+Gate de deploy: quatro ciclos de flag criada e removida. Uma vez ele bloqueou um push de verdade, porque o comando foi montado na ordem errada e a flag ainda não existia. É o teste obrigatório do §A.7 passando sem ensaio.
+
 <!-- Nova entrada acima desta linha. Formato: ## AAAA-MM-DD, título curto -->

@@ -1,7 +1,22 @@
 # Legado em .mjs, preservado, fora de uso
 
 Estes três arquivos são a ponte como ela nasceu na OST 5, em JavaScript puro:
-`base.mjs`, `claudeCode.mjs` e `ponte.mjs`.
+`base.mjs.txt`, `claudeCode.mjs.txt` e `ponte.mjs.txt`.
+
+## Por que terminam em .txt
+
+A auditoria de segurança da OST 6 achou que mover não bastava. Com o nome
+original, `node legado-mjs/ponte.mjs` ainda rodava: as dependências resolviam de
+`ponte/node_modules` e a última linha do arquivo se auto executava. Pior, o
+`initBase` do legado não faz login nenhum, então o que subia dali era uma ponte
+com identidade mais fraca que a de hoje. Dano real era nulo, porque a regra do
+Firestore nega quem não tem a identidade do diretor, mas código morto que roda
+é porta aberta e a segurança pediu que deixasse de rodar.
+
+A extensão final virou `.txt`, e com isso o Node recusa na partida, com
+`ERR_UNKNOWN_FILE_EXTENSION`. Nenhum byte do conteúdo foi tocado, §A.17: a
+evidência do que existia antes do porte continua inteira e legível. Para ler
+como código, basta abrir o arquivo.
 
 Na OST 6 a ponte voltou para TypeScript por decisão do diretor, §A.2: a ponte decide
 aprovação, e erro ali tem consequência de segurança. O código vivo está em `../src`

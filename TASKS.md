@@ -4,9 +4,10 @@ Fila de trabalho da fábrica. Pendentes no topo, concluídas no rodapé. Cada ta
 
 ## Pendentes
 <!-- Formato: - [ ] Título, onda, agentes, situação -->
-- [ ] OST 6 Bloco 1, ligar a ponte na base, Onda 1, agentes ponte e backend, em execucao
-- [ ] OST 6 Bloco 2, o painel de verdade na stack do §A.2, Onda 1, agente frontend, em execucao
-- [ ] OST 6 Bloco 3, matar o canal preview-madrugada e publicar o painel de verdade, Onda 1, agente devops, aguarda o Bloco 2
+- [ ] OST 6 Bloco 1 Passo 3, os sete testes contra a BASE REAL, Onda 1, agente ponte, BLOQUEADO no clique do diretor para ligar o Authentication
+- [ ] OST 6, validacao visual do painel de verdade, §A.13, Onda 1, diretor, aguarda o diretor
+- [ ] OST 6, prova do segundo fator da conta Google, §A.6, condicao 1 da seguranca, bloqueia a main, aguarda o diretor
+- [ ] OST 6, reauditoria da seguranca depois do login no ar, oito itens do parecer, Onda 1, agente seguranca, aguarda o login
 
 ## Concluídas
 <!-- Formato: - [x] Título, onda, agentes, data -->
@@ -19,3 +20,7 @@ Fila de trabalho da fábrica. Pendentes no topo, concluídas no rodapé. Cada ta
 - [x] OST 3 Parte 1, subir OST 2, 2026-10-12
 - [x] OST 4 Parte 1, corrigir a constituicao para Claude Code, 2026-10-12
 - [x] OST 4 Parte 2, provar no Claude Code, agente ponte e seguranca, 2026-10-12
+- [x] OST 6 Bloco 1, entrada do cliente, porte para TypeScript, instalacao de um passo e base endurecida, Onda 1, agentes ponte e backend, 2026-10-13
+- [x] OST 6 Bloco 2, o painel de verdade na stack do §A.2, Onda 1, agente frontend, 2026-10-13
+- [x] OST 6 Bloco 3, canal preview-madrugada apagado e painel de verdade publicado com login, Onda 1, coordenador, 2026-10-13
+- [x] OST 6, auditoria de seguranca, APROVADO COM RESSALVA, agente seguranca, 2026-10-13

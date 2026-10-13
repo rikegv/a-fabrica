@@ -8,8 +8,15 @@ rules_version = '2';
 // so o comentario de cabecalho. Prova em
 // firebase/testes/rodada-2026-10-13-091905/diferenca-regras.txt.
 //
-// ESTA VERSAO, com o endurecimento da OST 6, AINDA NAO ESTA NA NUVEM. Quem publica
-// e o coordenador, com a flag do gate, §A.7. Nenhum agente publica por conta propria.
+// ESTA VERSAO, com o endurecimento da OST 6, JA ESTA NA NUVEM. Publicada pelo
+// coordenador na OST 6, com a flag do gate criada e removida em seguida, §A.7.
+// Nenhum agente publica por conta propria.
+//
+// Como conferir, em vez de confiar neste comentario: baixe o conjunto publicado
+// em projects/a-fabrica-soulan/releases/cloud.firestore e compare com este
+// arquivo. A seguranca da OST 6 fez exatamente isso e achou identico, byte a
+// byte. Quem editar este arquivo, inclusive so o comentario, publica de novo,
+// senao esta frase deixa de ser verdade.
 //
 // Principios, §A.6:
 //  - Conta unica. So o e-mail do diretor, com e-mail verificado. Nega todo o resto.
