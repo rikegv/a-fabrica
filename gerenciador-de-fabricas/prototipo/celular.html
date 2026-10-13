@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fábricas no Celular</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components/bundle.css">
+<style>html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg-000); }
+.gf-root { max-width: 430px; margin: 0 auto; height: 100%; }
+.gf-mapp { height: 100%; }</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="../design-system/components/bundle.js"></script>
+</head>
+<body>
+<div id="root" class="gf-root gf-ambient"></div>
+<script>window.START = new URLSearchParams(location.search).get('tela') || 'approvals';</script>
+<script src="dados.js"></script>
+<script src="celular.js"></script>
+</body>
+</html>
