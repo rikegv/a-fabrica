@@ -149,6 +149,17 @@ export interface CampoMarcado<T> {
 /** Pacote completo do pedido de aprovacao, formato aprovado na OST 2. */
 export interface PacoteAprovacao {
   marcacao: string;
+  /**
+   * Quais padroes de mascara pegaram algo neste pacote. Vazio quase sempre.
+   *
+   * Nasceu do achado da auditoria da OST 7: o caminho da aprovacao publicava
+   * texto livre do agente sem mascara. Agora mascara, e DIZ que mascarou, porque
+   * o diretor lendo "[credencial mascarada]" na tela precisa saber que foi a
+   * ponte que trocou, e nao o agente que escreveu aquilo.
+   */
+  mascarou: string[];
+  /** O texto do agente foi cortado no teto? Para a tela nao fingir que acabou ali. */
+  textoDoAgenteCortado: boolean;
   oQue: CampoMarcado<string>;
   ferramenta: CampoMarcado<string>;
   tarefa: CampoMarcado<string>;

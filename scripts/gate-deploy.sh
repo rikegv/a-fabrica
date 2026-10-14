@@ -48,13 +48,24 @@ ESCRITA_RE='(-X[[:space:]]*(POST|PUT|PATCH|DELETE)|--request[[:space:]]+(POST|PU
 # propria e recusa sem ela, mas vigiado aqui tambem: quem publica passa pelo gate,
 # sem depender de o script estar correto.
 SCRIPT_RE='publicar\.mjs'
+# Os verbos do script que PUBLICAM de verdade. Se um deles estiver na linha, nao
+# existe exceção: --conferir ao lado nao salva.
+PUBLICA_RE='--(regra|indices|painel)'
 
 MOTIVO=''
 if printf '%s' "$COMMAND" | grep -Eiq "$DEPLOY_RE"; then
   MOTIVO='verbo de deploy ou push'
 elif printf '%s' "$COMMAND" | grep -Eiq "$API_RE" && printf '%s' "$COMMAND" | grep -Eq "$ESCRITA_RE"; then
   MOTIVO='escrita na API de publicacao (regra, hospedagem, funcao ou servico)'
-elif printf '%s' "$COMMAND" | grep -Eq "$SCRIPT_RE" && ! printf '%s' "$COMMAND" | grep -Eq -- '--conferir'; then
+elif printf '%s' "$COMMAND" | grep -Eq "$SCRIPT_RE" &&
+  { printf '%s' "$COMMAND" | grep -Eq -- "$PUBLICA_RE" || ! printf '%s' "$COMMAND" | grep -Eq -- '--conferir'; }; then
+  # A EXCECAO DO --conferir SO VALE SE ELE ESTIVER SOZINHO.
+  #
+  # Furo achado pela auditoria da OST 7: a versao anterior liberava qualquer linha
+  # que contivesse --conferir, e o script aceita --conferir e --painel na MESMA
+  # linha. Logo "publicar.mjs --conferir --painel" passava pelo gate, e quem
+  # segurava era so a conferencia interna do proprio script. Cinto e suspensorio
+  # tem de ser dois, nao um.
   MOTIVO='script de publicacao da fabrica'
 fi
 

@@ -32,6 +32,7 @@ import {
 } from './config.js';
 import { SessaoDesprotegida, exigirProtecao } from './protecaoSessao.js';
 import { iniciarPublicadorDeGanchos } from './ganchos.js';
+import { mascararCampo } from './mascara.js';
 import { despachar, type MundoDaPonte } from './acoes.js';
 import { RegistroDeFabricas } from './vivas.js';
 import type { NivelRisco, PacoteAprovacao } from './tipos.js';
@@ -75,18 +76,51 @@ interface DadosPacote {
  * capturado do fluxo ao vivo ou DEDUCAO da ponte. Nunca declaracao do agente
  * tomada como verdade.
  */
+/**
+ * Teto do texto do agente dentro do pacote de aprovacao.
+ *
+ * Existe por dois motivos. O primeiro e de leitura: o diretor decide olhando a
+ * tela, e paragrafo de dez mil caracteres nao se le, se ignora. O segundo e de
+ * seguranca: `aprovacoes` nao aceita apagar e aceita uma unica atualizacao, pela
+ * regra do Firestore, entao tudo que entra ali entra para sempre. Quanto menos
+ * texto livre atravessa esse caminho, menor a chance de levar junto o que nao
+ * devia.
+ */
+const TETO_TEXTO_DO_AGENTE = 4000;
+
 export function montarPacote(d: DadosPacote): PacoteAprovacao {
   const alvo = d.input['command'] ?? d.input['file_path'];
-  const cmd = typeof alvo === 'string' ? alvo : JSON.stringify(d.input).slice(0, 200);
+  const cmdBruto = typeof alvo === 'string' ? alvo : JSON.stringify(d.input).slice(0, 200);
+  // MASCARA NO CAMINHO DA APROVACAO, §A.6 regra 5.
+  //
+  // Achado da auditoria da OST 7, e ela tinha razao: a mascara era chamada SO no
+  // caminho dos ganchos. O pacote de aprovacao, que e o outro caminho em que texto
+  // livre sai desta maquina, publicava o comando e TODO o texto acumulado do
+  // agente sem mascara nenhuma, numa colecao que a regra proibe apagar. Ou seja: o
+  // caminho mais permanente era o unico sem filtro.
+  //
+  // O que a mascara e o que ela nao e, dito aqui para ninguem confiar demais:
+  // ela pega FORMAS CONHECIDAS de credencial, nao adivinha segredo. Ela reduz o
+  // acidente; nao autoriza mandar segredo para ca.
+  const cmdMascarado = mascararCampo(cmdBruto);
+  const cmd = cmdMascarado.valor ?? cmdBruto;
   const r: NivelRisco = d.toolName === 'Write' ? 'medio' : risco(cmd);
   const impacto: Record<NivelRisco, string> = {
     baixo: 'Sem efeito colateral aparente.',
     medio: 'Cria ou altera arquivo ou estado local.',
     alto: 'Pode apagar, publicar ou acessar rede.',
   };
-  const texto = d.textoAoVivo.trim();
+  const textoCru = d.textoAoVivo.trim();
+  const textoMascarado = mascararCampo(textoCru.slice(0, TETO_TEXTO_DO_AGENTE));
+  const texto = textoMascarado.valor ?? '';
+  const pegou = [...new Set([...cmdMascarado.pegou, ...textoMascarado.pegou])];
   return {
     marcacao: 'origem fato = capturado do fluxo ao vivo. origem ponte = deducao, nunca declaracao do agente.',
+    // Quando a mascara pegou algo, o diretor tem de saber que o que ele esta lendo
+    // foi mexido antes de chegar na tela, senao ele le "[credencial mascarada]" e
+    // acha que o agente escreveu aquilo.
+    mascarou: pegou,
+    textoDoAgenteCortado: textoCru.length > TETO_TEXTO_DO_AGENTE,
     oQue: { valor: cmd, origem: 'fato' },
     ferramenta: { valor: d.toolName, origem: 'fato' },
     tarefa: { valor: d.tarefa, origem: 'fato' },

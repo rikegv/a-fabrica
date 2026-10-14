@@ -71,6 +71,12 @@ conferir "publicar FUNCAO pela API, com POST" \
   'curl --request POST https://cloudfunctions.googleapis.com/v2/projects/a-fabrica-soulan/locations/us-central1/functions' 2
 conferir "script de publicacao da fabrica, regra" "node scripts/publicar.mjs --regra" 2
 conferir "script de publicacao da fabrica, painel" "node scripts/publicar.mjs --painel" 2
+# Furo achado pela auditoria da OST 7: --conferir ao lado de um verbo que publica
+# nao pode valer como exceção. O script aceita os dois na mesma linha.
+conferir "conferir E publicar na mesma linha, a excecao nao vale" \
+  "node scripts/publicar.mjs --conferir --painel" 2
+conferir "conferir E publicar regra na mesma linha, ordem trocada" \
+  "node scripts/publicar.mjs --regra --conferir" 2
 
 echo "PARTE 2, SEM flag: leitura e comando comum tem de PASSAR (codigo 0)"
 conferir "ler a regra publicada, com GET" \
