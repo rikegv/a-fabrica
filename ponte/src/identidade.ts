@@ -5,12 +5,15 @@
 // o token de atualizacao sozinho, porque a sessao esta persistida em arquivo
 // (persistenciaArquivo.ts).
 //
-// §A.6, regra dura que manda aqui: SO CONEXAO DE SAIDA. Nada neste modulo escuta
-// nada. Em especial, esta PROIBIDO abrir servidor HTTP local de laco de retorno
-// para receber redirecionamento de OAuth, mesmo em 127.0.0.1. Por isso a escada
-// de credencial abaixo nao tem nenhum degrau de navegador com retorno local: ela
-// recebe uma colagem do diretor, ou fala com o emulador. Se uma solucao precisar
-// escutar, ela esta errada.
+// §A.6, e aqui a regra MUDOU na OST 7, por esclarecimento do diretor: laco de
+// retorno local em 127.0.0.1 esta LIBERADO para a entrada da ponte. O que o §A.6
+// continua vetando e porta de ENTRADA na maquina, isto e, tunel de entrada,
+// endereco publico apontando para ca, ou servico escutando em interface que a
+// rede alcanca. Com isso, a COLAGEM de credencial MORREU: o degrau que lia uma
+// credencial colada no terminal foi removido inteiro, sem resto comentado, e no
+// lugar dele entrou o degrau de login no navegador (entradaNavegador.ts), com as
+// sete trancas descritas la. Fora do momento da entrada, nada nesta ponte escuta
+// nada: o servico ponte.ts nunca liga esse degrau, e e ele quem roda o dia inteiro.
 //
 // DECISAO DO DIRETOR, OST 6 parte 2, e ela e dura: esta PROIBIDO usar o token do
 // Firebase CLI como credencial da ponte. O degrau que lia o deposito do
@@ -46,6 +49,7 @@ import {
   type ConfigLocal,
 } from './config.js';
 import { criarPersistenciaEmArquivo, type SessaoEmArquivo } from './persistenciaArquivo.js';
+import { entrarPeloNavegador, EntradaPeloNavegadorFalhou } from './entradaNavegador.js';
 
 const NOME_APP = 'ponte-da-fabrica';
 // Porta propria da ponte, para nao colidir com emulador de outro projeto na mesma
@@ -58,8 +62,15 @@ export interface ContextoDegrau {
   config: ConfigLocal;
   emulador: boolean;
   sessao: SessaoEmArquivo;
-  /** Credencial colada pelo diretor na instalacao, quando houver. */
-  colagem: string | null;
+  /**
+   * Interruptor unico do degrau que abre o laco de retorno.
+   *
+   * Vale true SO em entrar.ts, que e o comando de login que o diretor roda na
+   * mao. O servico (ponte.ts) passa false, e por isso o servico que fica no ar o
+   * dia inteiro NUNCA tem caminho de codigo que abra porta nenhuma. Quem auditar
+   * tem um lugar so para conferir: quem seta isto.
+   */
+  permitirNavegador: boolean;
   /** Instancia de autenticacao, disponivel apenas na fase pelo SDK. */
   auth: Auth | null;
   registrar: (linha: string) => void;
@@ -132,11 +143,18 @@ function erroDe(e: unknown): string {
 }
 
 // ---------------------------------------------------------------------------
-// Degrau de colagem unica na instalacao: credencial de sessao vinda do painel
+// Degrau de nuvem: login no navegador do diretor, pelo laco de retorno local
 // ---------------------------------------------------------------------------
 //
-// Este e o unico degrau de nuvem que existe. O degrau que lia o token do Firebase
-// CLI foi removido por decisao do diretor (veja o cabecalho deste arquivo).
+// Este e o unico degrau de nuvem que existe. Dois degraus morreram antes dele, e
+// os dois por decisao do diretor: o que lia o token do Firebase CLI (OST 6 parte
+// 2, escopo de nuvem grande demais) e o de colagem no terminal (OST 7, trocado
+// pelo login no navegador). Nenhum dos dois deixou resto comentado.
+//
+// A parte que o navegador entrega e so o transporte. A conferencia e a gravacao
+// continuam sendo as mesmas da OST 6, ja provadas caso de erro por caso de erro:
+// troca no endpoint de token seguro por conexao de saida, conferencia das
+// alegacoes, e so depois disso o disco.
 
 interface SessaoTrocada {
   idToken: string;
@@ -168,27 +186,32 @@ async function trocarNoEndpointDeToken(apiKey: string, refreshToken: string): Pr
   return { idToken, refreshToken: novoRefresh, expiraEmMs: Date.now() + expiraEm * 1000, uid };
 }
 
-/** O que a leitura da colagem devolve: ou um token de atualizacao, ou o motivo exato da recusa. */
-export type LeituraDaColagem =
+/** O que a leitura da credencial devolve: ou um token de atualizacao, ou o motivo exato da recusa. */
+export type LeituraDaCredencial =
   | { ok: true; refreshToken: string; emailDeclarado: string | null; formato: 'texto puro' | 'JSON' }
   | { ok: false; motivo: string };
 
 const PISTA_JWT = /^ey[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 
 /**
- * Le a colagem do diretor, falha fechada e falante.
+ * Le a credencial que chega de fora, falha fechada e falante.
  *
- * Aceita duas formas: o token de atualizacao puro, ou um JSON de uma linha com
- * refreshToken e, se quiser, email. Qualquer outra coisa e recusada com motivo
- * legivel, porque quem le a mensagem e o diretor no meio da instalacao.
+ * Nasceu para ler colagem no terminal, na OST 6. A colagem morreu na OST 7, mas
+ * esta funcao continua valendo e continua sendo a primeira barreira, porque agora
+ * ela confere a FORMA do que a pagina do laco de retorno entregou. O ganho de
+ * manter: os dez casos de erro que a prova exercita continuam exercitando o mesmo
+ * codigo que roda de verdade, em vez de um caminho novo sem prova.
+ *
+ * Aceita duas formas: o token de atualizacao puro, ou um JSON com refreshToken e,
+ * se quiser, email. Qualquer outra coisa e recusada com motivo legivel.
  *
  * Nao valida assinatura nem decide identidade: isso quem faz e a troca no endpoint
  * de token do Google, mais a conferencia das alegacoes, mais a regra do Firestore.
  */
-export function lerColagem(bruto: string): LeituraDaColagem {
-  if (typeof bruto !== 'string') return { ok: false, motivo: 'nada foi colado' };
+export function lerCredencialEntregue(bruto: string): LeituraDaCredencial {
+  if (typeof bruto !== 'string') return { ok: false, motivo: 'nada foi entregue' };
   const texto = bruto.trim();
-  if (texto.length === 0) return { ok: false, motivo: 'nada foi colado, a linha veio vazia' };
+  if (texto.length === 0) return { ok: false, motivo: 'nada foi entregue, a linha veio vazia' };
 
   let candidato = texto;
   let emailDeclarado: string | null = null;
@@ -202,10 +225,10 @@ export function lerColagem(bruto: string): LeituraDaColagem {
     } catch {
       return {
         ok: false,
-        motivo: 'a colagem comeca com { mas nao e um JSON valido, provavelmente foi copiada pela metade',
+        motivo: 'a credencial entregue comeca com { mas nao e um JSON valido, provavelmente foi copiada pela metade',
       };
     }
-    if (typeof j !== 'object' || j === null) return { ok: false, motivo: 'a colagem e um JSON que nao descreve um objeto' };
+    if (typeof j !== 'object' || j === null) return { ok: false, motivo: 'a credencial entregue e um JSON que nao descreve um objeto' };
     const o = j as Record<string, unknown>;
     const emailBruto = o['email'];
     if (typeof emailBruto === 'string' && emailBruto.length > 0) emailDeclarado = emailBruto.trim().toLowerCase();
@@ -220,7 +243,7 @@ export function lerColagem(bruto: string): LeituraDaColagem {
     if (achou === null) {
       return {
         ok: false,
-        motivo: `o JSON colado nao tem o campo refreshToken (campos presentes: ${Object.keys(o).join(', ') || 'nenhum'})`,
+        motivo: `o JSON entregue nao tem o campo refreshToken (campos presentes: ${Object.keys(o).join(', ') || 'nenhum'})`,
       };
     }
     candidato = achou;
@@ -230,29 +253,29 @@ export function lerColagem(bruto: string): LeituraDaColagem {
   // tem espaco, entao tirar espaco em branco e seguro e evita recusa boba.
   candidato = candidato.replace(/\s+/g, '');
 
-  if (candidato.length === 0) return { ok: false, motivo: 'a credencial colada ficou vazia depois de tirar os espacos' };
+  if (candidato.length === 0) return { ok: false, motivo: 'a credencial entregue ficou vazia depois de tirar os espacos' };
   if (PISTA_JWT.test(candidato)) {
     return {
       ok: false,
       motivo:
-        'o que foi colado e um token de identificacao (JWT de tres partes), e a ponte precisa do token de ATUALIZACAO da sessao. ' +
+        'o que foi entregue e um token de identificacao (JWT de tres partes), e a ponte precisa do token de ATUALIZACAO da sessao. ' +
         'O token de identificacao vence em uma hora e nao serve para a ponte renovar sozinha.',
     };
   }
   if (candidato.length < 40) {
     return {
       ok: false,
-      motivo: `a credencial colada tem so ${candidato.length} caractere(s), curta demais para um token de atualizacao, provavelmente foi cortada na copia`,
+      motivo: `a credencial entregue tem so ${candidato.length} caractere(s), curta demais para um token de atualizacao, provavelmente foi cortada na copia`,
     };
   }
   if (!/^[A-Za-z0-9_.:\-]+$/.test(candidato)) {
     return {
       ok: false,
-      motivo: 'a credencial colada tem caractere que token de atualizacao nao tem, provavelmente veio texto da pagina junto',
+      motivo: 'a credencial entregue tem caractere que token de atualizacao nao tem, provavelmente veio texto da pagina junto',
     };
   }
   if (emailDeclarado !== null && emailDeclarado !== DIRETOR) {
-    return { ok: false, motivo: `o JSON colado diz que a conta e ${emailDeclarado}, e so o diretor entra, §A.6` };
+    return { ok: false, motivo: `o JSON entregue diz que a conta e ${emailDeclarado}, e so o diretor entra, §A.6` };
   }
   return { ok: true, refreshToken: candidato, emailDeclarado, formato };
 }
@@ -288,68 +311,104 @@ export function conferirAlegacoesDaSessao(
   const provedor = typeof firebase['sign_in_provider'] === 'string' ? firebase['sign_in_provider'] : null;
   const base = { email, verificado, projeto, provedor };
   if (email === null) return { ...base, ok: false, motivo: 'a sessao devolvida nao tem e-mail nenhum' };
-  if (email !== DIRETOR) return { ...base, ok: false, motivo: `a credencial colada e da conta ${email}, nao do diretor, §A.6` };
-  if (!verificado) return { ...base, ok: false, motivo: 'a credencial colada tem e-mail nao verificado, e o verificado e obrigatorio, §A.6' };
+  if (email !== DIRETOR) return { ...base, ok: false, motivo: `a credencial entregue e da conta ${email}, nao do diretor, §A.6` };
+  if (!verificado) return { ...base, ok: false, motivo: 'a credencial entregue tem e-mail nao verificado, e o verificado e obrigatorio, §A.6' };
   if (projeto !== projectId) {
-    return { ...base, ok: false, motivo: `a credencial colada e do projeto ${projeto ?? 'desconhecido'}, e esta ponte e do projeto ${projectId}` };
+    return { ...base, ok: false, motivo: `a credencial entregue e do projeto ${projeto ?? 'desconhecido'}, e esta ponte e do projeto ${projectId}` };
   }
   return { ...base, ok: true, motivo: `conta ${email}, e-mail verificado, projeto ${projeto}, provedor ${provedor ?? 'nao declarado'}` };
 }
 
-const degrauColagemNaInstalacao: Degrau = {
-  nome: 'colagem-na-instalacao',
+/**
+ * Confere uma credencial que veio de fora e, SO se ela passar em tudo, grava a
+ * sessao no disco.
+ *
+ * Esta funcao e o lugar unico onde credencial de nuvem vira sessao em disco. Era
+ * o corpo do degrau de colagem na OST 6; ficou separada na OST 7 para o degrau do
+ * navegador usar exatamente o mesmo caminho, sem copia. Toda recusa sai daqui sem
+ * gravar um byte.
+ */
+async function conferirEGravarSessao(
+  ctx: ContextoDegrau,
+  credencialBruta: string,
+  deOnde: string
+): Promise<SaidaDegrau> {
+  const leitura = lerCredencialEntregue(credencialBruta);
+  if (!leitura.ok) {
+    return { ok: false, detalhe: `a credencial foi recusada antes de qualquer chamada: ${leitura.motivo}` };
+  }
+  ctx.registrar(
+    `credencial de ${deOnde} lida em formato de ${leitura.formato}, ${leitura.refreshToken.length} caractere(s), ` +
+      `conta declarada ${leitura.emailDeclarado ?? 'nao declarada'}`
+  );
+  let s: SessaoTrocada;
+  try {
+    s = await trocarNoEndpointDeToken(ctx.config.apiKey, leitura.refreshToken);
+  } catch (e) {
+    return {
+      ok: false,
+      detalhe:
+        'o endpoint de token do Google recusou a credencial entregue. ' +
+        'Isso acontece quando a credencial venceu, foi revogada ou e de outro projeto. ' +
+        'Faca o login no navegador outra vez.',
+      erroReal: erroDe(e),
+    };
+  }
+  const alegacoes = alegacoesDoJwt(s.idToken);
+  if (alegacoes === null) {
+    return { ok: false, detalhe: 'o endpoint de token devolveu uma sessao que a ponte nao conseguiu ler, recusado por seguranca' };
+  }
+  const conferido = conferirAlegacoesDaSessao(alegacoes, ctx.config.projectId);
+  ctx.registrar(`sessao trocada e conferida: ${conferido.motivo}`);
+  if (!conferido.ok) return { ok: false, detalhe: conferido.motivo };
+  const email = conferido.email as string;
+  // So aqui, com tudo conferido, a sessao vai para o disco. Credencial recusada
+  // nao deixa nada gravado. O formato e o que o proprio SDK le na abertura: dali
+  // em diante o SDK renova sozinho e o diretor nao loga de novo.
+  ctx.sessao.escrever(ctx.sessao.chaveDoUsuario(ctx.config.apiKey, NOME_APP), {
+    uid: s.uid,
+    email,
+    emailVerified: true,
+    isAnonymous: false,
+    providerData: [{ providerId: 'google.com', uid: email, displayName: null, email, phoneNumber: null, photoURL: null }],
+    stsTokenManager: { refreshToken: s.refreshToken, accessToken: s.idToken, expirationTime: s.expiraEmMs },
+    createdAt: String(Date.now()),
+    lastLoginAt: String(Date.now()),
+    apiKey: ctx.config.apiKey,
+    appName: NOME_APP,
+  });
+  return { ok: true, detalhe: `sessao gravada para ${email}, uid ${s.uid}` };
+}
+
+const degrauNavegadorLocal: Degrau = {
+  nome: 'login-no-navegador',
   descricao:
-    'O diretor abre o painel no navegador, ja logado como ele, e cola na instalacao a credencial de sessao daquela sessao de navegador. ' +
-    'A ponte troca essa credencial por sessao propria no endpoint de token seguro, por conexao de SAIDA, confere que a conta e a do diretor ' +
-    'com e-mail verificado e que a sessao e deste projeto, e so entao grava.',
+    'A ponte abre uma pagina no navegador do diretor, presa em 127.0.0.1 e com segredo de uso unico, e ele entra com o Google, ' +
+    'com a segunda etapa que a conta dele exige. A pagina devolve a credencial da sessao pelo laco de retorno; a ponte troca por ' +
+    'sessao propria no endpoint de token seguro, por conexao de SAIDA, confere que a conta e a do diretor com e-mail verificado e ' +
+    'que a sessao e deste projeto, e so entao grava. A porta fecha no fim, sempre.',
   fase: 'antes do SDK',
-  aplicavel: (ctx) => !ctx.emulador && ctx.colagem !== null,
+  // Duas condicoes, e as duas tem de valer: fora do emulador, e com o interruptor
+  // ligado, que SO o comando de login liga. O servico nunca chega aqui.
+  aplicavel: (ctx) => !ctx.emulador && ctx.permitirNavegador,
   async tentar(ctx) {
-    const leitura = lerColagem(ctx.colagem ?? '');
-    if (!leitura.ok) {
-      return { ok: false, detalhe: `a colagem foi recusada antes de qualquer chamada: ${leitura.motivo}` };
+    let credencial: Awaited<ReturnType<typeof entrarPeloNavegador>>;
+    try {
+      credencial = await entrarPeloNavegador({ config: ctx.config, registrar: ctx.registrar });
+    } catch (e) {
+      if (e instanceof EntradaPeloNavegadorFalhou) {
+        return { ok: false, detalhe: `${e.message}. O que fazer: ${e.oQueFazer}`, erroReal: e.message };
+      }
+      return { ok: false, detalhe: 'a entrada pelo navegador falhou', erroReal: erroDe(e) };
     }
     ctx.registrar(
-      `colagem lida em formato de ${leitura.formato}, ${leitura.refreshToken.length} caractere(s), ` +
-        `conta declarada ${leitura.emailDeclarado ?? 'nao declarada'}`
+      `porta do laco de retorno ficou aberta ${credencial.portaAbertaMs} ms na porta ${credencial.porta}, e ja fechou`
     );
-    let s: SessaoTrocada;
-    try {
-      s = await trocarNoEndpointDeToken(ctx.config.apiKey, leitura.refreshToken);
-    } catch (e) {
-      return {
-        ok: false,
-        detalhe:
-          'o endpoint de token do Google recusou a credencial colada. ' +
-          'Isso acontece quando a credencial venceu, foi revogada, e de outro projeto ou foi copiada pela metade. ' +
-          'Copie de novo no painel ja logado e cole outra vez.',
-        erroReal: erroDe(e),
-      };
-    }
-    const alegacoes = alegacoesDoJwt(s.idToken);
-    if (alegacoes === null) {
-      return { ok: false, detalhe: 'o endpoint de token devolveu uma sessao que a ponte nao conseguiu ler, recusado por seguranca' };
-    }
-    const conferido = conferirAlegacoesDaSessao(alegacoes, ctx.config.projectId);
-    ctx.registrar(`sessao trocada e conferida: ${conferido.motivo}`);
-    if (!conferido.ok) return { ok: false, detalhe: conferido.motivo };
-    const email = conferido.email as string;
-    // So aqui, com tudo conferido, a sessao vai para o disco. Colagem recusada nao
-    // deixa nada gravado. O formato e o que o proprio SDK le na abertura: dali em
-    // diante o SDK renova sozinho e a colagem nunca se repete.
-    ctx.sessao.escrever(ctx.sessao.chaveDoUsuario(ctx.config.apiKey, NOME_APP), {
-      uid: s.uid,
-      email,
-      emailVerified: true,
-      isAnonymous: false,
-      providerData: [{ providerId: 'google.com', uid: email, displayName: null, email, phoneNumber: null, photoURL: null }],
-      stsTokenManager: { refreshToken: s.refreshToken, accessToken: s.idToken, expirationTime: s.expiraEmMs },
-      createdAt: String(Date.now()),
-      lastLoginAt: String(Date.now()),
-      apiKey: ctx.config.apiKey,
-      appName: NOME_APP,
+    const bruta = JSON.stringify({
+      email: credencial.emailDeclarado,
+      refreshToken: credencial.refreshToken,
     });
-    return { ok: true, detalhe: `sessao gravada para ${email}, uid ${s.uid}` };
+    return conferirEGravarSessao(ctx, bruta, 'login no navegador');
   },
 };
 
@@ -434,7 +493,7 @@ const degrauEmulador: Degrau = {
  * Fora desta lista, o unico caminho de identidade e a sessao ja salva, que o SDK
  * renova sozinho.
  */
-export const ESCADA: Degrau[] = [degrauEmulador, degrauColagemNaInstalacao];
+export const ESCADA: Degrau[] = [degrauEmulador, degrauNavegadorLocal];
 
 // ---------------------------------------------------------------------------
 // Abertura da identidade
@@ -452,7 +511,13 @@ async function conferirDiretor(usuario: User): Promise<{ uid: string; email: str
 
 export interface OpcoesIdentidade {
   emulador?: boolean;
-  colagem?: string | null;
+  /**
+   * Liga o degrau que abre o laco de retorno em 127.0.0.1 para o login no
+   * navegador. PADRAO FALSO, de propósito: quem nao pedir, nao abre porta. Só o
+   * comando de login (entrar.ts) passa true. O serviço, as provas e os testes
+   * nunca passam.
+   */
+  permitirNavegador?: boolean;
   registrar?: (linha: string) => void;
 }
 
@@ -474,7 +539,14 @@ export async function abrirIdentidade(opcoes: OpcoesIdentidade = {}): Promise<Id
   const sessao = criarPersistenciaEmArquivo(emulador ? CAMINHO_SESSAO_EMULADOR : CAMINHO_SESSAO);
   registrar(`sessao persistida em ${sessao.caminho}`);
 
-  const ctxBase: ContextoDegrau = { config, emulador, sessao, colagem: opcoes.colagem ?? null, auth: null, registrar };
+  const ctxBase: ContextoDegrau = {
+    config,
+    emulador,
+    sessao,
+    permitirNavegador: opcoes.permitirNavegador === true,
+    auth: null,
+    registrar,
+  };
 
   const jaTemSessao = sessao.ler(sessao.chaveDoUsuario(config.apiKey, NOME_APP)) !== null;
   let degrauUsado = jaTemSessao ? 'sessao-salva' : '';
@@ -531,8 +603,8 @@ export async function abrirIdentidade(opcoes: OpcoesIdentidade = {}): Promise<Id
   if (!usuarioBruto) {
     throw new IdentidadeRecusada(
       'nenhum degrau da escada de credencial entregou sessao. A ponte nao sobe sem identidade do diretor, §A.6. ' +
-        'Rode a instalacao com a colagem, uma vez so: ' +
-        'powershell -ExecutionPolicy Bypass -File ponte\\instalar.ps1 -Colar',
+        'Rode o login no navegador, uma vez so: ' +
+        'powershell -ExecutionPolicy Bypass -File ponte\\instalar.ps1',
       relato
     );
   }

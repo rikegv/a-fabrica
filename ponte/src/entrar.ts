@@ -4,19 +4,32 @@
 // %USERPROFILE%\.a-fabrica-ponte\sessao.json. Dali em diante o proprio SDK
 // renova o token e o diretor nao loga de novo.
 //
-// §A.6: so conexao de saida. Nada aqui escuta nada, nem em 127.0.0.1.
+// §A.6 na leitura da OST 7: ESTE comando, e so ele, abre o laco de retorno em
+// 127.0.0.1 para o login no navegador. Ele e o comando que o diretor roda na mao,
+// vive segundos e fecha a porta sempre, inclusive em erro. O servico, que fica no
+// ar o dia inteiro, nunca liga esse degrau. Veja entradaNavegador.ts.
+//
+// A COLAGEM MORREU na OST 7. Nao existe mais --colar, nem leitura de credencial
+// pela entrada de texto, nem mensagem mandando o diretor copiar token de tela.
 //
 // Uso:
-//   node dist/entrar.js                 confere a sessao e tenta os degraus que nao pedem nada
-//   node dist/entrar.js --colar         le da entrada de texto a credencial que o painel mostra
+//   node dist/entrar.js                 confere a sessao, e faz o login no navegador se faltar
 //   node dist/entrar.js --emulador      entra no emulador, para teste sem a nuvem
+//   node dist/entrar.js --sem-navegador confere a sessao e NAO abre porta nenhuma
 //   node dist/entrar.js --relato ARQ    grava o relato passo a passo no arquivo indicado
 
-import { appendFileSync, writeFileSync } from 'node:fs';
-import { createInterface } from 'node:readline';
+import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
 import { deleteApp, getApps } from 'firebase/app';
-import { CAMINHO_SESSAO, CAMINHO_SESSAO_EMULADOR, FaltaConfig, protegerPastaLocal } from './config.js';
-import { ESCADA, IdentidadeRecusada, abrirIdentidade, lerColagem } from './identidade.js';
+import {
+  CAMINHO_CONFIG,
+  CAMINHO_SESSAO,
+  CAMINHO_SESSAO_EMULADOR,
+  FaltaConfig,
+  PASTA_LOCAL,
+  protegerPastaLocal,
+} from './config.js';
+import { ESCADA, IdentidadeRecusada, abrirIdentidade } from './identidade.js';
+import { aplicarProtecao, conferirProtecao, exigirProtecao } from './protecaoSessao.js';
 
 /**
  * Sai fechando o que esta aberto.
@@ -39,21 +52,9 @@ function argumento(nome: string): string | null {
   return v !== undefined && !v.startsWith('--') ? v : '';
 }
 
-async function pedirColagem(): Promise<string> {
-  // Se a credencial vier por entrada de texto redirecionada (instalacao sem teclado,
-  // prova de caminho), le o que chegou. Senao, pergunta.
-  console.log('');
-  console.log('Cole aqui a credencial de sessao do painel, ja logado como voce, e aperte Enter.');
-  console.log('Ela e usada UMA vez: a ponte troca por sessao propria e dali em diante o SDK renova sozinho.');
-  console.log('A credencial colada nao e gravada em arquivo nenhum, nem em relato.');
-  const leitor = createInterface({ input: process.stdin, output: process.stdout });
-  const linha = await new Promise<string>((resolve) => leitor.question('credencial: ', resolve));
-  leitor.close();
-  return linha;
-}
-
 async function principal(): Promise<void> {
   const emulador = process.argv.includes('--emulador') || process.env.PONTE_EMULADOR === '1';
+  const semNavegador = process.argv.includes('--sem-navegador');
   const arquivoRelato = argumento('--relato');
   const relato: string[] = [];
   const registrar = (linha: string): void => {
@@ -62,46 +63,57 @@ async function principal(): Promise<void> {
     if (arquivoRelato) appendFileSync(arquivoRelato, `${linha}\n`, 'utf8');
   };
 
+  const caminhoSessao = emulador ? CAMINHO_SESSAO_EMULADOR : CAMINHO_SESSAO;
+
   console.log('A Fabrica, login de uma vez da ponte');
   console.log('');
   console.log('Fechando a pasta local para o seu usuario:');
-  const icacls = protegerPastaLocal();
-  console.log(icacls);
-  if (arquivoRelato) writeFileSync(arquivoRelato, `icacls:\n${icacls}\n\n`, 'utf8');
+  const icaclsPasta = protegerPastaLocal();
+  console.log(icaclsPasta);
+  if (arquivoRelato) writeFileSync(arquivoRelato, `icacls da pasta:\n${icaclsPasta}\n\n`, 'utf8');
 
   console.log('');
   console.log('Escada de credencial, na ordem de preferencia:');
   for (const d of ESCADA) console.log(`  ${d.nome} (${d.fase}): ${d.descricao}`);
   console.log('');
 
-  const colagem = process.argv.includes('--colar') ? await pedirColagem() : null;
-
-  // Confere a forma do que foi colado ANTES de qualquer chamada de rede, e recusa
-  // com mensagem clara. Falha fechada: colagem fora de forma nao vira sessao e nao
-  // grava nada em disco.
-  if (colagem !== null) {
-    const leitura = lerColagem(colagem);
-    if (!leitura.ok) {
-      console.log('');
-      console.error('A credencial colada foi recusada, e nada foi gravado.');
-      console.error(`Motivo: ${leitura.motivo}`);
-      console.error('');
-      console.error('O que fazer: volte ao painel ja logado, copie a credencial de sessao inteira e rode de novo');
-      console.error('  powershell -ExecutionPolicy Bypass -File ponte\\instalar.ps1 -Colar');
-      await sairLimpo(4);
-      return;
-    }
-    registrar(
-      `colagem conferida na forma: ${leitura.formato}, ${leitura.refreshToken.length} caractere(s), ` +
-        `conta declarada ${leitura.emailDeclarado ?? 'nao declarada'}`
-    );
-  }
-
   try {
-    const id = await abrirIdentidade({ emulador, colagem, registrar });
+    const id = await abrirIdentidade({ emulador, permitirNavegador: !semNavegador, registrar });
+
+    // Trancar o ARQUIVO de sessao, nao so a pasta. Na Onda 2 este arquivo vale
+    // como chave de aprovacao: a ponte escreve resposta de aprovacao na base com
+    // ele. Modo 0o600 do Node nao mexe na lista de controle de acesso do Windows,
+    // entao quem tranca de verdade e o icacls, aqui.
+    console.log('');
+    console.log('Trancando o arquivo de sessao para o seu usuario, e so ele:');
+    const icaclsArquivo = aplicarProtecao(caminhoSessao);
+    console.log(icaclsArquivo);
+    if (arquivoRelato) appendFileSync(arquivoRelato, `icacls do arquivo de sessao:\n${icaclsArquivo}\n\n`, 'utf8');
+
+    // E conferir que trancou, em vez de afirmar que trancou. Afirmacao de
+    // protecao sem conferencia foi exatamente o que a seguranca vetou antes.
+    const vereditos = [conferirProtecao(PASTA_LOCAL), conferirProtecao(CAMINHO_CONFIG), conferirProtecao(caminhoSessao)];
+    for (const v of vereditos) console.log(`  ${v.protegido ? 'TRANCADO' : 'ABERTO'}: ${v.motivo}`);
+    if (arquivoRelato) {
+      appendFileSync(
+        arquivoRelato,
+        `conferencia da tranca:\n${vereditos.map((v) => `${v.protegido ? 'TRANCADO' : 'ABERTO'}: ${v.motivo}\n${v.saidaIcacls}`).join('\n')}\n`,
+        'utf8'
+      );
+    }
+    const abertos = vereditos.filter((v) => !v.protegido);
+    if (abertos.length > 0) {
+      console.log('');
+      console.error('O login funcionou, mas a tranca do arquivo de sessao NAO ficou de pe.');
+      console.error('A ponte vai recusar subir assim, de proposito, porque esse arquivo vale como chave de aprovacao.');
+      for (const v of abertos) console.error(`  ${v.motivo}`);
+      await deleteApp(id.app).catch(() => undefined);
+      await sairLimpo(5);
+    }
+
     console.log('');
     console.log(`Pronto. A ponte entra como ${id.usuario.email}, pelo degrau ${id.degrau}.`);
-    console.log(`Sessao guardada em ${emulador ? CAMINHO_SESSAO_EMULADOR : CAMINHO_SESSAO}, so o seu usuario le.`);
+    console.log(`Sessao guardada em ${caminhoSessao}, trancada para o seu usuario e so ele.`);
     console.log('O SDK renova o token sozinho. Voce nao precisa logar de novo.');
     // Fecha o aplicativo do Firebase antes de sair. Sem isto, o Node pode cair no
     // encerramento com os canais de rede ainda abertos e devolver codigo de erro
@@ -120,13 +132,16 @@ async function principal(): Promise<void> {
       console.error(e.message);
       console.error('');
       console.error('O que resolve, uma vez so:');
-      console.error('1. Abra https://a-fabrica-soulan.web.app e entre com a sua conta do Google.');
-      console.error('2. Com o painel aberto, copie a credencial de sessao daquela sessao de navegador.');
-      console.error('3. Rode: powershell -ExecutionPolicy Bypass -File ponte\\instalar.ps1 -Colar');
-      console.error('   e cole a credencial quando ele pedir.');
+      console.error('  powershell -ExecutionPolicy Bypass -File ponte\\instalar.ps1');
+      console.error('  Vai abrir uma pagina na sua maquina, em 127.0.0.1. Entre com a sua conta do Google.');
       console.error('');
       console.error('A ponte nunca usa o token do Firebase CLI, por decisao do diretor: aquele token tem');
       console.error('escopo de nuvem muito maior do que as regras do Firestore limitam.');
+      if (existsSync(caminhoSessao)) {
+        const v = conferirProtecao(caminhoSessao);
+        console.error('');
+        console.error(`Estado da tranca do arquivo de sessao: ${v.protegido ? 'TRANCADO' : 'ABERTO'}, ${v.motivo}`);
+      }
       await sairLimpo(3);
     }
     console.error('Falha ao entrar.');
@@ -134,5 +149,8 @@ async function principal(): Promise<void> {
     await sairLimpo(1);
   }
 }
+
+// Exportado para a prova usar o mesmo portao que o servico usa, sem copia.
+export { exigirProtecao };
 
 void principal();

@@ -13,16 +13,20 @@
 #       %USERPROFILE%\.a-fabrica-ponte, com permissao so do seu usuario.
 # §A.20: todo comando do firebase diz o projeto de forma explicita.
 #
+# OST 7: a COLAGEM de credencial MORREU. O login agora e no navegador, por laco de
+# retorno em 127.0.0.1, liberado pelo esclarecimento do §A.6 do diretor. Nao existe
+# mais -Colar, e nao existe mais caminho que peca credencial no terminal.
+#
 # Uso:
 #   powershell -ExecutionPolicy Bypass -File ponte\instalar.ps1
-#   powershell -ExecutionPolicy Bypass -File ponte\instalar.ps1 -Colar
-#       (pede a credencial de sessao que o painel mostra, caso o login direto nao sirva)
 #   powershell -ExecutionPolicy Bypass -File ponte\instalar.ps1 -SemSubir
 #       (instala e registra, sem subir a ponte agora)
+#   powershell -ExecutionPolicy Bypass -File ponte\instalar.ps1 -SemNavegador
+#       (nao abre a pagina de login; serve para conferir o que ja esta instalado)
 
 param(
-  [switch]$Colar,
-  [switch]$SemSubir
+  [switch]$SemSubir,
+  [switch]$SemNavegador
 )
 
 $ErrorActionPreference = 'Stop'
@@ -70,37 +74,37 @@ if (Test-Path $cfg) { $atual = Get-Content $cfg -Raw | ConvertFrom-Json }
 $maquinaId = if ($atual -and $atual.maquinaId) { $atual.maquinaId } else { 'maquina-' + [guid]::NewGuid().ToString('N').Substring(0, 12) }
 $nomeMaquina = if ($atual -and $atual.nomeMaquina) { $atual.nomeMaquina } else { $env:COMPUTERNAME }
 
-# O firebase CLI escreve o andamento na saida de erro; por isso aqui a parada em
-# erro fica suspensa e o JSON e recortado da saida junta.
+# A configuracao do cliente vem da PROPRIA HOSPEDAGEM, que a serve em aberto, de
+# proposito, porque ela e publica por desenho (chave de API de cliente, dominio de
+# autenticacao, identificador do projeto e do aplicativo). Isto e conexao de SAIDA
+# e nao pede credencial nenhuma.
+#
+# Mudou na OST 7, e o motivo e pratico: antes isto dependia do firebase CLI estar
+# logado, e quando a credencial dele venceu a instalacao travou. A instalacao da
+# ponte nao pode depender de login de outra ferramenta.
 $sdk = $null
 $guardaErro = $ErrorActionPreference
 $ErrorActionPreference = 'Continue'
 try {
-  $bruto = (& firebase apps:sdkconfig WEB $appWeb --project $projetoNuvem --json 2>&1 | Out-String)
-  $inicio = $bruto.IndexOf('{')
-  if ($inicio -ge 0) {
-    $resposta = $bruto.Substring($inicio) | ConvertFrom-Json
-    if ($resposta.result -and $resposta.result.sdkConfig) { $sdk = $resposta.result.sdkConfig }
-    elseif ($resposta.result) { $sdk = $resposta.result }
-  }
+  $sdk = Invoke-RestMethod -Uri "https://$projetoNuvem.web.app/__/firebase/init.json" -TimeoutSec 20
 } catch {
   $sdk = $null
 } finally {
   $ErrorActionPreference = $guardaErro
 }
 
-if (-not $sdk) {
-  if ($atual -and $atual.apiKey) {
-    Write-Host '   nao deu para falar com o Firebase agora, mantendo a configuracao que ja estava gravada'
-    $sdk = [pscustomobject]@{ projectId = $atual.projectId; apiKey = $atual.apiKey; authDomain = $atual.authDomain; appId = $atual.appId }
-  } else {
-    Write-Host ''
-    Write-Host 'Nao deu para ler a configuracao do cliente no Firebase.'
-    Write-Host 'Entre na sua conta do Firebase com este comando e rode a instalacao de novo:'
-    Write-Host '   firebase login'
-    exit 2
-  }
+if ($sdk -and $sdk.apiKey) {
+  Write-Host "   configuracao do cliente lida da hospedagem de $projetoNuvem"
+} elseif ($atual -and $atual.apiKey) {
+  Write-Host '   nao deu para falar com a hospedagem agora, mantendo a configuracao que ja estava gravada'
+  $sdk = [pscustomobject]@{ projectId = $atual.projectId; apiKey = $atual.apiKey; authDomain = $atual.authDomain; appId = $atual.appId }
+} else {
+  Write-Host ''
+  Write-Host 'Nao deu para ler a configuracao do cliente, e nao existe nenhuma gravada aqui ainda.'
+  Write-Host "Confira a sua conexao e se o painel responde: https://$projetoNuvem.web.app"
+  exit 2
 }
+if (-not $sdk.appId) { $sdk | Add-Member -NotePropertyName appId -NotePropertyValue $appWeb -Force }
 
 $novo = [ordered]@{
   maquinaId   = $maquinaId
@@ -118,13 +122,13 @@ Write-Host "   maquina pareada com id $maquinaId, configuracao gravada em $cfg"
 # ---------------------------------------------------------------------------
 # 4. Login de uma vez
 # ---------------------------------------------------------------------------
-Write-Host '4. Login de uma vez, a ponte entra como voce, sem chave de servico'
+Write-Host '4. Login de uma vez, no seu navegador. A ponte entra como voce, sem chave de servico'
 Push-Location $raiz
 $loginOk = $false
 $codigoLogin = -1
 try {
-  if ($Colar) {
-    node dist/entrar.js --colar
+  if ($SemNavegador) {
+    node dist/entrar.js --sem-navegador
   } else {
     node dist/entrar.js
   }
@@ -134,15 +138,15 @@ try {
   Pop-Location
 }
 
-if ($codigoLogin -eq 4) {
-  Write-Host ''
-  Write-Host 'A credencial colada foi recusada pela forma, e NADA foi gravado na maquina.'
-  Write-Host 'O motivo exato esta na linha acima. Copie a credencial inteira no painel e rode de novo:'
-  Write-Host '   powershell -ExecutionPolicy Bypass -File ponte\instalar.ps1 -Colar'
-}
 if ($codigoLogin -eq 2) {
   Write-Host ''
-  Write-Host 'A ponte nao tem configuracao local. Rode a instalacao de novo sem -Colar primeiro.'
+  Write-Host 'A ponte nao tem configuracao local. Rode a instalacao de novo, sem -SemNavegador.'
+}
+if ($codigoLogin -eq 5) {
+  Write-Host ''
+  Write-Host 'O login funcionou, mas a tranca do arquivo de sessao nao ficou de pe.'
+  Write-Host 'A ponte vai recusar subir assim, de proposito: esse arquivo vale como chave de aprovacao.'
+  Write-Host 'Rode a instalacao de novo. Se repetir, avise a fabrica com a mensagem acima.'
 }
 
 if (-not $loginOk) {
@@ -150,16 +154,14 @@ if (-not $loginOk) {
   Write-Host 'A instalacao seguiu, mas a ponte ainda nao tem sessao sua. Falta um passo, uma vez so.'
   Write-Host 'O resto da instalacao ja esta feito, inclusive a tarefa que sobe a ponte sozinha.'
   Write-Host ''
-  Write-Host '  Passo unico, no seu navegador e aqui:'
-  Write-Host '    1. abra https://a-fabrica-soulan.web.app e entre com a sua conta do Google'
-  Write-Host '    2. com o painel aberto, copie a credencial de sessao daquela sessao de navegador'
-  Write-Host '    3. rode, nesta pasta, e cole quando ele pedir:'
-  Write-Host '       powershell -ExecutionPolicy Bypass -File ponte\instalar.ps1 -Colar'
+  Write-Host '  Passo unico:'
+  Write-Host '    powershell -ExecutionPolicy Bypass -File ponte\instalar.ps1'
+  Write-Host '    Vai abrir uma pagina nesta maquina, em 127.0.0.1. Entre com a sua conta do Google.'
   Write-Host ''
-  Write-Host '  Por que a colagem, e nao um login automatico: a ponte entra como voce pelo login de CLIENTE,'
-  Write-Host '  que e o escopo exato que as regras do Firestore controlam. Ela nao usa o token do Firebase CLI,'
-  Write-Host '  que carrega escopo de nuvem muito maior. E nao usa janela de navegador com retorno local,'
-  Write-Host '  porque a ponte nunca escuta porta, §A.6.'
+  Write-Host '  Por que no navegador, e nao uma chave de servico: a ponte entra como voce pelo login de'
+  Write-Host '  CLIENTE, que e o escopo exato que as regras do Firestore controlam. Ela nao usa o token do'
+  Write-Host '  Firebase CLI, que carrega escopo de nuvem muito maior. A pagina do login vive segundos,'
+  Write-Host '  so no laco de retorno desta maquina, e fecha sozinha. Nenhuma porta fica aberta depois.'
 }
 
 # ---------------------------------------------------------------------------

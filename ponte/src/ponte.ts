@@ -5,7 +5,7 @@
 // escreve na base, a ponte le e executa; a ponte escreve na base, o painel le.
 
 import { randomUUID } from 'node:crypto';
-import { closeSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { onAuthStateChanged } from 'firebase/auth';
 import { abrirFabrica, PortaoNaoConfirmado, type EventoFabrica, type Portao } from './claudeCode.js';
@@ -20,7 +20,17 @@ import {
   reconciliarPendentes,
   tomarComando,
 } from './base.js';
-import { PASTA_TRAVAS, carregarConfig, garantirPastaLocal } from './config.js';
+import {
+  CAMINHO_CONFIG,
+  CAMINHO_SESSAO,
+  CAMINHO_SESSAO_EMULADOR,
+  PASTA_LOCAL,
+  PASTA_TRAVAS,
+  carregarConfig,
+  garantirPastaLocal,
+} from './config.js';
+import { SessaoDesprotegida, exigirProtecao } from './protecaoSessao.js';
+import { iniciarPublicadorDeGanchos } from './ganchos.js';
 import type { ComandoTomado, NivelRisco, PacoteAprovacao } from './tipos.js';
 import type { Firestore } from 'firebase/firestore';
 import type { PermissionResult } from '@anthropic-ai/claude-agent-sdk';
@@ -260,11 +270,41 @@ export interface OpcoesServico {
 export async function main(opcoes: OpcoesServico = {}): Promise<void> {
   const emulador = opcoes.emulador === true;
   const config = carregarConfig({ emulador });
+  const caminhoSessao = emulador ? CAMINHO_SESSAO_EMULADOR : CAMINHO_SESSAO;
+
+  // PORTAO DE SUBIDA, antes de qualquer coisa: a sessao em disco e a chave com que
+  // a ponte responde aprovacao na base. Se ela nao estiver trancada para o dono e
+  // so para ele, a ponte NAO SOBE. Isto nao e aviso, e recusa, §A.6, e fecha a
+  // condicao 12 do parecer da seguranca.
+  //
+  // O arquivo de sessao do emulador pode ainda nao existir na primeira subida,
+  // porque e o proprio degrau do emulador que o cria. Por isso a conferencia dele
+  // acontece depois do initBase, logo abaixo, e nunca e dispensada.
+  const antes = exigirProtecao([
+    { caminho: PASTA_LOCAL, tipo: 'pasta' },
+    { caminho: CAMINHO_CONFIG, tipo: 'arquivo' },
+    ...(existsSync(caminhoSessao) ? [{ caminho: caminhoSessao, tipo: 'arquivo' as const }] : []),
+  ]);
+  for (const v of antes) console.log(`[tranca] ${v.motivo}`);
+
   const base = await initBase({ emulador, registrar: (l) => console.log(`[identidade] ${l}`) });
+
+  // Segunda passada, agora com a sessao existindo com certeza. Fecha o caminho em
+  // que o arquivo nasce aberto durante a propria abertura.
+  for (const v of exigirProtecao([{ caminho: caminhoSessao, tipo: 'arquivo' }])) {
+    console.log(`[tranca] ${v.motivo}`);
+  }
   const maquinaId = config.maquinaId;
   console.log(`ponte entrou como ${base.identidade.usuario.email}, degrau ${base.identidade.degrau}`);
 
   const hb = iniciarHeartbeat(base.db, maquinaId, { nome: config.nomeMaquina });
+
+  // Bloco 1 da OST 7: a fila que os ganchos do Claude Code escrevem. Com isto, a
+  // sessao que o DIRETOR abre na mao, em qualquer projeto, aparece no painel.
+  // Quem publica e a ponte, nunca o gancho, e a mascara de segredo acontece aqui.
+  const ganchos = iniciarPublicadorDeGanchos(base.db, maquinaId, {
+    registrar: (l) => console.log(`[ganchos] ${l}`),
+  });
   const r = await reconciliarPendentes(base.db, maquinaId, sessoesVivas);
   console.log(
     `reconciliacao no inicio: ${r.aprovacoesRecusadas} pedido(s) recusado(s) por seguranca, ` +
@@ -298,6 +338,10 @@ export async function main(opcoes: OpcoesServico = {}): Promise<void> {
     } catch {
       // ouvinte ja desligado
     }
+    ganchos.parar();
+    // Uma ultima passada na fila antes de morrer: o que o gancho escreveu nos
+    // ultimos segundos nao fica para tras so porque a ponte esta encerrando.
+    await ganchos.agora().catch(() => undefined);
     await hb.parar(sessoesVivas);
     process.exit(0);
   };
@@ -322,6 +366,13 @@ if (executadoDireto) {
   main({ emulador: process.env.PONTE_EMULADOR === '1' }).catch((e: unknown) => {
     console.error('a ponte nao subiu.');
     console.error(e instanceof Error ? e.message : String(e));
+    if (e instanceof SessaoDesprotegida) {
+      console.error('');
+      console.error('Isto e recusa de proposito, nao defeito. O que resolve, uma vez so:');
+      console.error('  powershell -ExecutionPolicy Bypass -File ponte\\instalar.ps1');
+      for (const v of e.vereditos) console.error(`  ${v.protegido ? 'TRANCADO' : 'ABERTO'}: ${v.motivo}`);
+      process.exit(6);
+    }
     process.exit(1);
   });
 }

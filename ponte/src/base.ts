@@ -59,18 +59,21 @@ export interface Base {
 
 export interface OpcoesBase {
   emulador?: boolean;
-  colagem?: string | null;
   registrar?: (linha: string) => void;
 }
 
 /**
  * Liga a ponte na base. Sem identidade do diretor, nao sobe: abrirIdentidade
  * lanca e o motivo fica registrado, §A.6.
+ *
+ * Nao existe opcao aqui para ligar o degrau do navegador, e isto e de proposito:
+ * quem liga a base e o SERVICO e as provas, e nenhum dos dois pode ter caminho de
+ * codigo que abra porta. O login no navegador acontece so em entrar.ts, antes, e
+ * deixa a sessao gravada. Veja o interruptor permitirNavegador em identidade.ts.
  */
 export async function initBase(opcoes: OpcoesBase = {}): Promise<Base> {
   const identidade = await abrirIdentidade({
     emulador: opcoes.emulador === true,
-    colagem: opcoes.colagem ?? null,
     ...(opcoes.registrar ? { registrar: opcoes.registrar } : {}),
   });
   const db = getFirestore(identidade.app);

@@ -12,16 +12,17 @@
     "compilar": "tsc -p tsconfig.json",
     "ponte": "node dist/ponte.js",
     "ponte:emulador": "cross-env PONTE_EMULADOR=1 node dist/ponte.js",
-    "entrar": "node dist/entrar.js",
-    "colar": "tsc -p tsconfig.json && node dist/entrar.js --colar",
+    "entrar": "tsc -p tsconfig.json && node dist/entrar.js",
     "testes": "node dist/testes/sete-testes.js",
     "testes:emulador": "cross-env PONTE_EMULADOR=1 node dist/testes/sete-testes.js",
     "base-real": "tsc -p tsconfig.json && node dist/testes/sete-testes.js",
     "prova:ressalvas": "tsc -p tsconfig.json && node dist/testes/prova-ressalvas.js",
-    "prova:colagem": "tsc -p tsconfig.json && node dist/testes/prova-colagem.js",
+    "prova:credencial": "tsc -p tsconfig.json && node dist/testes/prova-credencial.js",
     "prova:tempo": "tsc -p tsconfig.json && node dist/testes/prova-tempo-esgotado.js",
     "prova:tempo:emulador": "tsc -p tsconfig.json && cross-env PONTE_EMULADOR=1 node dist/testes/prova-tempo-esgotado.js",
-    "prova:sessao": "tsc -p tsconfig.json && node dist/testes/prova-sessao-colada.js"
+    "prova:sessao": "tsc -p tsconfig.json && node dist/testes/prova-sessao-colada.js",
+    "prova:ganchos": "tsc -p tsconfig.json && node dist/testes/prova-ganchos.js",
+    "medir:ganchos": "node ganchos/medir.mjs"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.3.296",
