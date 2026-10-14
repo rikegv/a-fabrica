@@ -82,10 +82,15 @@ export function usarFabricas(base: Firestore | null): Colecao<FabricaBase> {
 }
 
 export function usarAprovacoes(base: Firestore | null): Colecao<AprovacaoBase> {
-  /* Mais antiga primeiro. O filtro de pendente fica em memoria, para nao
-     precisar de indice composto. */
+  /* Mais RECENTE primeiro na consulta, e a ordem da fila (mais antiga primeiro)
+     e refeita em memoria pelo tradutor. Parece invertido e nao e: com ordem
+     crescente, o limite guardaria as 50 mais ANTIGAS, e um dia de respostas
+     acumuladas empurraria o pedido novo, que e justamente o que esta parado
+     esperando o diretor, para fora da janela. Com ordem decrescente o pedido
+     novo esta sempre dentro, e o historico que sobra de fora e o mais velho.
+     Continua sendo consulta de um campo so, sem indice composto. */
   const consulta = useMemo(
-    () => (base ? query(collection(base, 'aprovacoes'), orderBy('criadoEm', 'asc'), limitar(50)) : null),
+    () => (base ? query(collection(base, 'aprovacoes'), orderBy('criadoEm', 'desc'), limitar(100)) : null),
     [base]
   );
   return usarConsulta<AprovacaoBase>(consulta);

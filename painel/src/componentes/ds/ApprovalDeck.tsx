@@ -14,7 +14,7 @@ export interface ApprovalDeckProps {
   onApprove?: (item: ApprovalItemProps) => void;
   onReject?: (item: ApprovalItemProps, reason: string) => void;
   onApproveWithNote?: (item: ApprovalItemProps, note: string) => void;
-  readOnlyReason?: string;
+  readOnlyReason?: string | null;
   emptyText?: string;
 }
 
@@ -70,7 +70,7 @@ export function ApprovalDeck({
           {...atual}
           flat
           touch={touch}
-          readOnlyReason={readOnlyReason}
+          readOnlyReason={readOnlyReason ?? atual.readOnlyReason}
           onApprove={readOnlyReason ? undefined : () => onApprove?.(atual)}
           onReject={readOnlyReason ? undefined : (motivo: string) => onReject?.(atual, motivo)}
           onApproveWithNote={readOnlyReason ? undefined : (obs: string) => onApproveWithNote?.(atual, obs)}

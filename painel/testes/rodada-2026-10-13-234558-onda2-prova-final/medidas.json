@@ -1,0 +1,373 @@
+[
+  {
+    "passo": "0 base no comeco",
+    "comandos": 0
+  },
+  {
+    "passo": "1 abrir fabrica pela tela de nova fabrica",
+    "comandosDoPainel": 1,
+    "documento": {
+      "id": "5N9Jmu5HjCDF8ohOA3Ux",
+      "acao": "abrir",
+      "situacao": "pendente",
+      "criadoEm": "2026-10-14T02:46:16.930Z",
+      "entregueEm": "ausente",
+      "origem": "painel no computador, henrique.vieira@soulan.com.br",
+      "fabricaId": "painel-30ddf7fc-5b2f-4a64-969c-c18fad1b406a",
+      "maquinaId": "maquina-do-diretor",
+      "texto": "Implemente o envio de documentos e me peça aprovação antes de mexer no banco.",
+      "cwd": "~/projetos/app-do-colaborador",
+      "agente": "claude code",
+      "modelo": "ausente",
+      "conversationId": null
+    }
+  },
+  {
+    "passo": "2 mandar comando pela caixa viva",
+    "comandosDoPainel": 2,
+    "documento": {
+      "id": "JZx0MeRadTVUDGki8Vy5",
+      "acao": "comando",
+      "situacao": "pendente",
+      "criadoEm": "2026-10-14T02:46:19.736Z",
+      "entregueEm": "ausente",
+      "origem": "painel no computador, henrique.vieira@soulan.com.br",
+      "fabricaId": "fab-portal",
+      "maquinaId": "maquina-do-diretor",
+      "texto": "Rode os testes do fluxo de documentos e me diga o que quebrou.",
+      "cwd": null,
+      "agente": null,
+      "modelo": "ausente",
+      "conversationId": "conversa-fab-portal"
+    }
+  },
+  {
+    "passo": "4a cancelar o encerramento nao escreve nada",
+    "comandosAntes": 2,
+    "comandosDepois": 2,
+    "escreveu": false
+  },
+  {
+    "passo": "4b encerrar com confirmacao",
+    "documento": {
+      "id": "4WSnSWwQohxhEAiHNbd9",
+      "acao": "encerrar",
+      "situacao": "pendente",
+      "criadoEm": "2026-10-14T02:46:24.376Z",
+      "entregueEm": "ausente",
+      "origem": "painel no computador, henrique.vieira@soulan.com.br",
+      "fabricaId": "fab-portal",
+      "maquinaId": "maquina-do-diretor",
+      "texto": "encerrar a fábrica",
+      "cwd": null,
+      "agente": null,
+      "modelo": "ausente",
+      "conversationId": null
+    }
+  },
+  {
+    "passo": "4c retomar a fabrica pausada",
+    "documento": {
+      "id": "ErFNuGNzOHupX4BOxGk1",
+      "acao": "reiniciar",
+      "situacao": "pendente",
+      "criadoEm": "2026-10-14T02:46:29.817Z",
+      "entregueEm": "ausente",
+      "origem": "painel no computador, henrique.vieira@soulan.com.br",
+      "fabricaId": "fab-base",
+      "maquinaId": "maquina-do-diretor",
+      "texto": "retomar a fábrica pausada",
+      "cwd": null,
+      "agente": null,
+      "modelo": "ausente",
+      "conversationId": "conversa-fab-base"
+    }
+  },
+  {
+    "passo": "4c pausar a fabrica que esta rodando",
+    "documento": {
+      "id": "1Jdz8InAd7J9ElVUISyP",
+      "acao": "pausar",
+      "situacao": "pendente",
+      "criadoEm": "2026-10-14T02:46:34.456Z",
+      "entregueEm": "ausente",
+      "origem": "painel no computador, henrique.vieira@soulan.com.br",
+      "fabricaId": "fab-folha",
+      "maquinaId": "maquina-do-diretor",
+      "texto": "pausar a fábrica",
+      "cwd": null,
+      "agente": null,
+      "modelo": "ausente",
+      "conversationId": null
+    }
+  },
+  {
+    "passo": "3a aprovar com observacao",
+    "idDoPrimeiro": null,
+    "travadoSemObservacao": true,
+    "documento": {
+      "id": "ap-1",
+      "situacao": "respondida",
+      "resposta": "aprovado com observacao",
+      "observacao": "Pode seguir, mas rode a migração de volta se algo falhar.",
+      "respondidoEm": "2026-10-14T02:46:40.412Z",
+      "respondidoPor": "painel no computador, henrique.vieira@soulan.com.br",
+      "criadoEm": "2026-10-14T02:28:08.087Z"
+    },
+    "marcacaoDeOrigemNaTela": [
+      "leitura da ponte",
+      "fato capturado",
+      "leitura da ponte",
+      "leitura da ponte",
+      "fato capturado",
+      "fato mais leitura da ponte"
+    ]
+  },
+  {
+    "passo": "3b recusar com motivo",
+    "alvoDaRecusa": "sem id",
+    "documento": {
+      "id": "ap-3",
+      "situacao": "respondida",
+      "resposta": "recusado",
+      "observacao": "Não mexa no cache agora, estou usando o build.",
+      "respondidoEm": "2026-10-14T02:46:46.182Z",
+      "respondidoPor": "painel no computador, henrique.vieira@soulan.com.br",
+      "criadoEm": "2026-10-14T02:37:08.087Z"
+    }
+  },
+  {
+    "passo": "3c aprovar",
+    "documento": {
+      "id": "ap-2",
+      "situacao": "respondida",
+      "resposta": "aprovado",
+      "observacao": null,
+      "respondidoEm": "2026-10-14T02:46:49.554Z",
+      "respondidoPor": "painel no computador, henrique.vieira@soulan.com.br",
+      "criadoEm": "2026-10-14T02:42:08.087Z"
+    }
+  },
+  {
+    "passo": "3 fila de aprovacoes, como a base ficou",
+    "documentos": [
+      {
+        "id": "ap-0",
+        "situacao": "respondida",
+        "resposta": "aprovado",
+        "observacao": null,
+        "respondidoEm": "2026-10-14T00:56:08.087Z",
+        "respondidoPor": "henrique.vieira@soulan.com.br",
+        "criadoEm": "2026-10-14T00:46:08.087Z"
+      },
+      {
+        "id": "ap-1",
+        "situacao": "respondida",
+        "resposta": "aprovado com observacao",
+        "observacao": "Pode seguir, mas rode a migração de volta se algo falhar.",
+        "respondidoEm": "2026-10-14T02:46:40.412Z",
+        "respondidoPor": "painel no computador, henrique.vieira@soulan.com.br",
+        "criadoEm": "2026-10-14T02:28:08.087Z"
+      },
+      {
+        "id": "ap-2",
+        "situacao": "respondida",
+        "resposta": "aprovado",
+        "observacao": null,
+        "respondidoEm": "2026-10-14T02:46:49.554Z",
+        "respondidoPor": "painel no computador, henrique.vieira@soulan.com.br",
+        "criadoEm": "2026-10-14T02:42:08.087Z"
+      },
+      {
+        "id": "ap-3",
+        "situacao": "respondida",
+        "resposta": "recusado",
+        "observacao": "Não mexa no cache agora, estou usando o build.",
+        "respondidoEm": "2026-10-14T02:46:46.182Z",
+        "respondidoPor": "painel no computador, henrique.vieira@soulan.com.br",
+        "criadoEm": "2026-10-14T02:37:08.087Z"
+      }
+    ]
+  },
+  {
+    "passo": "6 ponte offline no computador",
+    "offlineAprovacoes": {
+      "pedidosNaFila": "3",
+      "botoes": [
+        {
+          "texto": "Aprovar",
+          "desabilitado": true
+        },
+        {
+          "texto": "Aprovar com observação",
+          "desabilitado": true
+        },
+        {
+          "texto": "Recusar",
+          "desabilitado": true
+        }
+      ],
+      "motivo": "A ponte está offline, a resposta não chega à fábrica até ela voltar.",
+      "faixa": "A ponte está offlineSem sinal da máquina local há 5 min. As fábricas não andam e nenhum comando é entregue até ela voltar."
+    },
+    "offlineAbrir": {
+      "desabilitado": true,
+      "motivo": "A ponte está offline, a fábrica só nasce quando ela voltar."
+    },
+    "offlineFabrica": {
+      "acoes": [
+        {
+          "texto": "Pausar",
+          "desabilitado": true
+        },
+        {
+          "texto": "Reiniciar",
+          "desabilitado": true
+        },
+        {
+          "texto": "Encerrar",
+          "desabilitado": true
+        }
+      ],
+      "motivoDasAcoes": "A ponte está offline. Pausar, reiniciar e encerrar voltam quando ela voltar.",
+      "caixaDesabilitada": true,
+      "motivoDaCaixa": "A ponte está offline, nenhuma ordem sai daqui até ela voltar.",
+      "botaoEnviarDesabilitado": true
+    }
+  },
+  {
+    "passo": "tudo o que o painel escreveu em comandos, no computador",
+    "total": 5,
+    "porAcao": {
+      "pausar": 1,
+      "encerrar": 1,
+      "abrir": 1,
+      "reiniciar": 1,
+      "comando": 1
+    },
+    "todosPendentes": true,
+    "todosComHoraDeServidor": true,
+    "todosComOrigemLegivel": true,
+    "todosComTexto": true
+  },
+  {
+    "passo": "5a responder aprovacao no celular",
+    "documento": {
+      "id": "ap-1",
+      "situacao": "respondida",
+      "resposta": "aprovado com observacao",
+      "observacao": "Pode seguir, me avise quando terminar.",
+      "respondidoEm": "2026-10-14T02:47:27.919Z",
+      "respondidoPor": "painel no celular, henrique.vieira@soulan.com.br",
+      "criadoEm": "2026-10-14T02:29:19.795Z"
+    }
+  },
+  {
+    "passo": "5b abrir fabrica pelo celular",
+    "documento": {
+      "id": "TRaNiD5dP3nm8ZCBoksj",
+      "acao": "abrir",
+      "situacao": "pendente",
+      "criadoEm": "2026-10-14T02:47:32.361Z",
+      "entregueEm": "ausente",
+      "origem": "painel no celular, henrique.vieira@soulan.com.br",
+      "fabricaId": "painel-7116b4dc-aab4-40fc-8317-c6bfd1a1d3a1",
+      "maquinaId": "maquina-do-diretor",
+      "texto": "Suba o relatório do dia e me avise quando terminar.",
+      "cwd": "~/projetos/app-do-colaborador",
+      "agente": "claude code",
+      "modelo": "ausente",
+      "conversationId": null
+    }
+  },
+  {
+    "passo": "5c mandar comando pelo celular",
+    "documento": {
+      "id": "Y3r3B3IkzfAi5wwrqzXu",
+      "acao": "comando",
+      "situacao": "pendente",
+      "criadoEm": "2026-10-14T02:47:37.075Z",
+      "entregueEm": "ausente",
+      "origem": "painel no celular, henrique.vieira@soulan.com.br",
+      "fabricaId": "fab-portal",
+      "maquinaId": "maquina-do-diretor",
+      "texto": "Pare no próximo passo e me explique o que achou.",
+      "cwd": null,
+      "agente": null,
+      "modelo": "ausente",
+      "conversationId": "conversa-fab-portal"
+    }
+  },
+  {
+    "passo": "5 celular, alvo de toque e rolagem da pagina",
+    "aprovacoes": {
+      "rolagemDaPagina": 0,
+      "totalDeAlvos": 10,
+      "abaixoDe44": []
+    },
+    "respostaComObservacao": {
+      "rolagemDaPagina": 0,
+      "totalDeAlvos": 10,
+      "abaixoDe44": []
+    },
+    "fabricas": {
+      "rolagemDaPagina": 0,
+      "totalDeAlvos": 10,
+      "abaixoDe44": []
+    },
+    "novaFabrica": {
+      "rolagemDaPagina": 0,
+      "totalDeAlvos": 10,
+      "abaixoDe44": []
+    },
+    "fabrica": {
+      "rolagemDaPagina": 0,
+      "totalDeAlvos": 5,
+      "abaixoDe44": []
+    },
+    "folhaDeAcoes": {
+      "rolagemDaPagina": 0,
+      "totalDeAlvos": 9,
+      "abaixoDe44": []
+    },
+    "confirmacao": {
+      "rolagemDaPagina": 0,
+      "totalDeAlvos": 7,
+      "abaixoDe44": []
+    }
+  },
+  {
+    "passo": "4d celular, cancelar o encerramento nao escreve nada",
+    "comandosAntes": 7,
+    "comandosDepois": 7,
+    "escreveu": false
+  },
+  {
+    "passo": "6 ponte offline no celular",
+    "offlineCelular": {
+      "faixa": "A ponte está offlineSem sinal da máquina há 5 min.",
+      "caixaDesabilitada": true,
+      "motivoDaCaixa": "A ponte está offline, nenhuma ordem sai daqui até ela voltar.",
+      "acoesDesabilitadas": true,
+      "motivoDasAcoes": "A ponte está offline. Pausar, reiniciar e encerrar voltam quando ela voltar."
+    },
+    "offlineAbrirCelular": {
+      "desabilitado": true
+    }
+  },
+  {
+    "passo": "tudo o que o painel escreveu em comandos, no fim da prova",
+    "total": 7,
+    "porAcao": {
+      "pausar": 1,
+      "encerrar": 1,
+      "abrir": 2,
+      "reiniciar": 1,
+      "comando": 2
+    },
+    "porOrigem": {
+      "painel no computador, henrique.vieira@soulan.com.br": 5,
+      "painel no celular, henrique.vieira@soulan.com.br": 2
+    }
+  }
+]

@@ -5,38 +5,19 @@
  * prototipo/computador.js: linha de indicadores, painel Fabricas na esquerda e
  * painel Aguardando voce na direita.
  *
- * Modo leitura, Onda 1: os botoes de decisao aparecem desabilitados, dizendo em
- * que onda entram. Nada aqui escreve na base.
+ * Onda 2: o pedido parado no painel Aguardando voce responde de verdade, com as
+ * tres respostas. A mecanica da resposta mora em pedido.tsx, porque e a mesma
+ * aqui, na tela de Aprovacoes, na tela da fabrica e no celular.
  */
 
 import { useState } from 'react';
 import { ApprovalDeck, FactoryCard, KpiTile, Pager } from '@/componentes/ds';
-import type { ApprovalItemProps } from '@/componentes/ds';
 import type { EstadoDoPainel } from '@/dados/painel';
 import { consumoEmPartes, plural, tempoEmPartes } from '@/formato';
 import { Falha, Panel, Vazio } from './pecas';
-import { motivoDaDecisao } from './textos';
+import { paraPedidoDeTela, type EstadoDaResposta } from './pedido';
 
 const POR_PAGINA = 6;
-
-export function paraPedidoDeTela(
-  pedido: EstadoDoPainel['aprovacoes'][number],
-  motivo: string
-): ApprovalItemProps {
-  return {
-    id: pedido.id,
-    title: pedido.title,
-    why: pedido.why,
-    impact: pedido.impact,
-    touches: pedido.touches,
-    risk: pedido.risk,
-    project: pedido.project,
-    task: pedido.task,
-    waiting: pedido.waiting,
-    stale: pedido.stale,
-    readOnlyReason: motivo
-  };
-}
 
 export function LinhaDeIndicadores({ estado }: { estado: EstadoDoPainel }) {
   const { contagem, aprovacoes } = estado;
@@ -73,16 +54,17 @@ export function LinhaDeIndicadores({ estado }: { estado: EstadoDoPainel }) {
 
 export function VisaoGeral({
   estado,
+  resposta,
   abrirFabrica
 }: {
   estado: EstadoDoPainel;
+  resposta: EstadoDaResposta;
   abrirFabrica: (id: string) => void;
 }) {
   const [pagina, setPagina] = useState(1);
   const total = Math.max(1, Math.ceil(estado.fabricas.length / POR_PAGINA));
   const atual = Math.min(pagina, total);
   const visiveis = estado.fabricas.slice((atual - 1) * POR_PAGINA, atual * POR_PAGINA);
-  const motivo = motivoDaDecisao(estado.ponte.situacao);
 
   return (
     <div className="gf-body">
@@ -130,8 +112,11 @@ export function VisaoGeral({
       </Panel>
 
       <ApprovalDeck
-        items={estado.aprovacoes.map((p) => paraPedidoDeTela(p, motivo))}
-        readOnlyReason={motivo}
+        items={estado.aprovacoes.map((p) => paraPedidoDeTela(p, resposta))}
+        readOnlyReason={resposta.motivo}
+        onApprove={(item) => resposta.aprovar({ id: item.id ?? '' })}
+        onReject={(item, motivoDaRecusa) => resposta.recusar({ id: item.id ?? '' }, motivoDaRecusa)}
+        onApproveWithNote={(item, observacao) => resposta.aprovarComObservacao({ id: item.id ?? '' }, observacao)}
         emptyText={
           estado.ponte.situacao === 'sem maquina'
             ? 'Nenhuma ponte pareada ainda. Quando uma fábrica pedir aprovação, o pedido aparece aqui.'

@@ -1,0 +1,56 @@
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3210
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.3s
+ ○ Compiling / ...
+ ✓ Compiled / in 2.1s (810 modules)
+ GET / 200 in 2836ms
+ GET / 200 in 54ms
+ ⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 522ms (813 modules)
+ GET /__/firebase/init.json 404 in 697ms
+ GET / 200 in 256ms
+ GET /__/firebase/init.json 404 in 47ms
+ GET / 200 in 50ms
+ GET /__/firebase/init.json 404 in 41ms
+ ✓ Compiled in 2.2s (826 modules)
+ GET / 200 in 331ms
+ ✓ Compiled /_not-found in 313ms (813 modules)
+ GET /__/firebase/init.json 404 in 432ms
+ GET / 200 in 224ms
+ GET /__/firebase/init.json 404 in 43ms
+ ✓ Compiled in 788ms (826 modules)
+ ✓ Compiled in 473ms (826 modules)
+ ✓ Compiled in 335ms (826 modules)
+ GET / 200 in 304ms
+ ✓ Compiled /_not-found in 414ms (813 modules)
+ GET /__/firebase/init.json 404 in 552ms
+ GET / 200 in 299ms
+ GET /__/firebase/init.json 404 in 58ms
+ ✓ Compiled in 543ms (826 modules)
+ ✓ Compiled in 250ms (826 modules)
+ ✓ Compiled in 311ms (826 modules)
+ ✓ Compiled in 792ms (826 modules)
+ ✓ Compiled in 396ms (826 modules)
+ ✓ Compiled in 449ms (826 modules)
+ ✓ Compiled in 375ms (826 modules)
+ ✓ Compiled in 427ms (826 modules)
+ ✓ Compiled in 337ms (826 modules)
+ ✓ Compiled in 266ms (826 modules)
+ ✓ Compiled in 323ms (826 modules)
+ ✓ Compiled in 717ms (826 modules)
+ ✓ Compiled in 256ms (826 modules)
+ ✓ Compiled in 579ms (826 modules)
+ ✓ Compiled in 583ms (303 modules)
+ GET / 200 in 270ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 732ms (813 modules)
+ GET /__/firebase/init.json 404 in 1020ms
+ GET / 200 in 301ms
+ GET /_next/static/chunks/app/page.js 404 in 62ms
+ GET / 200 in 53ms
+[?25h

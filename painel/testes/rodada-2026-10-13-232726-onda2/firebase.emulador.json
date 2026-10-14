@@ -1,0 +1,23 @@
+{
+  "_comentario": [
+    "Emulador PROPRIO desta rodada do painel, OST 7 Bloco 2.",
+    "Portas escolhidas para nao colidir com o emulador da ponte, que nesta noite",
+    "esta em firestore 8099 e auth 9199. A base da ponte tem documentos da prova",
+    "dela; a prova do painel precisa de base limpa para dizer com honestidade o",
+    "que foi o painel que escreveu.",
+    "As regras sao as de firebase/firestore.rules, copiadas aqui como evidencia da",
+    "rodada, §A.17."
+  ],
+  "firestore": {
+    "rules": "firestore.rules.copia",
+    "indexes": "firestore.indexes.copia.json"
+  },
+  "emulators": {
+    "auth": { "host": "127.0.0.1", "port": 9399 },
+    "firestore": { "host": "127.0.0.1", "port": 8299 },
+    "hub": { "host": "127.0.0.1", "port": 4699 },
+    "logging": { "host": "127.0.0.1", "port": 4799 },
+    "ui": { "enabled": false },
+    "singleProjectMode": true
+  }
+}

@@ -37,6 +37,112 @@ body {
   height: var(--size-touch);
 }
 
+/* Mesma regra para os controles que a Onda 2 trouxe ao celular: o botao comum do
+   pacote tem 34px, a opcao do escolhedor 30px e a lista 40px. No dedo, todos
+   sobem para a medida de toque. min-height, e nao height, para o botao poder
+   crescer quando o texto quebra em duas linhas. */
+.gf-mapp .gf-btn {
+  min-height: var(--size-touch);
+}
+
+.gf-mapp .gf-seg-opt {
+  min-height: var(--size-touch);
+}
+
+.gf-mapp .gf-li {
+  min-height: var(--size-touch);
+}
+
+.gf-mapp .gf-linkbtn {
+  min-height: var(--size-touch);
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Campo de digitar tambem e alvo de toque. Medido na rodada da Onda 2: o campo
+   do pacote fecha em 40px e o da caixa de comando em 36px, porque a caixa ajusta
+   a altura pelo conteudo. min-height resolve os dois, inclusive contra a altura
+   que a caixa escreve no proprio elemento. */
+.gf-mapp .gf-input,
+.gf-mapp .gf-cmd-input {
+  min-height: var(--size-touch);
+}
+
+/* Confirmacao do que nao tem volta. O pacote traz a folha que sobe do pe no
+   celular; no computador a MESMA folha fica no centro da tela, porque o aviso e
+   o mesmo e nao vale inventar um segundo desenho. */
+.gf-sheet-centro {
+  position: fixed;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+}
+
+.gf-sheet-centro .gf-sheet {
+  width: 100%;
+  max-width: calc(var(--size-reading) / 1.6);
+}
+
+.gf-sheet-wrap .gf-sheet {
+  box-shadow: var(--shadow-pop);
+}
+
+/* Erro de escrita, do lado do controle que falhou. Fica na tela, nao desaparece
+   sozinho. */
+.gf-erro {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--state-failed-bg);
+  border: 1px solid var(--state-failed);
+  color: var(--ink);
+}
+
+/* Aviso de que a ordem entrou na fila, no computador. No celular o pacote ja tem
+   o gf-toast. */
+.gf-aviso {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-6);
+  transform: translateX(-50%);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  z-index: 9;
+}
+
+/* Marcacao de origem de cada campo do pacote de aprovacao, aprovada na OST 2:
+   fato capturado pelo portao e uma coisa, leitura da ponte e outra. A cor do
+   ponto separa as duas antes de o diretor ler a palavra. */
+.gf-origem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--glass);
+  border: 1px solid var(--glass-line);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.gf-origem-ponto {
+  width: var(--space-1);
+  height: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--ink-faint);
+  flex: none;
+}
+
+.gf-origem-fato .gf-origem-ponto {
+  background: var(--state-done);
+}
+
+.gf-origem-ponte .gf-origem-ponto {
+  background: var(--state-approval);
+}
+
 /* O nome da maquina pode ser longo. No pe do menu o indicador da ponte corta no
    fim em vez de furar a borda do menu. */
 .gf-side-foot .gf-bridge {

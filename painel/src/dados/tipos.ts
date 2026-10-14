@@ -1,7 +1,11 @@
 /*
  * Tipos da base na nuvem, em portugues, exatamente como o contrato das tres
- * pecas descreve (docs/contrato-tres-pecas.md). Quem escreve cada documento e a
- * ponte; o painel so le, nesta onda.
+ * pecas descreve (docs/contrato-tres-pecas.md), mais os campos que a Onda 2
+ * acrescenta (docs/ost7-contrato-onda2.md).
+ *
+ * Quem escreve fabricas, atividade, tarefas e o pedido de aprovacao e a ponte.
+ * O painel escreve comandos e a resposta da aprovacao, e so por
+ * src/dados/escritas.ts.
  *
  * Campos marcados como tolerados nao estao no contrato: se a ponte escrever,
  * o painel aproveita; se nao escrever, o painel segue sem eles.
@@ -53,6 +57,13 @@ export interface FabricaBase {
   tempoDecorridoMs?: number;
   consumo?: ConsumoBase;
   atualizadoEm?: HoraDaBase;
+  /* Campos da Onda 2, escritos pela ponte (seção 3 do contrato da Onda 2). */
+  origem?: 'painel' | 'mao' | string;
+  pausada?: boolean;
+  encerradaEm?: HoraDaBase;
+  pedidoDeEncerramento?: string;
+  /* Motivo da falha, quando o portão não confirma e a fábrica não nasce. */
+  erro?: string;
 }
 
 export interface TarefaBase {
@@ -77,17 +88,25 @@ export interface AtividadeBase {
   em?: HoraDaBase;
 }
 
+/* Origem de cada campo do pacote, como a OST 2 aprovou: o painel mostra o que e
+   fato capturado e o que e leitura da ponte, sem esconder a diferença. */
+export type OrigemDoCampo = 'fato' | 'ponte' | 'fato mais leitura da ponte' | string;
+
 export interface CampoDoPacote<T = string> {
   valor: T;
-  origem?: string;
+  origem?: OrigemDoCampo;
 }
 
 export interface PacoteDeAprovacao {
+  /* Marcação que a ponte escreve no topo do pacote, quando escreve. */
+  marcacao?: string;
   oQue?: CampoDoPacote;
   resumo?: CampoDoPacote;
+  /* Nome cru da ferramenta que o portão segurou, fato. */
+  ferramenta?: CampoDoPacote;
   tarefa?: CampoDoPacote;
   fabrica?: CampoDoPacote;
-  agenteDisse?: CampoDoPacote;
+  agenteDisse?: CampoDoPacote<string | null>;
   porQue?: CampoDoPacote;
   impacto?: CampoDoPacote;
   oQueSeraTocado?: CampoDoPacote<string | string[]>;

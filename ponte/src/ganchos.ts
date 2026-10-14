@@ -32,6 +32,20 @@
 //
 // 5. NADA AQUI ESCUTA PORTA. Este arquivo le arquivo local e escreve na base por
 //    conexao de saida, §A.6.
+//
+// 6. §A.19 E ESTA FILA, dito antes de alguem achar que foi esquecido. O §A.19
+//    manda que "a fila de pedidos e respostas da ponte" viva dentro da pasta da
+//    rodada, nunca numa pasta fixa reaproveitada. Esta fila aqui NAO e aquela: a
+//    do §A.19 e a fila de PEDIDO DE APROVACAO E RESPOSTA de rodada de teste, e a
+//    regra existe para uma rodada nao herdar resposta da anterior e dar prova
+//    falsa. Esta e a fila de ATIVIDADE de producao, que precisa sobreviver a
+//    reinicio da maquina para o painel nao perder passo.
+//
+//    O espirito do §A.19 continua cumprido do jeito que importa: cada sessao tem
+//    o seu PROPRIO arquivo, nomeado pelo identificador dela, entao nao existe
+//    heranca entre sessoes; e arquivo de sessao encerrada sai da pasta ativa e vai
+//    para fila-ganchos-consumida com data e hora no nome, nunca apagado, §A.17.
+//    Nenhuma sessao le o que sobrou de outra.
 
 import {
   closeSync,

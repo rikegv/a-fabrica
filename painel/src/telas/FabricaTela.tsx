@@ -5,13 +5,18 @@
  * prototipo/computador.js: cabecalho, abas, corpo e caixa de comando no pe; na
  * direita o pedido parado desta fabrica e os indicadores dela.
  *
- * Modo leitura, Onda 1: caixa de comando e botoes de decisao aparecem
- * desabilitados, dizendo em que onda entram, e sem caminho de clique que
- * escreva na base.
+ * Onda 2, o painel comanda:
+ *  - caixa de comando viva, que escreve na fila da ponte;
+ *  - pausar, reiniciar e encerrar vivos no cabecalho;
+ *  - encerrar SEMPRE com confirmacao, porque nao tem volta;
+ *  - o pedido parado desta fabrica responde aqui mesmo, com as tres respostas.
  *
- * As abas do pacote sao quatro. Nesta onda existem as duas que o contrato
- * alimenta, Atividade e Tarefas; Relatórios e Alterações ficam ditos na tela,
- * sem tela inventada.
+ * O painel nunca fala com a fabrica, §A.3: todo botao daqui escreve em comandos
+ * ou em aprovacoes, e a ponte le.
+ *
+ * As abas do pacote sao quatro. Existem as duas que o contrato alimenta,
+ * Atividade e Tarefas; Relatórios e Alterações ficam ditos na tela, sem tela
+ * inventada, §A.12.
  */
 
 import { useMemo, useState } from 'react';
@@ -22,33 +27,119 @@ import {
   CommandBox,
   FactoryHeader,
   KpiTile,
+  RiskTag,
   StateIcon,
   Tabs,
   TaskRow
 } from '@/componentes/ds';
+import {
+  encerrarFabrica,
+  impedimentoDaEscrita,
+  mandarComando,
+  pausarFabrica,
+  reiniciarFabrica,
+  type ContextoDeEscrita
+} from '@/dados/escritas';
 import { usarAtividade, usarTarefas } from '@/dados/ouvintes';
 import type { EstadoDoPainel } from '@/dados/painel';
+import type { Fabrica } from '@/dados/tradutor';
 import { ordenarTarefas, traduzirAtividade, traduzirTarefa } from '@/dados/tradutor';
 import { consumoEmPartes, plural } from '@/formato';
-import { Falha, Panel, Vazio } from './pecas';
-import {
-  MOTIVO_DAS_ACOES_DA_FABRICA,
-  motivoDaCaixaDeComando,
-  motivoDaDecisao
-} from './textos';
+import { Confirmacao, ErroDeEscrita, Falha, MarcaDeOrigem, Panel, Vazio } from './pecas';
+import { type EstadoDaResposta } from './pedido';
+import { AVISOS, CONFIRMAR_ENCERRAR, motivoDaCaixaDeComando, motivoDasAcoesDaFabrica } from './textos';
+import { usarOrdem, type Ordem } from './usarOrdem';
 
 const PASSOS_NO_COMPUTADOR = 6;
 const TAREFAS_NO_COMPUTADOR = 6;
 
+/* As ordens de ciclo de vida da fabrica, no computador e no celular. Uma
+   mecanica, dois desenhos. */
+export function usarAcoesDaFabrica(
+  escrita: ContextoDeEscrita,
+  fabrica: Fabrica | null,
+  avisar: (mensagem: string) => void
+) {
+  const ordem = usarOrdem(avisar);
+  const [confirmando, setConfirmando] = useState(false);
+  const motivo = motivoDasAcoesDaFabrica(impedimentoDaEscrita(escrita));
+  const alvo = fabrica
+    ? { fabricaId: fabrica.id, maquinaId: fabrica.maquinaId, conversationId: fabrica.conversationId }
+    : null;
+
+  return {
+    ordem,
+    motivo,
+    confirmando,
+    pedirConfirmacaoDeEncerramento: () => {
+      ordem.limparErro();
+      setConfirmando(true);
+    },
+    desistirDoEncerramento: () => setConfirmando(false),
+    pausar: () => {
+      if (!alvo) return;
+      void ordem.enviar(() => pausarFabrica(escrita, alvo), AVISOS.pausada);
+    },
+    retomar: () => {
+      if (!alvo) return;
+      void ordem.enviar(() => reiniciarFabrica(escrita, { ...alvo, pausada: true }), AVISOS.retomada);
+    },
+    reiniciar: () => {
+      if (!alvo) return;
+      void ordem.enviar(() => reiniciarFabrica(escrita, { ...alvo, pausada: false }), AVISOS.reiniciada);
+    },
+    encerrar: () => {
+      if (!alvo) return;
+      void ordem.enviar(() => encerrarFabrica(escrita, alvo), AVISOS.encerrada).then((deuCerto) => {
+        if (deuCerto) setConfirmando(false);
+      });
+    }
+  };
+}
+
+export type AcoesDaFabrica = ReturnType<typeof usarAcoesDaFabrica>;
+
+/* Caixa de comando viva. O texto so e limpo quando a ordem entrou na fila. */
+export function usarCaixaDeComando(
+  escrita: ContextoDeEscrita,
+  fabrica: Fabrica | null,
+  avisar: (mensagem: string) => void
+) {
+  const ordem: Ordem = usarOrdem(avisar);
+  const motivo = motivoDaCaixaDeComando(impedimentoDaEscrita(escrita));
+
+  async function enviar(texto: string): Promise<boolean> {
+    if (!fabrica) return false;
+    return ordem.enviar(
+      () =>
+        mandarComando(escrita, {
+          fabricaId: fabrica.id,
+          maquinaId: fabrica.maquinaId,
+          conversationId: fabrica.conversationId,
+          texto
+        }),
+      AVISOS.comandoEnviado
+    );
+  }
+
+  return { ordem, motivo, enviar };
+}
+
 export function FabricaTela({
   base,
   estado,
+  escrita,
   fabricaId,
+  resposta,
+  avisar,
   verPedido
 }: {
   base: Firestore | null;
   estado: EstadoDoPainel;
+  escrita: ContextoDeEscrita;
   fabricaId: string;
+  resposta: EstadoDaResposta;
+  avisar: (mensagem: string) => void;
   verPedido: () => void;
 }) {
   const [aba, setAba] = useState('atividade');
@@ -58,6 +149,8 @@ export function FabricaTela({
 
   const atividade = usarAtividade(base, fabricaId, PASSOS_NO_COMPUTADOR);
   const tarefas = usarTarefas(base, fabricaId);
+  const acoes = usarAcoesDaFabrica(escrita, fabrica, avisar);
+  const caixa = usarCaixaDeComando(escrita, fabrica, avisar);
 
   const passos = useMemo(() => atividade.itens.map(traduzirAtividade), [atividade.itens]);
   const listaDeTarefas = useMemo(
@@ -80,8 +173,6 @@ export function FabricaTela({
 
   const uso = consumoEmPartes(fabrica.tokens);
   const concluidas = listaDeTarefas.filter((t) => t.state === 'done').length;
-  const motivoComando = motivoDaCaixaDeComando(estado.ponte.situacao);
-  const motivoDecisao = motivoDaDecisao(estado.ponte.situacao);
 
   let corpo: React.ReactNode;
   if (aba === 'atividade') {
@@ -149,8 +240,19 @@ export function FabricaTela({
           state={fabrica.state}
           elapsed={fabrica.elapsed}
           usage={fabrica.usage}
-          actionsDisabledReason={MOTIVO_DAS_ACOES_DA_FABRICA}
+          paused={fabrica.pausada}
+          busy={acoes.ordem.ocupado}
+          actionsDisabledReason={acoes.motivo}
+          onPause={fabrica.pausada ? acoes.retomar : acoes.pausar}
+          onRestart={acoes.reiniciar}
+          onStop={acoes.pedirConfirmacaoDeEncerramento}
         />
+        {acoes.ordem.erro && !acoes.confirmando ? (
+          <ErroDeEscrita mensagem={acoes.ordem.erro} aoFechar={acoes.ordem.limparErro} />
+        ) : null}
+        {fabrica.erro ? (
+          <div className="caption gf-muted">{`A ponte registrou uma falha nesta fábrica: ${fabrica.erro}`}</div>
+        ) : null}
         <div>
           <Tabs
             value={aba}
@@ -167,15 +269,25 @@ export function FabricaTela({
             Relatórios desta fábrica entram na Onda 3. A aba Alterações entra quando a ponte passar a registrar
             arquivos tocados.
           </span>
-          <CommandBox disabledReason={motivoComando} />
+          <CommandBox
+            disabledReason={caixa.motivo}
+            error={caixa.ordem.erro}
+            onDismissError={caixa.ordem.limparErro}
+            onSend={caixa.enviar}
+          />
         </div>
       </section>
 
       <div className="flex min-h-0 flex-col gap-3">
         {pedido ? (
+          /* Aviso curto, do jeito do pacote do designer: aqui cabe a decisao
+             rapida de aprovar, e o pacote inteiro, com a marcacao de fato e de
+             leitura da ponte, mora na fila de aprovacoes, que tem a tela
+             inteira. Espremer o pacote nesta coluna seria o diretor decidir sem
+             conseguir ler, e isso nao se faz num botao que libera risco. */
           <section
             className="gf-panel gf-glass"
-            style={{ gap: 10, padding: 18, borderColor: 'var(--state-approval)' }}
+            style={{ gap: 'var(--space-2)', padding: 'var(--space-4)', borderColor: 'var(--state-approval)' }}
           >
             <div
               className="caption flex items-center gap-2"
@@ -184,19 +296,30 @@ export function FabricaTela({
               <StateIcon state="approval" size={10} />
               {`Esta fábrica espera você há ${pedido.waiting}`}
             </div>
+            <div className="flex items-center gap-2">
+              <RiskTag level={pedido.risk} />
+              <MarcaDeOrigem marca={pedido.origens.risk} />
+            </div>
             <div className="title-sm">{pedido.title}</div>
+            {resposta.respondendo === pedido.id && resposta.ordem.erro ? (
+              <ErroDeEscrita mensagem={resposta.ordem.erro} aoFechar={resposta.ordem.limparErro} />
+            ) : null}
             <div className="flex gap-2">
-              <Button variant="primary" disabled>
-                Aprovar
+              <Button
+                variant="primary"
+                disabled={Boolean(resposta.motivo) || resposta.ordem.ocupado}
+                onClick={() => resposta.aprovar(pedido)}
+              >
+                {resposta.ordem.ocupado ? 'Registrando...' : 'Aprovar'}
               </Button>
-              <Button variant="danger" disabled>
-                Recusar
+              <Button variant="secondary" onClick={verPedido}>
+                Ver o pedido inteiro
               </Button>
             </div>
-            <span className="caption gf-faint">{motivoDecisao}</span>
-            <Button variant="secondary" onClick={verPedido}>
-              Abrir o painel Aguardando você
-            </Button>
+            <span className="caption gf-faint gf-motivo">
+              {resposta.motivo ??
+                'Recusar e aprovar com observação ficam na fila, junto do pacote completo do pedido.'}
+            </span>
           </section>
         ) : null}
 
@@ -231,9 +354,27 @@ export function FabricaTela({
               <span className="gf-muted">Versão da ponte</span>
               <span className="mono">{estado.ponte.versao ?? 'não informada'}</span>
             </div>
+            <div className="gf-stat-row body">
+              <span className="gf-muted">Nasceu</span>
+              <span className="mono">{fabrica.nasceuNoPainel ? 'pelo painel' : 'na mão'}</span>
+            </div>
           </div>
         </Panel>
       </div>
+
+      {acoes.confirmando ? (
+        <Confirmacao
+          titulo={CONFIRMAR_ENCERRAR.titulo(fabrica.project)}
+          detalhe={CONFIRMAR_ENCERRAR.detalhe}
+          rotuloDoBotao={CONFIRMAR_ENCERRAR.botao}
+          rotuloDeCancelar={CONFIRMAR_ENCERRAR.cancelar}
+          perigo
+          ocupado={acoes.ordem.ocupado}
+          erro={acoes.ordem.erro}
+          aoConfirmar={acoes.encerrar}
+          aoCancelar={acoes.desistirDoEncerramento}
+        />
+      ) : null}
     </div>
   );
 }

@@ -4,20 +4,25 @@
  * Casca do computador: menu lateral de vidro, barra superior, faixa de alerta e
  * corpo da tela. Uma tela so, sem rolagem da pagina.
  *
- * Telas desta onda: Visao geral e Fabrica. Os outros itens do menu existem como
- * destino inerte, dito na tela.
+ * Telas construidas: Visao geral, Fabrica (posto de comando), Aprovacoes e Nova
+ * fabrica. Relatórios, Indicadores, Configurações e a tela Fábricas seguem como
+ * destino inerte, dito na tela, §A.12.
  */
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { Firestore } from 'firebase/firestore';
 import { AlertBanner, Button, Icon, Sidebar } from '@/componentes/ds';
 import type { Entrada } from '@/dados/autenticacao';
+import { impedimentoDaEscrita, type ContextoDeEscrita } from '@/dados/escritas';
 import type { EstadoDoPainel } from '@/dados/painel';
 import { desdeQuando, diaPorExtenso, plural } from '@/formato';
+import { Aprovacoes } from './Aprovacoes';
 import { FabricaTela } from './FabricaTela';
 import { Inerte } from './Inerte';
-import { Topbar } from './pecas';
-import { DONO, MARCA, MOTIVO_DE_ABRIR_FABRICA } from './textos';
+import { NovaFabrica } from './NovaFabrica';
+import { Aviso, Topbar } from './pecas';
+import { usarResposta } from './pedido';
+import { DONO, MARCA, motivoDeAbrirFabrica } from './textos';
 import { LinhaDeIndicadores, VisaoGeral } from './VisaoGeral';
 
 const ITENS = [
@@ -29,19 +34,32 @@ const ITENS = [
   { id: 'settings', label: 'Configurações' }
 ];
 
+const TITULOS: Record<string, string> = {
+  factory: 'Posto de comando',
+  new: 'Nova fábrica'
+};
+
 export function Computador({
   base,
   estado,
+  escrita,
   entrada,
   menuRecolhido
 }: {
   base: Firestore | null;
   estado: EstadoDoPainel;
+  escrita: ContextoDeEscrita;
   entrada: Entrada;
   menuRecolhido: boolean;
 }) {
   const [tela, setTela] = useState('overview');
   const [fabricaId, setFabricaId] = useState<string | null>(null);
+  /* UM aviso por vez, e a casca e a dona dele. Cada controle que registra uma
+     ordem chama avisar; nenhum guarda aviso proprio, senao dois apareceriam no
+     mesmo ponto da tela e o antigo cobriria o novo. */
+  const [aviso, setAviso] = useState<string | null>(null);
+  const avisar = useCallback((mensagem: string) => setAviso(mensagem), []);
+  const resposta = usarResposta(escrita, avisar);
 
   const ponte = estado.ponte;
   const faixa = ponte.online ? null : (
@@ -58,23 +76,40 @@ export function Computador({
   );
 
   const naFabrica = tela === 'factory' && fabricaId;
-  const titulo = naFabrica ? 'Posto de comando' : (ITENS.find((i) => i.id === tela)?.label ?? MARCA);
+  const titulo = naFabrica
+    ? TITULOS.factory
+    : (TITULOS[tela] ?? ITENS.find((i) => i.id === tela)?.label ?? MARCA);
   const nomeDaFabrica = estado.fabricas.find((f) => f.id === fabricaId)?.project;
   const sub = naFabrica
     ? `Fábricas  ›  ${nomeDaFabrica ?? 'fábrica fora do painel'}`
-    : tela === 'overview'
-      ? `${diaPorExtenso(estado.agora)} · ${plural(estado.contagem.total, 'fábrica no painel', 'fábricas no painel')}`
-      : undefined;
+    : tela === 'new'
+      ? 'Escolha o projeto, o agente, o modelo e diga o que fazer primeiro'
+      : tela === 'overview'
+        ? `${diaPorExtenso(estado.agora)} · ${plural(estado.contagem.total, 'fábrica no painel', 'fábricas no painel')}`
+        : tela === 'approvals'
+          ? 'Mais antiga primeiro'
+          : undefined;
 
+  const motivoDeAbrir = motivoDeAbrirFabrica(impedimentoDaEscrita(escrita));
   const direita =
-    tela === 'overview' ? (
+    tela === 'overview' || tela === 'approvals' ? (
       <div className="flex flex-col items-end gap-1">
-        <Button variant="primary" icon={<Icon name="plus" size={16} />} disabled>
+        <Button
+          variant="primary"
+          icon={<Icon name="plus" size={16} />}
+          disabled={Boolean(motivoDeAbrir)}
+          onClick={() => setTela('new')}
+        >
           Abrir nova fábrica
         </Button>
-        <span className="caption gf-faint">{MOTIVO_DE_ABRIR_FABRICA}</span>
+        {motivoDeAbrir ? <span className="caption gf-faint gf-motivo">{motivoDeAbrir}</span> : null}
       </div>
     ) : undefined;
+
+  function voltarParaVisaoGeral() {
+    setFabricaId(null);
+    setTela('overview');
+  }
 
   let corpo: React.ReactNode;
   if (naFabrica) {
@@ -82,10 +117,13 @@ export function Computador({
       <FabricaTela
         base={base}
         estado={estado}
+        escrita={escrita}
         fabricaId={fabricaId as string}
+        resposta={resposta}
+        avisar={avisar}
         verPedido={() => {
           setFabricaId(null);
-          setTela('overview');
+          setTela('approvals');
         }}
       />
     );
@@ -93,10 +131,25 @@ export function Computador({
     corpo = (
       <VisaoGeral
         estado={estado}
+        resposta={resposta}
         abrirFabrica={(id) => {
           setFabricaId(id);
           setTela('factory');
         }}
+      />
+    );
+  } else if (tela === 'approvals') {
+    corpo = <Aprovacoes estado={estado} resposta={resposta} />;
+  } else if (tela === 'new') {
+    corpo = (
+      <NovaFabrica
+        escrita={escrita}
+        estado={estado}
+        aoAbrir={(_fabricaId, mensagem) => {
+          setAviso(mensagem);
+          voltarParaVisaoGeral();
+        }}
+        aoCancelar={voltarParaVisaoGeral}
       />
     );
   } else {
@@ -151,19 +204,13 @@ export function Computador({
           title={titulo}
           sub={sub}
           right={direita}
-          onBack={
-            naFabrica
-              ? () => {
-                  setFabricaId(null);
-                  setTela('overview');
-                }
-              : undefined
-          }
+          onBack={naFabrica || tela === 'new' ? voltarParaVisaoGeral : undefined}
         />
         {faixa}
         {comKpis ? <LinhaDeIndicadores estado={estado} /> : null}
         {corpo}
       </main>
+      {aviso ? <Aviso mensagem={aviso} aoSumir={() => setAviso(null)} /> : null}
     </div>
   );
 }

@@ -45,6 +45,7 @@
 import type { ActivityTimelineItem, FactoryState, RiskLevel } from '@/componentes/ds';
 import {
   consumo as formatarConsumo,
+  dataAmigavel,
   horaComSegundos,
   tempoDecorrido,
   tempoParado as formatarTempoParado
@@ -140,6 +141,9 @@ export interface Ponte {
   situacao: SituacaoDaPonte;
   online: boolean;
   maquina: string | null;
+  /* Identificador da maquina, que a fila de comandos carrega. O nome e para a
+     tela; este e para a ordem chegar na maquina certa. */
+  maquinaId: string | null;
   versao: string | null;
   vistoPorUltimo: Date | null;
   atrasoMs: number | null;
@@ -151,6 +155,7 @@ export function avaliarPonte(maquinas: MaquinaBase[], agora: Date = new Date()):
       situacao: 'sem maquina',
       online: false,
       maquina: null,
+      maquinaId: null,
       versao: null,
       vistoPorUltimo: null,
       atrasoMs: null
@@ -167,6 +172,7 @@ export function avaliarPonte(maquinas: MaquinaBase[], agora: Date = new Date()):
     situacao: online ? 'conectada' : 'offline',
     online,
     maquina: melhor.maquina.nome ?? melhor.maquina.maquinaId ?? melhor.maquina.id,
+    maquinaId: melhor.maquina.maquinaId ?? melhor.maquina.id ?? null,
     versao: melhor.maquina.versaoPonte ?? null,
     vistoPorUltimo: melhor.visto,
     atrasoMs
@@ -192,14 +198,22 @@ export interface Fabrica {
   usage: string;
   pending: string | null;
   maquinaId: string | null;
+  /* Onda 2: o que a tela precisa para comandar esta fabrica. */
+  conversationId: string | null;
+  pausada: boolean;
+  nasceuNoPainel: boolean;
+  erro: string | null;
 }
 
 /* O contrato nao tem campo para a frase do que a fabrica faz agora. Em vez de
    inventar, o painel escreve a frase a partir do estado, e a tela da fabrica
    mostra o passo real da atividade ao lado. */
-function frasePeloEstado(estado: FactoryState, temPedido: boolean): string {
+function frasePeloEstado(estado: FactoryState, temPedido: boolean, pausada = false): string {
   if (estado === 'approval' || temPedido) return 'Parou para pedir aprovação.';
   if (estado === 'running') return 'Em execução. Abra a fábrica para ver o passo atual.';
+  /* Pausada não é estado novo, §A.4 fecha a lista: ela fica em aguardando
+     comando, com o campo pausada, e a tela diz a palavra certa ao diretor. */
+  if (estado === 'idle' && pausada) return 'Pausada por você. Retome para ela voltar a andar.';
   if (estado === 'idle') return 'Esperando a próxima ordem.';
   if (estado === 'done') return 'Concluída.';
   if (estado === 'failed') return 'Falhou. Abra a fábrica para ver o último passo.';
@@ -222,6 +236,7 @@ export function traduzirFabrica(
         : 0;
   const tokens = doc.consumo?.totalTokens ?? 0;
   const temPedido = opcoes.pedidoParado != null;
+  const pausada = doc.pausada === true;
   return {
     id: doc.id,
     project: doc.projeto?.trim() || 'Projeto sem nome',
@@ -229,14 +244,18 @@ export function traduzirFabrica(
     agent: doc.agente?.trim() || 'Agente não informado',
     model: doc.modelo?.trim() || 'modelo não informado',
     state,
-    doing: frasePeloEstado(state, temPedido),
+    doing: frasePeloEstado(state, temPedido, pausada),
     startedAt: inicio,
     elapsedMs: decorrido,
     tokens,
     elapsed: tempoDecorrido(decorrido),
     usage: formatarConsumo(tokens),
     pending: temPedido ? `Parado há ${formatarTempoParado(opcoes.pedidoParado)}` : null,
-    maquinaId: doc.maquinaId ?? null
+    maquinaId: doc.maquinaId ?? null,
+    conversationId: doc.conversationId ?? null,
+    pausada,
+    nasceuNoPainel: semAcento(doc.origem ?? '') === 'painel' || doc.id.startsWith('painel-'),
+    erro: doc.erro?.trim() || null
   };
 }
 
@@ -262,12 +281,62 @@ export function ordenarFabricas(lista: Fabrica[]): Fabrica[] {
   });
 }
 
+/* Caminhos de projeto que JA apareceram na base, para a tela de nova fabrica
+   oferecer escolha rapida. Não é cadastro de projeto, que é F7 e está fora
+   desta onda, §A.12: é só o que a base já viu, sem inventar nada. A ponte
+   escreve a pasta no campo projeto, e quando informa pasta separada o painel
+   prefere a pasta. */
+export interface CaminhoDeProjeto {
+  caminho: string;
+  nome: string;
+  quantas: number;
+}
+
+export function caminhosDeProjeto(lista: Fabrica[]): CaminhoDeProjeto[] {
+  const vistos = new Map<string, CaminhoDeProjeto>();
+  for (const f of lista) {
+    const caminho = (f.folder ?? f.project ?? '').trim();
+    if (!caminho || caminho === 'Projeto sem nome') continue;
+    const anterior = vistos.get(caminho);
+    if (anterior) {
+      anterior.quantas += 1;
+      continue;
+    }
+    const pedacos = caminho.split(/[\\/]+/).filter(Boolean);
+    vistos.set(caminho, { caminho, nome: pedacos[pedacos.length - 1] ?? caminho, quantas: 1 });
+  }
+  return [...vistos.values()].sort((a, b) => b.quantas - a.quantas || a.caminho.localeCompare(b.caminho));
+}
+
 /* ---------- aprovacao ---------- */
+
+/* Marcação de honestidade da OST 2: cada campo do pacote diz se é fato
+   capturado do portão ou leitura da ponte sobre o que viu. O painel mostra isso
+   na cara, porque foi o que o diretor pediu para poder confiar no pacote. */
+export type MarcaDaOrigem = 'fato' | 'ponte' | 'fato e ponte';
+
+export function marcaDaOrigem(origem: string | undefined | null): MarcaDaOrigem | null {
+  if (!origem) return null;
+  const limpa = semAcento(origem);
+  if (limpa === 'fato') return 'fato';
+  if (limpa === 'ponte') return 'ponte';
+  if (limpa.includes('fato') && limpa.includes('ponte')) return 'fato e ponte';
+  if (limpa.includes('ponte')) return 'ponte';
+  if (limpa.includes('fato')) return 'fato';
+  return null;
+}
+
+export const ROTULO_DA_ORIGEM: Record<MarcaDaOrigem, string> = {
+  fato: 'fato capturado',
+  ponte: 'leitura da ponte',
+  'fato e ponte': 'fato mais leitura da ponte'
+};
 
 /* O mesmo formato do pacote (interface Approval mais as props de ApprovalItem). */
 export interface Aprovacao {
   id: string;
   factoryId: string | null;
+  maquinaId: string | null;
   project: string;
   task: string;
   title: string;
@@ -275,10 +344,33 @@ export interface Aprovacao {
   impact: string;
   touches: string[];
   risk: RiskLevel;
+  tool: string | null;
+  agentSaid: string | null;
   requestedAt: Date | null;
   waitingMs: number;
   waiting: string;
   stale: boolean;
+  /* Origem de cada campo que a tela mostra, já traduzida para a marca. */
+  origens: {
+    title: MarcaDaOrigem | null;
+    why: MarcaDaOrigem | null;
+    impact: MarcaDaOrigem | null;
+    touches: MarcaDaOrigem | null;
+    risk: MarcaDaOrigem | null;
+    tool: MarcaDaOrigem | null;
+    agentSaid: MarcaDaOrigem | null;
+  };
+}
+
+/* Resposta já dada, para o histórico da tela de Aprovações. */
+export interface Decisao {
+  id: string;
+  title: string;
+  resposta: 'approved' | 'rejected' | 'noted';
+  observacao: string | null;
+  respondidoEm: Date | null;
+  quando: string;
+  respondidoPor: string | null;
 }
 
 function comoLista(valor: string | string[] | undefined): string[] {
@@ -302,6 +394,7 @@ export function traduzirAprovacao(doc: AprovacaoBase, agora: Date = new Date()):
   return {
     id: doc.id,
     factoryId: doc.fabricaId ?? null,
+    maquinaId: doc.maquinaId ?? null,
     project: pacote.fabrica?.valor?.trim() || 'Fábrica não informada',
     task: pacote.tarefa?.valor?.trim() || '',
     title: pacote.oQue?.valor?.trim() || pacote.resumo?.valor?.trim() || 'Pedido sem descrição',
@@ -309,11 +402,49 @@ export function traduzirAprovacao(doc: AprovacaoBase, agora: Date = new Date()):
     impact: pacote.impacto?.valor?.trim() || 'A ponte não informou o impacto.',
     touches: comoLista(pacote.oQueSeraTocado?.valor),
     risk: traduzirRisco(pacote.risco?.valor),
+    tool: pacote.ferramenta?.valor?.trim() || null,
+    agentSaid: pacote.agenteDisse?.valor?.trim() || null,
     requestedAt: criado,
     waitingMs,
     waiting: formatarTempoParado(waitingMs),
-    stale: waitingMs > LIMITE_PARADO_MS
+    stale: waitingMs > LIMITE_PARADO_MS,
+    origens: {
+      title: marcaDaOrigem(pacote.oQue?.origem ?? pacote.resumo?.origem),
+      why: marcaDaOrigem(pacote.porQue?.origem),
+      impact: marcaDaOrigem(pacote.impacto?.origem),
+      touches: marcaDaOrigem(pacote.oQueSeraTocado?.origem),
+      risk: marcaDaOrigem(pacote.risco?.origem),
+      tool: marcaDaOrigem(pacote.ferramenta?.origem),
+      agentSaid: marcaDaOrigem(pacote.agenteDisse?.origem)
+    }
   };
+}
+
+const MAPA_DE_RESPOSTA: Record<string, Decisao['resposta']> = {
+  aprovado: 'approved',
+  recusado: 'rejected',
+  'aprovado com observacao': 'noted'
+};
+
+export function traduzirDecisao(doc: AprovacaoBase, agora: Date = new Date()): Decisao | null {
+  const resposta = MAPA_DE_RESPOSTA[semAcento(doc.resposta ?? '')];
+  if (!resposta) return null;
+  const quando = paraData(doc.respondidoEm);
+  return {
+    id: doc.id,
+    title: doc.pacote?.oQue?.valor?.trim() || doc.pacote?.resumo?.valor?.trim() || 'Pedido sem descrição',
+    resposta,
+    observacao: doc.observacao?.trim() || null,
+    respondidoEm: quando,
+    quando: quando ? dataAmigavel(quando, agora) : 'sem hora na base',
+    respondidoPor: doc.respondidoPor?.trim() || null
+  };
+}
+
+export function ordenarDecisoes(lista: Decisao[]): Decisao[] {
+  /* Resposta mais recente primeiro: no histórico, o que acabou de acontecer é o
+     que o diretor procura. */
+  return [...lista].sort((a, b) => (b.respondidoEm?.getTime() ?? 0) - (a.respondidoEm?.getTime() ?? 0));
 }
 
 export function ordenarAprovacoes(lista: Aprovacao[]): Aprovacao[] {

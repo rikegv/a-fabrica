@@ -1,14 +1,17 @@
 /*
  * Componentes do design system portados para a stack do §A.2.
  *
- * Portados nesta onda (19 dos 24 do pacote), porque sao os que as duas telas do
- * escopo usam: ActivityTimeline, AlertBanner, ApprovalDeck, ApprovalItem,
- * BridgeStatus, Button, CommandBox, FactoryCard, FactoryHeader, Icon, KpiTile,
- * MobileNav, Pager, RiskTag, Sidebar, StateBadge, StateIcon, Tabs, TaskRow.
+ * Portados (20 dos 24 do pacote), porque sao os que as telas do escopo usam:
+ * ActivityTimeline, AlertBanner, ApprovalDeck, ApprovalItem, BridgeStatus,
+ * Button, CommandBox, FactoryCard, FactoryHeader, Icon, KpiTile, MobileNav,
+ * Pager, RiskTag, Segmented, Sidebar, StateBadge, StateIcon, Tabs, TaskRow.
  *
- * Fora desta onda, porque nenhuma tela do escopo usa: BarChart e ReportView
+ * Segmented entrou na Onda 2, que trouxe a tela de nova fabrica e o filtro do
+ * historico de aprovacoes.
+ *
+ * Fora do escopo, porque nenhuma tela construida usa: BarChart e ReportView
  * (Relatórios e Indicadores), ChangeRow (aba Alterações, que nao tem fonte no
- * contrato), Segmented e Toggle (filtros e Configurações).
+ * contrato) e Toggle (Configurações).
  *
  * O CSS dos componentes vem do proprio pacote, copiado por
  * scripts/gerar-estilos.mjs para app/componentes.gerado.css. Ele usa somente
@@ -43,6 +46,8 @@ export { Pager } from './Pager';
 export type { PagerProps } from './Pager';
 export { RiskTag } from './RiskTag';
 export type { RiskTagProps } from './RiskTag';
+export { Segmented } from './Segmented';
+export type { SegmentedOption, SegmentedProps } from './Segmented';
 export { Sidebar } from './Sidebar';
 export type { SidebarProps } from './Sidebar';
 export { StateBadge } from './StateBadge';

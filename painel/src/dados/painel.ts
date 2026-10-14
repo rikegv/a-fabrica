@@ -14,10 +14,13 @@ import {
   aprovacaoPendente,
   avaliarPonte,
   ordenarAprovacoes,
+  ordenarDecisoes,
   ordenarFabricas,
   traduzirAprovacao,
+  traduzirDecisao,
   traduzirFabrica,
   type Aprovacao,
+  type Decisao,
   type Fabrica,
   type Ponte
 } from './tradutor';
@@ -27,6 +30,9 @@ export interface EstadoDoPainel {
   ponte: Ponte;
   fabricas: Fabrica[];
   aprovacoes: Aprovacao[];
+  /* Pedidos já respondidos, do mais recente para o mais antigo. É o histórico da
+     tela de Aprovações, e sai do mesmo ouvinte, sem leitura nova na base. */
+  decisoes: Decisao[];
   porFabrica: Map<string, Aprovacao[]>;
   carregando: boolean;
   erro: string | null;
@@ -54,6 +60,13 @@ export function usarPainel(base: Firestore | null): EstadoDoPainel {
 
     const pendentes = ordenarAprovacoes(
       aprovacoes.itens.filter(aprovacaoPendente).map((doc) => traduzirAprovacao(doc, agora))
+    );
+
+    const decisoes = ordenarDecisoes(
+      aprovacoes.itens
+        .filter((doc) => !aprovacaoPendente(doc))
+        .map((doc) => traduzirDecisao(doc, agora))
+        .filter((d): d is NonNullable<typeof d> => d != null)
     );
 
     const porFabrica = new Map<string, Aprovacao[]>();
@@ -85,6 +98,7 @@ export function usarPainel(base: Firestore | null): EstadoDoPainel {
       ponte,
       fabricas: lista,
       aprovacoes: pendentes,
+      decisoes,
       porFabrica,
       carregando: maquinas.carregando || fabricas.carregando || aprovacoes.carregando,
       erro: maquinas.erro ?? fabricas.erro ?? aprovacoes.erro,

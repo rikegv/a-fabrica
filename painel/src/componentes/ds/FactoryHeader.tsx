@@ -1,7 +1,15 @@
 /* FactoryHeader, portado de bundle.js. Cabecalho da tela Fabrica.
-   Adicional do painel: actionsDisabledReason deixa os tres controles visiveis e
-   desabilitados, dizendo por que, porque pausar, reiniciar e encerrar entram na
-   Onda 2. Sem a prop, o componente se comporta como no pacote. */
+
+   Adicionais do painel:
+
+   - actionsDisabledReason deixa os tres controles visiveis e desabilitados,
+     dizendo por que, por exemplo com a ponte offline. Sem a prop, o componente
+     se comporta como no pacote.
+   - paused manda a palavra do primeiro botao, Pausar ou Retomar. O pacote
+     deduzia isso do estado idle; na base, pausada e campo proprio e nao estado,
+     porque §A.4 fecha a lista de estados (ver seção 3 do contrato da Onda 2).
+   - busy desabilita os tres enquanto a ordem anterior esta sendo registrada, e
+     assim a mesma ordem nao entra duas vezes na fila. */
 import { Button } from './Button';
 import { StateBadge } from './StateBadge';
 import type { FactoryState } from './tipos';
@@ -15,7 +23,9 @@ export interface FactoryHeaderProps {
   onPause?: () => void;
   onRestart?: () => void;
   onStop?: () => void;
-  actionsDisabledReason?: string;
+  actionsDisabledReason?: string | null;
+  paused?: boolean;
+  busy?: boolean;
 }
 
 export function FactoryHeader({
@@ -27,16 +37,19 @@ export function FactoryHeader({
   onPause,
   onRestart,
   onStop,
-  actionsDisabledReason
+  actionsDisabledReason,
+  paused,
+  busy
 }: FactoryHeaderProps) {
-  const pausada = state === 'idle';
-  const off = Boolean(actionsDisabledReason);
+  const pausada = paused ?? state === 'idle';
+  const off = Boolean(actionsDisabledReason) || busy === true;
   return (
     <header className="gf-fhead">
       <div className="gf-fhead-main">
         <div className="gf-fhead-title">
           <h1 className="title-lg">{project}</h1>
           <StateBadge state={state} size="lg" />
+          {paused ? <span className="caption gf-muted">pausada por você</span> : null}
         </div>
         <div className="caption gf-fhead-meta">
           <span>{agent}</span>
@@ -56,7 +69,9 @@ export function FactoryHeader({
             Encerrar
           </Button>
         </div>
-        {off ? <span className="caption gf-faint text-right">{actionsDisabledReason}</span> : null}
+        {actionsDisabledReason ? (
+          <span className="caption gf-faint gf-motivo text-right">{actionsDisabledReason}</span>
+        ) : null}
       </div>
     </header>
   );

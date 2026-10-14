@@ -6,21 +6,21 @@
  * nao rola e alvo de toque de 44px.
  *
  * Prioridade no celular, nesta ordem: responder aprovacao, ver o que esta
- * rodando, mandar comando, ler relatorio. Nesta onda, responder e mandar
- * aparecem desabilitados, dizendo em que onda entram; ler relatorio e um
- * destino inerte.
+ * rodando, mandar comando, ler relatorio. Na Onda 2 as tres primeiras estao
+ * vivas; ler relatorio segue como destino inerte, §A.12.
  *
- * O painel Aguardando voce e a forma do celular para o mesmo painel da Visao
- * geral; a fila completa, com historico e filtro, e a tela de Aprovacoes da
- * Onda 2, que esta onda nao constroi.
+ * O pedido parado abre direto na entrada, com o pacote completo e as tres
+ * respostas. Pausar, reiniciar e encerrar moram numa folha que sobe do pe, e
+ * encerrar pede confirmacao, sempre.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Firestore } from 'firebase/firestore';
 import {
   ActivityTimeline,
   AlertBanner,
   ApprovalDeck,
+  ApprovalItem,
   BridgeStatus,
   Button,
   CommandBox,
@@ -28,6 +28,7 @@ import {
   KpiTile,
   MobileNav,
   Pager,
+  Segmented,
   StateBadge,
   StateIcon,
   Tabs,
@@ -35,13 +36,16 @@ import {
   rotuloCurto
 } from '@/componentes/ds';
 import type { Entrada } from '@/dados/autenticacao';
+import { impedimentoDaEscrita, type ContextoDeEscrita } from '@/dados/escritas';
 import { usarAtividade, usarTarefas } from '@/dados/ouvintes';
 import type { EstadoDoPainel } from '@/dados/painel';
 import { ordenarTarefas, traduzirAtividade, traduzirTarefa } from '@/dados/tradutor';
 import { desdeQuando, plural } from '@/formato';
-import { MHead, Falha, Vazio } from './pecas';
-import { DESTINOS_INERTES, MOTIVO_DAS_ACOES_DA_FABRICA, motivoDaCaixaDeComando, motivoDaDecisao } from './textos';
-import { paraPedidoDeTela } from './VisaoGeral';
+import { usarAcoesDaFabrica, usarCaixaDeComando, type AcoesDaFabrica } from './FabricaTela';
+import { NovaFabricaCelular } from './NovaFabrica';
+import { Aviso, Confirmacao, ErroDeEscrita, MHead, Falha, Vazio } from './pecas';
+import { paraPedidoDeTela, usarResposta, type EstadoDaResposta } from './pedido';
+import { CONFIRMAR_ENCERRAR, DESTINOS_INERTES, motivoDeAbrirFabrica } from './textos';
 
 /* Quantos cartoes de fabrica a lista mostra por pagina no celular. Nao e numero
    fixo: a tela do celular e unica e nao rola, o cartao leva a linha do que a
@@ -89,10 +93,12 @@ function usarQuantosCartoesCabem(ativo: boolean, chave: string) {
 export function Celular({
   base,
   estado,
+  escrita,
   entrada
 }: {
   base: Firestore | null;
   estado: EstadoDoPainel;
+  escrita: ContextoDeEscrita;
   entrada: Entrada;
 }) {
   /* Entrada em Aprovacoes quando ha pedido parado, como o manual do celular
@@ -102,7 +108,12 @@ export function Celular({
   const [telaEscolhida, setTela] = useState<string | null>(null);
   const [fabricaId, setFabricaId] = useState<string | null>(null);
   const [pagina, setPagina] = useState(1);
+  const [aba, setAba] = useState<'pendentes' | 'historico'>('pendentes');
+  /* UM aviso por vez, e a casca e a dona dele, § mesma razao do computador. */
+  const [aviso, setAviso] = useState<string | null>(null);
+  const avisar = useCallback((mensagem: string) => setAviso(mensagem), []);
   const tela = telaEscolhida ?? (!estado.carregando && estado.aprovacoes.length ? 'approvals' : 'factories');
+  const resposta = usarResposta(escrita, avisar);
 
   const { lista: listaDeFabricas, cabem } = usarQuantosCartoesCabem(
     tela === 'factories',
@@ -110,7 +121,7 @@ export function Celular({
   );
 
   const ponte = estado.ponte;
-  const motivoDecisao = motivoDaDecisao(ponte.situacao);
+  const motivoDeAbrir = motivoDeAbrirFabrica(impedimentoDaEscrita(escrita));
 
   const faixaDaPonte = ponte.online ? null : (
     <AlertBanner
@@ -130,6 +141,18 @@ export function Celular({
       online={ponte.online}
       detail={ponte.online ? undefined : ponte.situacao === 'sem maquina' ? 'sem máquina' : desdeQuando(ponte.atrasoMs)}
     />
+  );
+
+  const botaoDeNovaFabrica = (
+    <button
+      type="button"
+      className="gf-iconbtn"
+      aria-label="Abrir nova fábrica"
+      disabled={Boolean(motivoDeAbrir)}
+      onClick={() => setTela('new')}
+    >
+      <Icon name="plus" size={18} />
+    </button>
   );
 
   let cabecalho: React.ReactNode = null;
@@ -152,14 +175,45 @@ export function Celular({
     corpo = (
       <>
         {faixaDaPonte}
-        <div className="flex min-h-0 flex-1">
-          <ApprovalDeck
-            items={estado.aprovacoes.map((p) => paraPedidoDeTela(p, motivoDecisao))}
-            touch
-            readOnlyReason={motivoDecisao}
-            emptyText="Nada parado esperando você. Quando uma fábrica pedir aprovação, o pedido aparece aqui."
+        {estado.decisoes.length ? (
+          <Segmented
+            block
+            label="Fila ou histórico"
+            value={aba}
+            onChange={(id) => setAba(id as 'pendentes' | 'historico')}
+            options={[
+              { id: 'pendentes', label: `Na fila (${estado.aprovacoes.length})` },
+              { id: 'historico', label: 'Histórico' }
+            ]}
           />
-        </div>
+        ) : null}
+        {aba === 'pendentes' || !estado.decisoes.length ? (
+          <div className="flex min-h-0 flex-1">
+            <ApprovalDeck
+              items={estado.aprovacoes.map((p) => paraPedidoDeTela(p, resposta))}
+              touch
+              readOnlyReason={resposta.motivo}
+              onApprove={(item) => resposta.aprovar({ id: item.id ?? '' })}
+              onReject={(item, motivoDaRecusa) => resposta.recusar({ id: item.id ?? '' }, motivoDaRecusa)}
+              onApproveWithNote={(item, observacao) =>
+                resposta.aprovarComObservacao({ id: item.id ?? '' }, observacao)
+              }
+              emptyText="Nada parado esperando você. Quando uma fábrica pedir aprovação, o pedido aparece aqui."
+            />
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+            {estado.decisoes.slice(0, 5).map((d) => (
+              <ApprovalItem
+                key={d.id}
+                title={d.title}
+                decision={d.resposta}
+                decidedAt={d.quando}
+                note={d.observacao ?? undefined}
+              />
+            ))}
+          </div>
+        )}
       </>
     );
   } else if (tela === 'factories') {
@@ -174,7 +228,7 @@ export function Celular({
             ? `${plural(estado.fabricas.length, 'no painel', 'no painel')} · mais urgente primeiro`
             : 'Nenhuma no painel'
         }
-        right={chipDaPonte}
+        right={botaoDeNovaFabrica}
       />
     );
     corpo = (
@@ -261,6 +315,25 @@ export function Celular({
         ) : null}
       </>
     );
+  } else if (tela === 'new') {
+    mostrarNav = false;
+    navAtiva = 'factories';
+    cabecalho = <MHead title="Nova fábrica" onBack={() => setTela('factories')} />;
+    corpo = (
+      <>
+        {faixaDaPonte}
+        <NovaFabricaCelular
+          escrita={escrita}
+          estado={estado}
+          celular
+          aoAbrir={(_id, mensagem) => {
+            setAviso(mensagem);
+            setTela('factories');
+          }}
+          aoCancelar={() => setTela('factories')}
+        />
+      </>
+    );
   } else if (tela === 'factory' && fabricaId) {
     mostrarNav = false;
     navAtiva = 'factories';
@@ -279,8 +352,11 @@ export function Celular({
       <CelularFabrica
         base={base}
         estado={estado}
+        escrita={escrita}
         fabricaId={fabricaId}
         faixa={faixaDaPonte}
+        resposta={resposta}
+        avisar={avisar}
         verPedido={() => setTela('approvals')}
       />
     ) : (
@@ -298,6 +374,17 @@ export function Celular({
         <div className="gf-glass flex min-h-0 flex-1 flex-col rounded-lg">
           <Vazio titulo={texto.titulo} detalhe={texto.detalhe} icone={<Icon name="overview" size={20} />} />
         </div>
+        {tela === 'more' ? (
+          <Button
+            variant="secondary"
+            size="touch"
+            block
+            disabled={Boolean(motivoDeAbrir)}
+            onClick={() => setTela('new')}
+          >
+            Abrir nova fábrica
+          </Button>
+        ) : null}
         <Button variant="ghost" size="touch" block onClick={entrada.sair}>
           Sair
         </Button>
@@ -324,6 +411,7 @@ export function Celular({
           ]}
         />
       ) : null}
+      {aviso ? <Aviso mensagem={aviso} celular aoSumir={() => setAviso(null)} /> : null}
     </div>
   );
 }
@@ -331,21 +419,30 @@ export function Celular({
 function CelularFabrica({
   base,
   estado,
+  escrita,
   fabricaId,
   faixa,
+  resposta,
+  avisar,
   verPedido
 }: {
   base: Firestore | null;
   estado: EstadoDoPainel;
+  escrita: ContextoDeEscrita;
   fabricaId: string;
   faixa: React.ReactNode;
+  resposta: EstadoDaResposta;
+  avisar: (mensagem: string) => void;
   verPedido: () => void;
 }) {
   const [aba, setAba] = useState('atividade');
-  const fabrica = estado.fabricas.find((f) => f.id === fabricaId);
+  const [folha, setFolha] = useState<'acoes' | null>(null);
+  const fabrica = estado.fabricas.find((f) => f.id === fabricaId) ?? null;
   const pedido = (estado.porFabrica.get(fabricaId) ?? [])[0];
   const atividade = usarAtividade(base, fabricaId, PASSOS_NO_CELULAR);
   const tarefas = usarTarefas(base, fabricaId);
+  const acoes = usarAcoesDaFabrica(escrita, fabrica, avisar);
+  const caixa = usarCaixaDeComando(escrita, fabrica, avisar);
 
   const passos = useMemo(() => atividade.itens.map(traduzirAtividade), [atividade.itens]);
   const listaDeTarefas = useMemo(
@@ -389,8 +486,9 @@ function CelularFabrica({
       {faixa}
       <div className="flex items-center gap-2">
         <StateBadge state={fabrica.state} label={rotuloCurto(fabrica.state)} />
+        {fabrica.pausada ? <span className="caption gf-muted">pausada</span> : null}
         <span className="mono gf-faint">{fabrica.usage}</span>
-        <span className="mono gf-faint">{fabrica.elapsed}</span>
+        <span className="mono gf-faint gf-push">{fabrica.elapsed}</span>
       </div>
       {pedido ? (
         <button
@@ -403,7 +501,7 @@ function CelularFabrica({
             <StateIcon state="approval" size={12} />
           </span>
           <span className="body-strong flex-1 text-left">{`Esperando você há ${pedido.waiting}`}</span>
-          <span className="caption gf-muted">Ver pedido</span>
+          <span className="caption gf-muted">Responder</span>
         </button>
       ) : null}
       <Tabs
@@ -415,8 +513,124 @@ function CelularFabrica({
         ]}
       />
       <div className="min-h-0 flex-1 overflow-hidden">{miolo}</div>
-      <CommandBox disabledReason={motivoDaCaixaDeComando(estado.ponte.situacao)} />
-      <span className="caption gf-faint">{MOTIVO_DAS_ACOES_DA_FABRICA}</span>
+      {acoes.ordem.erro && !acoes.confirmando && !folha ? (
+        <ErroDeEscrita mensagem={acoes.ordem.erro} aoFechar={acoes.ordem.limparErro} />
+      ) : null}
+      <CommandBox
+        touch
+        disabledReason={caixa.motivo}
+        error={caixa.ordem.erro}
+        onDismissError={caixa.ordem.limparErro}
+        onSend={caixa.enviar}
+      />
+      <Button
+        variant="secondary"
+        size="touch"
+        block
+        disabled={Boolean(acoes.motivo) || acoes.ordem.ocupado}
+        onClick={() => setFolha('acoes')}
+      >
+        Pausar, reiniciar ou encerrar
+      </Button>
+      {acoes.motivo ? <span className="caption gf-faint gf-motivo">{acoes.motivo}</span> : null}
+
+      {folha === 'acoes' && !acoes.confirmando ? (
+        <FolhaDeAcoes
+          acoes={acoes}
+          pausada={fabrica.pausada}
+          aoFechar={() => setFolha(null)}
+        />
+      ) : null}
+
+      {acoes.confirmando ? (
+        <Confirmacao
+          celular
+          perigo
+          titulo={CONFIRMAR_ENCERRAR.titulo(fabrica.project)}
+          detalhe={CONFIRMAR_ENCERRAR.detalhe}
+          rotuloDoBotao={CONFIRMAR_ENCERRAR.botao}
+          rotuloDeCancelar={CONFIRMAR_ENCERRAR.cancelar}
+          ocupado={acoes.ordem.ocupado}
+          erro={acoes.ordem.erro}
+          aoConfirmar={() => {
+            acoes.encerrar();
+            setFolha(null);
+          }}
+          aoCancelar={() => {
+            /* Deixar rodando fecha tudo, inclusive a folha de ordens: o diretor
+               disse que nao quer mexer nesta fabrica agora. */
+            acoes.desistirDoEncerramento();
+            setFolha(null);
+          }}
+        />
+      ) : null}
     </>
+  );
+}
+
+/* Folha que sobe do pe com as ordens de ciclo de vida, como o manual do celular
+   manda. Encerrar daqui ainda passa pela confirmacao. */
+function FolhaDeAcoes({
+  acoes,
+  pausada,
+  aoFechar
+}: {
+  acoes: AcoesDaFabrica;
+  pausada: boolean;
+  aoFechar: () => void;
+}) {
+  return (
+    <div className="gf-sheet-wrap" onClick={aoFechar}>
+      <div
+        className="gf-sheet gf-panel-solid"
+        role="dialog"
+        aria-label="Ordens para esta fábrica"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span className="gf-sheet-grip" aria-hidden />
+        <div className="title-md">O que fazer com esta fábrica</div>
+        <div className="caption gf-muted">A ordem entra na fila da ponte, que executa na sua máquina.</div>
+        {acoes.ordem.erro ? <ErroDeEscrita mensagem={acoes.ordem.erro} aoFechar={acoes.ordem.limparErro} /> : null}
+        <div className="gf-sheet-actions">
+          <Button
+            variant="secondary"
+            size="touch"
+            block
+            disabled={acoes.ordem.ocupado}
+            onClick={() => {
+              if (pausada) acoes.retomar();
+              else acoes.pausar();
+              aoFechar();
+            }}
+          >
+            {pausada ? 'Retomar' : 'Pausar'}
+          </Button>
+          <Button
+            variant="secondary"
+            size="touch"
+            block
+            disabled={acoes.ordem.ocupado}
+            onClick={() => {
+              acoes.reiniciar();
+              aoFechar();
+            }}
+          >
+            Reiniciar
+          </Button>
+          <Button
+            variant="danger"
+            size="touch"
+            block
+            disabled={acoes.ordem.ocupado}
+            onClick={acoes.pedirConfirmacaoDeEncerramento}
+          >
+            Encerrar
+          </Button>
+          <Button variant="ghost" size="touch" block onClick={aoFechar}>
+            Fechar
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
