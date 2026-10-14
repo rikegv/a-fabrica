@@ -119,6 +119,11 @@ async function subirPonte(rotulo: string): Promise<PonteViva> {
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined) ambiente[k] = v;
   ambiente['PONTE_MAQUINA_ID'] = MAQUINA;
   ambiente['PONTE_CWD'] = PROJETO;
+  // A fila de atividade desta rodada mora DENTRO da rodada. Sem esta linha, a
+  // ponte de teste le a fila de PRODUCAO e publica as sessoes de verdade do
+  // diretor carimbadas com esta maquina de teste, que e um defeito que aconteceu
+  // de fato na retomada da OST 7 e sujou a base real.
+  ambiente['PONTE_PASTA_FILA_GANCHOS'] = join(RODADA, 'fila-de-ganchos-da-rodada');
   if (EMULADOR) ambiente['PONTE_EMULADOR'] = '1';
   else delete ambiente['PONTE_EMULADOR'];
 

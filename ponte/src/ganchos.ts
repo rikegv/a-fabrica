@@ -66,9 +66,38 @@ import { atualizarFabrica } from './base.js';
 import { mascarar } from './mascara.js';
 import type { EstadoFabrica } from './tipos.js';
 
-export const PASTA_FILA = join(PASTA_LOCAL, 'fila-ganchos');
-export const PASTA_CONSUMIDA = join(PASTA_LOCAL, 'fila-ganchos-consumida');
-const CAMINHO_MARCAS = join(PASTA_LOCAL, 'fila-ganchos-marcas.json');
+/**
+ * Onde mora a fila de atividade. Producao: a pasta local da ponte.
+ *
+ * A VARIAVEL DE AMBIENTE NAO E CONFORTO, E CONSERTO DE UM DEFEITO ACHADO AO VIVO.
+ * Na retomada da OST 7, as rodadas de teste contra a base real subiram pontes com
+ * identificador de maquina de TESTE, e essas pontes leram esta fila, que e a de
+ * PRODUCAO. Resultado: sessoes de verdade do diretor foram publicadas na base real
+ * carimbadas com a maquina de teste, e apareceram no painel penduradas numa ponte
+ * que depois ficou offline. O painel mostrava a sessao viva dele como se fosse de
+ * outra maquina, morta.
+ *
+ * Com isto, rodada de teste aponta a fila para dentro da PASTA DA RODADA e nao
+ * encosta mais na atividade real do diretor. O padrao continua sendo producao, que
+ * e o que o servico usa.
+ */
+const PASTA_BASE_DA_FILA: string = ((): string => {
+  const bruto = (process.env.PONTE_PASTA_FILA_GANCHOS ?? '').trim();
+  return bruto.length > 0 ? bruto : PASTA_LOCAL;
+})();
+
+/**
+ * Fabricas que esta ponte ja identificou sem ter visto a abertura delas.
+ *
+ * Existe para o conserto da fabrica fantasma nao reescrever maquina, agente e
+ * projeto em toda varredura: uma vez por sessao basta. Cresce no maximo uma
+ * entrada por sessao que a ponte pegou no meio, e zera quando o servico reinicia.
+ */
+const identificadas = new Set<string>();
+
+export const PASTA_FILA = join(PASTA_BASE_DA_FILA, 'fila-ganchos');
+export const PASTA_CONSUMIDA = join(PASTA_BASE_DA_FILA, 'fila-ganchos-consumida');
+const CAMINHO_MARCAS = join(PASTA_BASE_DA_FILA, 'fila-ganchos-marcas.json');
 
 /** Prefixo que distingue, na base, a fabrica que o diretor abriu na mao. */
 export const PREFIXO_MAO = 'mao-';
@@ -338,8 +367,8 @@ export async function varrerFila(
       if (passo.mascarou.length > 0) r.mascaradas++;
 
       try {
+        const projeto = texto(linha.projeto);
         if (passo.tipo === 'init') {
-          const projeto = texto(linha.projeto);
           await atualizarFabrica(db, fabricaId, {
             maquinaId,
             estado: 'em execucao',
@@ -348,6 +377,25 @@ export async function varrerFila(
             ...(projeto !== null ? { projeto } : {}),
           });
           r.sessoesNovas++;
+        } else if (!identificadas.has(fabricaId)) {
+          // FABRICA FANTASMA, conserto de defeito achado ao vivo na OST 7.
+          //
+          // A ponte so escrevia maquina, agente e projeto no evento de abertura.
+          // Quando ela sobe com a sessao do diretor JA no meio do caminho, aquele
+          // evento ficou na fila antes dela existir, ou ja tinha sido consumido, e
+          // a fabrica nascia da primeira atividade: sem maquina, sem agente, sem
+          // projeto, e presa em execucao. No painel isso e uma linha muda, que nao
+          // diz de onde veio e nunca fecha.
+          //
+          // O gancho escreve o projeto em TODA linha, nao so na abertura, entao a
+          // informacao estava ali o tempo todo e era so usar. Merge, nunca
+          // sobrescrita: se a abertura chegar depois, ela e quem manda.
+          await atualizarFabrica(db, fabricaId, {
+            maquinaId,
+            agente: 'claude code',
+            ...(projeto !== null ? { projeto } : {}),
+          });
+          identificadas.add(fabricaId);
         }
         await addDoc(collection(db, 'fabricas', fabricaId, 'atividade'), { ...passo, em: serverTimestamp() });
         if (estado !== null) await atualizarFabrica(db, fabricaId, { estado });

@@ -83,6 +83,9 @@ async function subirPonte(): Promise<ChildProcessWithoutNullStreams> {
   ambiente['PONTE_MAQUINA_ID'] = MAQUINA;
   ambiente['PONTE_CWD'] = PROJETO;
   ambiente['PONTE_LIMITE_APROVACAO_MS'] = String(LIMITE_MS);
+  // Fila de atividade desta rodada dentro da rodada, para a ponte de teste nao
+  // publicar as sessoes de verdade do diretor com o carimbo desta maquina falsa.
+  ambiente['PONTE_PASTA_FILA_GANCHOS'] = join(RODADA, 'fila-de-ganchos-da-rodada');
   if (EMULADOR) ambiente['PONTE_EMULADOR'] = '1';
   else delete ambiente['PONTE_EMULADOR'];
 

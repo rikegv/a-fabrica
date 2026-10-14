@@ -18,8 +18,15 @@
 // --------------------------------
 //   1. abre um servidor HTTP preso em 127.0.0.1, em porta sorteada pelo sistema;
 //   2. abre o navegador do diretor num endereço com segredo de uso único;
-//   3. a página roda o SDK do Firebase e faz o login com o Google, com o segundo
-//      fator que a conta dele já exige;
+//   3. a página roda o SDK do Firebase e faz o login com o Google, do jeito que a
+//      conta dele estiver configurada no Google;
+//      NADA NESTE PROJETO CONFERE SEGUNDO FATOR, e este arquivo não pode afirmar
+//      que confere. A regra do Firestore já diz isso por escrito, desde a OST 6: o
+//      token do provedor Google não carrega essa informação e o Authentication
+//      deste projeto não impõe segunda etapa. Se o diretor tem verificação em duas
+//      etapas, ela vive na conta Google dele e é responsabilidade dela. A primeira
+//      versão deste arquivo afirmava o contrário, inclusive na tela que ele lê, e a
+//      auditoria da OST 7 vetou com razão.
 //   4. a página devolve, pelo laço de retorno, o token de atualização daquela
 //      sessão;
 //   5. o servidor fecha, e quem confere e grava é identidade.ts, pelo mesmo
@@ -35,9 +42,11 @@
 //      também por tempo esgotado, por erro e por sinal. Sempre em finally.
 //   T4 Segredo de uso único no caminho do endereço. Pedido sem o segredo recebe
 //      404 e nada mais, nem dica.
-//   T5 Confere o cabeçalho de hospedeiro. Só 127.0.0.1 com a porta desta rodada
-//      passa. Isso fecha o ataque de nome de domínio que aponta para o laço de
-//      retorno.
+//   T5 Confere o cabeçalho de hospedeiro. Só 127.0.0.1 ou localhost, com a porta
+//      desta rodada, passam. Isso fecha o ataque de nome de domínio que aponta
+//      para o laço de retorno, porque o nome dele não é nenhum dos dois. As duas
+//      grafias são aceitas porque o Firebase autoriza localhost de fábrica e não
+//      autoriza 127.0.0.1; a ESCUTA continua presa em 127.0.0.1 nos dois casos.
 //   T6 A entrega exige tipo de conteúdo JSON e não existe resposta de
 //      pré-verificação. Página de outra origem não consegue entregar nada aqui.
 //   T7 Uma entrega e acabou. A segunda chega depois do servidor ter fechado.
@@ -54,8 +63,35 @@ import type { AddressInfo } from 'node:net';
 import type { ConfigLocal } from './config.js';
 import { DIRETOR } from './config.js';
 
-/** Endereço de escuta, fixado em texto. Laço de retorno e nada mais, §A.6. */
+/** Endereço de ESCUTA, fixado em texto. Laço de retorno e nada mais, §A.6. */
 const LACO_DE_RETORNO = '127.0.0.1';
+
+/**
+ * As duas grafias do laço de retorno que a tranca de hospedeiro aceita, T5.
+ *
+ * Existe por um motivo concreto, descoberto na retomada da OST 7: o Firebase
+ * Authentication traz localhost na lista de domínios autorizados de fábrica, e
+ * NÃO traz 127.0.0.1. Com a página servida em 127.0.0.1, o login do Google
+ * recusava com auth/unauthorized-domain, o diretor via o erro na tela e a ponte
+ * só via tempo esgotado, sem saber a diferença entre erro e clique que não veio.
+ *
+ * Aceitar as duas grafias não abre nada: a ESCUTA continua presa em 127.0.0.1,
+ * então só processo desta máquina alcança, e o navegador manda no cabeçalho de
+ * hospedeiro exatamente o nome que foi digitado no endereço. Página de outro
+ * domínio, mesmo que ele resolva para o laço de retorno, continua barrada aqui,
+ * porque o nome dela nunca vai ser nenhuma destas duas.
+ */
+const GRAFIAS_DO_LACO = ['127.0.0.1', 'localhost'] as const;
+
+/**
+ * Qual grafia vai no endereço que o navegador abre. Padrão localhost, que é a
+ * que o Firebase autoriza de fábrica. A variável de ambiente serve para a prova
+ * forçar a outra grafia e conferir que a tranca de hospedeiro continua de pé.
+ */
+const GRAFIA_ESCOLHIDA: string = ((): string => {
+  const bruto = (process.env.PONTE_ENTRADA_HOSPEDEIRO ?? '').trim();
+  return (GRAFIAS_DO_LACO as readonly string[]).includes(bruto) ? bruto : 'localhost';
+})();
 
 /** Versão do SDK que a página carrega, a mesma que a ponte usa no pacote. */
 const VERSAO_SDK = '11.10.0';
@@ -179,8 +215,8 @@ function paginaDeEntrada(config: ConfigLocal, segredo: string): string {
   <button id="entrar">Entrar com o Google</button>
   <div id="aviso" class="aviso"></div>
   <p class="nota">
-    O que acontece aqui: o Google confirma quem você é, com a segunda etapa que a sua conta já exige,
-    e a ponte guarda a sessão num arquivo fechado só para o seu usuário.
+    O que acontece aqui: o Google confirma quem você é, do jeito que a sua conta estiver
+    configurada, e a ponte guarda a sessão num arquivo fechado só para o seu usuário.
     Esta página não guarda sessão no navegador e pode ser fechada no fim.
   </p>
 </div>
@@ -200,6 +236,18 @@ function dizer(texto, certo) {
   aviso.className = 'aviso ' + (certo ? 'certo' : 'errado');
 }
 
+// Conta para o terminal o que apareceu nesta tela. Sem isto, erro de login aqui
+// chegava na ponte como tempo esgotado, sem motivo nenhum.
+async function contarFalha(codigo, texto) {
+  try {
+    await fetch('/' + SEGREDO + '/falha', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ codigo: codigo, texto: texto }),
+    });
+  } catch (e) { /* o aviso na tela já está escrito; isto aqui é só o relato */ }
+}
+
 const app = initializeApp(${JSON.stringify(cfgParaPagina)});
 const auth = getAuth(app);
 // Persistência em memória: este login não fica guardado no navegador.
@@ -216,12 +264,14 @@ botao.addEventListener('click', async () => {
     if (u.email !== DIRETOR) {
       await signOut(auth);
       dizer('Esta conta é ' + u.email + ', e só a conta do diretor entra. Nada foi enviado para a ponte.', false);
+      await contarFalha('conta-errada', 'entrou com ' + u.email);
       botao.disabled = false;
       return;
     }
     if (!u.emailVerified) {
       await signOut(auth);
       dizer('Esta conta está com e-mail não verificado, e o verificado é obrigatório. Nada foi enviado para a ponte.', false);
+      await contarFalha('email-nao-verificado', 'a conta do diretor está sem e-mail verificado');
       botao.disabled = false;
       return;
     }
@@ -244,8 +294,9 @@ botao.addEventListener('click', async () => {
     let texto = 'Não deu para entrar: ' + (codigo || (e && e.message) || String(e));
     if (codigo === 'auth/popup-blocked') texto = 'O navegador bloqueou a janela do Google. Libere a janela para este endereço e clique de novo.';
     if (codigo === 'auth/popup-closed-by-user') texto = 'A janela do Google foi fechada antes de terminar. Clique de novo.';
-    if (codigo === 'auth/unauthorized-domain') texto = 'O projeto não autoriza este endereço. Avise a fábrica: falta 127.0.0.1 na lista de domínios autorizados.';
+    if (codigo === 'auth/unauthorized-domain') texto = 'O projeto não autoriza este endereço. Avise a fábrica: falta ' + location.hostname + ' na lista de domínios autorizados do Authentication.';
     dizer(texto, false);
+    await contarFalha(codigo || 'sem-codigo', (e && e.message) ? e.message : String(e));
     botao.disabled = false;
   }
 });
@@ -304,6 +355,10 @@ export async function entrarPeloNavegador(opcoes: OpcoesEntradaNavegador): Promi
   let rejeitar: ((e: Error) => void) | null = null;
   let entregou = false;
   let porta = 0;
+  /** A página chegou a ser servida? Muda o que o tempo esgotado significa. */
+  let serviuPagina = false;
+  /** O último motivo que a própria página relatou, se relatou algum. */
+  let ultimaFalhaDaPagina: string | null = null;
 
   const servidor: Server = createServer((pedido: IncomingMessage, resposta: ServerResponse) => {
     void (async (): Promise<void> => {
@@ -312,11 +367,13 @@ export async function entrarPeloNavegador(opcoes: OpcoesEntradaNavegador): Promi
         resposta.end(texto);
       };
 
-      // T5, cabeçalho de hospedeiro. Só o laço de retorno com a porta desta
-      // rodada passa. Nome de domínio que resolve para 127.0.0.1 bate aqui.
+      // T5, cabeçalho de hospedeiro. Só uma das duas grafias do laço de retorno,
+      // com a porta desta rodada, passa. Nome de domínio que resolve para o laço
+      // de retorno bate aqui, porque o nome dele não é nenhuma das duas.
       const hospedeiro = pedido.headers.host ?? '';
-      if (hospedeiro !== `${LACO_DE_RETORNO}:${porta}`) {
-        registrar(`pedido recusado, hospedeiro ${hospedeiro || 'ausente'} não é ${LACO_DE_RETORNO}:${porta}`);
+      const aceitos = GRAFIAS_DO_LACO.map((g) => `${g}:${porta}`);
+      if (!aceitos.includes(hospedeiro)) {
+        registrar(`pedido recusado, hospedeiro ${hospedeiro || 'ausente'} não é ${aceitos.join(' nem ')}`);
         recusar(404, 'nada aqui');
         return;
       }
@@ -339,6 +396,39 @@ export async function entrarPeloNavegador(opcoes: OpcoesEntradaNavegador): Promi
           'referrer-policy': 'no-referrer',
         });
         resposta.end(html);
+        // Registrar que a página FOI servida. Sem esta linha, tempo esgotado era
+        // uma coisa só, e podia ser o diretor que não clicou ou a página que
+        // abriu e falhou. Eram dois problemas diferentes com o mesmo relato.
+        serviuPagina = true;
+        registrar(`página de entrada servida para o navegador, em ${hospedeiro}`);
+        return;
+      }
+
+      // O canal de volta do erro de tela. A página manda para cá o que deu errado
+      // no login, para o terminal e o relato saberem. Não decide nada, não grava
+      // nada, só conta: a porta continua esperando a entrega de verdade.
+      if (pedido.method === 'POST' && partes[1] === 'falha') {
+        const tipoFalha = String(pedido.headers['content-type'] ?? '');
+        if (!tipoFalha.toLowerCase().startsWith('application/json')) {
+          recusar(415, 'tipo de conteúdo não aceito');
+          return;
+        }
+        const corpoFalha = await lerCorpo(pedido, 8 * 1024);
+        let motivo = 'não deu para ler o motivo';
+        if (corpoFalha !== null) {
+          try {
+            const j = JSON.parse(corpoFalha) as Record<string, unknown>;
+            const c = typeof j['codigo'] === 'string' ? j['codigo'] : '';
+            const t = typeof j['texto'] === 'string' ? j['texto'] : '';
+            motivo = [c, t].filter((p) => p.length > 0).join(', ').slice(0, 400);
+          } catch {
+            motivo = 'motivo não era JSON';
+          }
+        }
+        resposta.writeHead(204, { 'cache-control': 'no-store' });
+        resposta.end();
+        ultimaFalhaDaPagina = motivo;
+        registrar(`a página relatou falha no login: ${motivo}`);
         return;
       }
 
@@ -413,8 +503,10 @@ export async function entrarPeloNavegador(opcoes: OpcoesEntradaNavegador): Promi
       );
     }
     porta = endereco.port;
-    const url = `http://${LACO_DE_RETORNO}:${porta}/${segredo}`;
-    registrar(`porta de entrada aberta em ${LACO_DE_RETORNO}:${porta}, só laço de retorno, com segredo de uso único`);
+    const url = `http://${GRAFIA_ESCOLHIDA}:${porta}/${segredo}`;
+    registrar(
+      `porta de entrada aberta, escutando em ${LACO_DE_RETORNO}:${porta}, endereço na grafia ${GRAFIA_ESCOLHIDA}, só laço de retorno, com segredo de uso único`
+    );
     opcoes.aoSubir?.(url, porta);
 
     servidor.on('error', (e) => {
@@ -427,12 +519,22 @@ export async function entrarPeloNavegador(opcoes: OpcoesEntradaNavegador): Promi
     });
 
     relogio = setTimeout(() => {
-      rejeitar?.(
-        new EntradaPeloNavegadorFalhou(
-          `tempo esgotado: ninguém entrou em ${Math.round(limiteMs / 1000)} segundo(s), e a porta fechou`,
-          'rode a instalação de novo e faça o login na página que abrir'
-        )
-      );
+      const segundos = Math.round(limiteMs / 1000);
+      // Três desfechos diferentes, três mensagens diferentes. Antes os três
+      // chegavam como a mesma frase e não davam para diagnosticar.
+      const oQueAconteceu =
+        ultimaFalhaDaPagina !== null
+          ? `tempo esgotado em ${segundos} segundo(s): a página abriu e o login falhou com ${ultimaFalhaDaPagina}`
+          : serviuPagina
+            ? `tempo esgotado em ${segundos} segundo(s): a página abriu mas nenhuma conta foi entregue`
+            : `tempo esgotado em ${segundos} segundo(s): a página nem chegou a ser aberta no navegador`;
+      const oQueFazer =
+        ultimaFalhaDaPagina !== null
+          ? 'leia o motivo acima, resolva e rode o login de novo'
+          : serviuPagina
+            ? 'rode o login de novo e termine a entrada na página, clicando em Entrar com o Google'
+            : 'rode o login de novo e abra na mão o endereço que aparecer no terminal';
+      rejeitar?.(new EntradaPeloNavegadorFalhou(`${oQueAconteceu}, e a porta fechou`, oQueFazer));
     }, limiteMs);
 
     console.log('');

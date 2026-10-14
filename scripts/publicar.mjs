@@ -299,13 +299,48 @@ async function publicarPainel() {
   reg('conferido: nenhum arquivo do pacote leva chave do Firebase dentro');
 
   // Passo 1, versao nova com a configuracao de firebase.json.
+  //
+  // TRADUCAO OBRIGATORIA, e ela custou uma publicacao recusada com HTTP 400 na
+  // retomada da OST 7. O firebase.json fala o vocabulario do Firebase CLI, com
+  // source e destination. A API de hospedagem fala outro, com glob e path, e
+  // recusa o que nao conhece em vez de ignorar. Como a decisao do diretor foi
+  // publicar SEM depender do CLI, a traducao tem de morar aqui.
+  //
+  //   reescrita   source -> glob,  destination -> path
+  //   redirecao   source -> glob,  destination -> location,  type -> statusCode
+  //   cabecalho   source -> glob,  lista de {key,value} -> um objeto so
   const config = JSON.parse(readFileSync(join(RAIZ, 'firebase.json'), 'utf8')).hosting ?? {};
+
+  const traduzirReescrita = (r) => {
+    const alvo = r.destination !== undefined ? { path: r.destination } : {};
+    return {
+      ...(r.regex !== undefined ? { regex: r.regex } : { glob: r.source ?? r.glob ?? '**' }),
+      ...alvo,
+      ...(r.function !== undefined ? { function: r.function } : {}),
+      ...(r.run !== undefined ? { run: r.run } : {}),
+    };
+  };
+  const traduzirRedirecao = (r) => ({
+    ...(r.regex !== undefined ? { regex: r.regex } : { glob: r.source ?? r.glob ?? '**' }),
+    location: r.destination ?? r.location,
+    statusCode: r.type ?? r.statusCode ?? 301,
+  });
+  const traduzirCabecalho = (h) => ({
+    ...(h.regex !== undefined ? { regex: h.regex } : { glob: h.source ?? h.glob ?? '**' }),
+    headers: Array.isArray(h.headers)
+      ? Object.fromEntries(h.headers.map((c) => [c.key, String(c.value)]))
+      : (h.headers ?? {}),
+  });
+
+  const configDaApi = {
+    rewrites: (config.rewrites ?? []).map(traduzirReescrita),
+    ...(config.headers ? { headers: config.headers.map(traduzirCabecalho) } : {}),
+    ...(config.redirects ? { redirects: config.redirects.map(traduzirRedirecao) } : {}),
+  };
+  reg(`configuracao traduzida para a API: ${JSON.stringify(configDaApi)}`);
+
   const versao = await chamar('POST', `https://firebasehosting.googleapis.com/v1beta1/sites/${SITE}/versions`, {
-    config: {
-      rewrites: config.rewrites ?? [],
-      ...(config.headers ? { headers: config.headers } : {}),
-      ...(config.redirects ? { redirects: config.redirects } : {}),
-    },
+    config: configDaApi,
   });
   reg(`versao criada: ${versao.name}`);
 
