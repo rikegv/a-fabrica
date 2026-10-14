@@ -124,4 +124,83 @@ Liberada para CONSTRUIR, proibida de LIGAR, por parecer da segurança. Construir
 ### Onde está cada coisa escrita
 docs/ost6-ponte.md e docs/ost6-ponte-parte2.md, a ponte. docs/ost6-ponte-credencial.md, o achado da credencial com seis opções. docs/ost6-base.md, a base. docs/ost6-painel.md e docs/ost6-painel-parte2.md, o painel. docs/ost6-seguranca.md e docs/ost6-seguranca-parte2.md, os dois pareceres. docs/ost6-decisoes-do-diretor.md, as duas decisões. Evidências em firebase/testes, painel/testes e C:\Users\Henrique\a-fabrica-lab\rodadas, nenhuma sobrescrita, nenhuma apagada, §A.17.
 
+## 2026-10-14, retomada da OST 7: a sessão do diretor entrou e destravou tudo
+
+Agentes: **coordenador** (login, provas na base real, gate, publicação, consertos)
+e **seguranca** (auditoria e veto), §A.15.
+
+### O que destravou
+O diretor entrou pelo login no navegador. A sessão da ponte está gravada e trancada
+em `C:\Users\Henrique\.a-fabrica-ponte\sessao.json`. Com ela, caiu a trava que vinha
+desde a OST 6.
+
+A primeira tentativa de login morreu calada: 15 minutos, porta fechada por tempo
+esgotado, e o relato não sabia dizer se o diretor não clicou ou se a página abriu e
+falhou. A causa provável era o Firebase autorizar `localhost` de fábrica e não
+autorizar `127.0.0.1`. Três consertos antes da segunda tentativa, que funcionou em
+93 segundos: as duas grafias aceitas na tranca de hospedeiro, a página contando o
+erro dela para o terminal, e o tempo esgotado distinguindo três desfechos.
+
+### O que está provado contra a base real
+Sete testes, 7 de 7, **três rodadas**. Prova do tempo esgotado, com recusa por tempo,
+hora de servidor, origem, e a resposta tardia do diretor negada pela própria regra
+com `PERMISSION_DENIED`. Bloco 1 fim a fim, 9 de 9: sessão aberta na mão apareceu
+sozinha na nuvem em 3 segundos, com os 5 passos em ordem. Prova das cinco ações do
+painel, tudo passando. Prova do §A.7, quatro partes, 12 casos de bloqueio.
+
+Custo do gancho, medido hoje: **p95 de 72 ms por passo**, dos quais 2,4 ms é trabalho
+dele e o resto é processo subindo. A medida antiga de 220 a 280 ms vinha de dividir a
+diferença de uma tarefa inteira pelo número de chamadas, que é mais ruidoso.
+
+### Quatro defeitos achados ao vivo e consertados
+1. **Gate cego para a PowerShell.** O hook estava amarrado só em `matcher: "Bash"`, e
+   a sessão tem ferramenta PowerShell: um push por ela passava inteiro por fora do
+   §A.7. Fechado e provado ao vivo.
+2. **Publicação sem o Firebase CLI estava quebrada.** O script mandava os campos do
+   `firebase.json` crus para a API de hospedagem, que recusou com HTTP 400. A tradução
+   mora no script agora.
+3. **Ponte de teste comia a fila de produção.** Pontes com identificador de máquina
+   falso liam a fila real e publicavam as sessões de verdade do diretor carimbadas
+   com a máquina de teste. No painel, a sessão viva dele aparecia pendurada numa ponte
+   offline. A fila aceita pasta por ambiente e as três provas apontam para dentro da
+   rodada.
+4. **Fábrica fantasma.** Sessão cuja abertura a ponte perdeu nascia muda, sem máquina,
+   sem agente, sem projeto, presa em execução. Agora a primeira atividade completa a
+   fábrica por merge.
+
+### O que está no ar
+Painel com a Onda 2 dentro em https://a-fabrica-soulan.web.app, publicado com flag do
+gate criada e removida. Regra do Firestore já estava byte a byte igual ao arquivo, não
+precisou republicar. Ponte de produção rodando solta, máquina `maquina-b06c5b1e81b4`,
+estado online.
+
+### O veto da segurança
+A Onda 2 **não podia ser ligada**: condições 1 e 12 do parecer da OST 6 abertas, 8
+pela metade. Veto de processo e de risco, não de código. Validação visual do diretor
+não está vetada e é recomendada. Parecer inteiro em
+`docs/ost7-seguranca-retomada.md`.
+
+Dois achados fechados na hora: máscara no caminho da aprovação, que publicava todo o
+texto do agente sem filtro numa coleção que não se apaga; e o furo do gate que
+liberava conferir e publicar na mesma linha.
+
+### Cinco decisões esperando o diretor
+1. **Evidência do segundo fator da conta Google.** Bloqueia a main e bloqueia manter a
+   Onda 2 ligada. É o item mais barato e o que mais protege.
+2. **Faturamento do projeto**, para ligar recuperação a ponto no tempo. A API recusou
+   por plano gratuito. Sem ela, a trilha é imutável para o painel e para a ponte, e
+   não para quem tem a conta.
+3. **A flag do gate é autoassinada.** O agente que quer publicar cria a própria
+   autorização, sem rastro de quem autorizou. Enquanto isso valer, a frase do §A.7 não
+   é inteiramente verdade.
+4. **O gancho captura o prompt de todos os projetos**, e a lista de ignorados está
+   vazia. Prompt de sistema de cliente iria para a base, contra o §A.4.
+5. **Lixo de teste na base de produção**: 10 fábricas de teste e 3 máquinas de teste
+   offline. Proposta é rotular e filtrar, nunca apagar, §A.17.
+
+### Condição 12, o que falta em uma frase
+A pasta de trabalho da fábrica vem **de dentro do comando**, escolhida por quem
+escreve no painel. Falta prova de que leitura fora dela passa pelo portão e é negada,
+ou decisão escrita do diretor aceitando o risco.
+
 <!-- Nova entrada acima desta linha. Formato: ## AAAA-MM-DD, título curto -->
