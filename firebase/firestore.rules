@@ -12,19 +12,22 @@ rules_version = '2';
 // coordenador na OST 6, com a flag do gate criada e removida em seguida, §A.7.
 // Nenhum agente publica por conta propria.
 //
-// Como conferir, em vez de confiar neste comentario: baixe o conjunto publicado
-// em projects/a-fabrica-soulan/releases/cloud.firestore e compare com este
-// arquivo. Quem editar este arquivo, inclusive so o comentario, publica de novo,
-// senao a comparacao deixa de fechar.
+// Como conferir, em vez de confiar neste comentario, e agora existe comando para
+// isso:
 //
-// PENDENCIA ABERTA E DECLARADA, OST 6 parte 2: o CORPO das regras publicado na
-// nuvem e o deste arquivo sao os mesmos, nenhuma permissao mudou. O COMENTARIO
-// divergiu: a correcao do segundo fator, logo abaixo, foi escrita depois da
-// ultima publicacao, porque o Firebase CLI da maquina perdeu a credencial e
-// pede login interativo do diretor. Assim que ele rodar firebase login
-// --reauth, o coordenador republica e a comparacao volta a fechar byte a byte.
-// Fica dito aqui para ninguem conferir e achar que descobriu uma divergencia
-// escondida.
+//     node scripts/publicar.mjs --conferir
+//
+// Ele baixa o conjunto publicado em projects/a-fabrica-soulan/releases/
+// cloud.firestore e compara com este arquivo de duas formas: byte a byte, e so o
+// CORPO, sem comentario. A segunda comparacao e a que importa para seguranca,
+// porque comentario novo faz a primeira falhar sem que permissao nenhuma tenha
+// mudado. Quem editar este arquivo, inclusive so o comentario, publica de novo.
+//
+// PENDENCIA FECHADA na OST 7: na OST 6 parte 2 o comentario deste arquivo divergiu
+// do publicado, porque a correcao do segundo fator foi escrita depois da ultima
+// publicacao e o Firebase CLI da maquina tinha perdido a credencial. A divergencia
+// foi medida (corpo identico, so comentario diferente) e a republicacao foi feita
+// sem o CLI, pela API de administracao, com a flag do gate criada e removida, §A.7.
 //
 // Principios, §A.6:
 //  - Conta unica. So o e-mail do diretor, com e-mail verificado. Nega todo o resto.
