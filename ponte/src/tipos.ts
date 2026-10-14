@@ -39,6 +39,9 @@ export interface Consumo {
   [chave: string]: unknown;
 }
 
+/** De onde a fabrica nasceu. `mao` e escrito pelos ganchos do Bloco 1. */
+export type OrigemFabrica = 'painel' | 'mao';
+
 export interface Fabrica {
   fabricaId: string;
   maquinaId: string;
@@ -50,8 +53,16 @@ export interface Fabrica {
   inicio?: Momento;
   tempoDecorridoMs?: number;
   consumo?: Consumo | null;
-  erro?: string;
+  erro?: string | null;
   atualizadoEm?: Momento;
+  /** Onda 2, contrato secao 3: painel ou mao. */
+  origem?: OrigemFabrica;
+  /** Onda 2: true enquanto a fabrica esta pausada. O estado segue aguardando comando, §A.4. */
+  pausada?: boolean;
+  /** Onda 2: hora do servidor do encerramento pedido pelo painel. */
+  encerradaEm?: Momento;
+  /** Onda 2: texto do motivo do encerramento, quando houver. */
+  pedidoDeEncerramento?: string;
 }
 
 export type TipoAtividade = 'init' | 'texto' | 'pensamento' | 'ferramenta' | 'resultado' | 'fim';
@@ -67,6 +78,10 @@ export interface PassoAtividade {
 
 export type SituacaoComando = 'pendente' | 'entregue';
 
+/** Onda 2, contrato secao 2: as cinco acoes que um comando pode pedir. */
+export const ACOES = ['abrir', 'comando', 'encerrar', 'pausar', 'reiniciar'] as const;
+export type AcaoComando = (typeof ACOES)[number];
+
 export interface Comando {
   comandoId: string;
   fabricaId: string;
@@ -79,6 +94,34 @@ export interface Comando {
   /** Opcional: pasta de projeto e id de conversa para retomar. */
   cwd?: string;
   conversationId?: string;
+  /** Onda 2. Ausente vale `comando`, por compatibilidade com a Onda 1. */
+  acao?: AcaoComando;
+  agente?: string;
+  modelo?: string;
+}
+
+/**
+ * Leitura do campo `acao` do documento de comando.
+ *
+ * Duas coisas diferentes, de proposito:
+ *   acao ausente     vale `comando`, compatibilidade obrigatoria do contrato secao 2.
+ *   acao presente e nao reconhecida  devolve null, e o roteador RECUSA. Falha
+ *                    fechada: a ponte nao adivinha o que o painel quis dizer.
+ */
+export interface LeituraDeAcao {
+  acao: AcaoComando | null;
+  /** O que veio escrito no documento, para a trilha dizer a verdade. */
+  bruta: string | null;
+}
+
+export function acaoDe(dado: unknown): LeituraDeAcao {
+  if (typeof dado !== 'object' || dado === null) return { acao: 'comando', bruta: null };
+  const v = (dado as Record<string, unknown>)['acao'];
+  if (v === undefined || v === null) return { acao: 'comando', bruta: null };
+  if (typeof v !== 'string') return { acao: null, bruta: JSON.stringify(v).slice(0, 60) };
+  const limpo = v.trim().toLowerCase();
+  const achada = ACOES.find((a): boolean => a === limpo);
+  return achada === undefined ? { acao: null, bruta: v.slice(0, 60) } : { acao: achada, bruta: v };
 }
 
 /** Comando ja tomado pela ponte, com os campos que a execucao usa, tipados. */
@@ -88,6 +131,11 @@ export interface ComandoTomado {
   texto: string;
   cwd: string | null;
   conversationId: string | null;
+  /** null quando o documento trouxe uma acao que a ponte nao reconhece. */
+  acao: AcaoComando | null;
+  acaoBruta: string | null;
+  agente: string | null;
+  modelo: string | null;
 }
 
 export type Origem = 'fato' | 'ponte' | 'fato mais leitura da ponte';

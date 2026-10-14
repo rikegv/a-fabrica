@@ -17,6 +17,7 @@ import {
   connectFirestoreEmulator,
   doc,
   getDoc,
+  getDocs,
   getFirestore,
   onSnapshot,
   query,
@@ -32,6 +33,7 @@ import type { FirebaseApp } from 'firebase/app';
 import { abrirIdentidade, type Identidade } from './identidade.js';
 import { DIRETOR, VERSAO_PONTE } from './config.js';
 import {
+  acaoDe,
   respostaDe,
   textoDe,
   type Comando,
@@ -272,6 +274,7 @@ export async function tomarComando(db: Firestore, comandoId: string): Promise<Co
       if (textoDe(dado, 'situacao') !== 'pendente') return null; // ja entregue, nao executa de novo
       const texto = textoDe(dado, 'texto');
       if (texto === null) return null; // comando sem texto: nao executa
+      const leitura = acaoDe(dado);
       tx.update(ref, { situacao: 'entregue', entregueEm: serverTimestamp() });
       return {
         id: comandoId,
@@ -279,6 +282,10 @@ export async function tomarComando(db: Firestore, comandoId: string): Promise<Co
         texto,
         cwd: textoDe(dado, 'cwd'),
         conversationId: textoDe(dado, 'conversationId'),
+        acao: leitura.acao,
+        acaoBruta: leitura.bruta,
+        agente: textoDe(dado, 'agente'),
+        modelo: textoDe(dado, 'modelo'),
       };
     });
   } catch {
@@ -314,7 +321,7 @@ export function ouvirComandos(
 export async function reconciliarPendentes(
   db: Firestore,
   maquinaId: string,
-  sessoesVivas: Set<string>
+  sessoesVivas: { has(fabricaId: string): boolean }
 ): Promise<{ aprovacoesRecusadas: number; fabricasMarcadasOffline: number }> {
   const aprovacoesRecusadas = await new Promise<number>((resolve) => {
     const q = query(
@@ -372,6 +379,63 @@ export async function reconciliarPendentes(
   });
 
   return { aprovacoesRecusadas, fabricasMarcadasOffline };
+}
+
+/**
+ * Recusa os pedidos de aprovacao ainda pendentes de UMA fabrica, com motivo.
+ *
+ * Existe por causa de encerrar e pausar: se a sessao estava parada no portao
+ * esperando o diretor, e ele mandou encerrar ou pausar, o pedido nao pode ficar
+ * pendente na tela de uma fabrica que nao existe mais. Ficaria o painel mostrando
+ * pedido fantasma, e uma resposta tardia aprovaria algo que ja nao vai executar.
+ *
+ * Nada executa por causa disto: a recusa e o desfecho seguro, §A.6. E a mesma
+ * logica da reconciliacao de reinicio, aplicada a uma fabrica so.
+ */
+export async function recusarAprovacoesDaFabrica(
+  db: Firestore,
+  fabricaId: string,
+  motivo: string
+): Promise<number> {
+  try {
+    const q = query(
+      collection(db, 'aprovacoes'),
+      where('fabricaId', '==', fabricaId),
+      where('situacao', '==', 'pendente')
+    );
+    const achados = await getDocs(q);
+    let n = 0;
+    for (const s of achados.docs) {
+      await updateDoc(s.ref, {
+        situacao: 'respondida',
+        resposta: 'recusado',
+        observacao: motivo,
+        respondidoEm: serverTimestamp(),
+        respondidoPor: `ponte, ordem do diretor pelo painel, ${DIRETOR}`,
+      }).catch(() => undefined);
+      n++;
+    }
+    return n;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Le na base o identificador de conversa guardado da fabrica.
+ *
+ * Serve a acao `reiniciar`: o painel manda o conversationId, e esta leitura e a
+ * rede de seguranca para o caso de ele nao mandar. Sem conversa guardada aqui nem
+ * no comando, reiniciar e RECUSADO, porque retomar sem conversa seria abrir uma
+ * fabrica nova fingindo ser a antiga.
+ */
+export async function lerConversaDaFabrica(db: Firestore, fabricaId: string): Promise<string | null> {
+  try {
+    const snap = await getDoc(doc(db, 'fabricas', fabricaId));
+    return textoDe(snap.data(), 'conversationId');
+  } catch {
+    return null; // falha fechada: sem leitura, nao retoma
+  }
 }
 
 /** Pedidos de aprovacao pendentes desta maquina, sem responder nada. Para prova e painel. */

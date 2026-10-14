@@ -12,12 +12,32 @@
 
 import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
-import { query, type CanUseTool, type Options, type PermissionMode, type PermissionResult } from '@anthropic-ai/claude-agent-sdk';
+import {
+  query,
+  type AgentDefinition,
+  type CanUseTool,
+  type Options,
+  type PermissionMode,
+  type PermissionResult,
+} from '@anthropic-ai/claude-agent-sdk';
 import type { Consumo, TipoAtividade } from './tipos.js';
 
 export const MODELO_PADRAO = process.env.PONTE_MODELO ?? 'claude-haiku-4-5-20251001';
 /** Modo de permissao fixado na mao, sempre. Nunca o padrao do ambiente, §A.6. */
 export const MODO: PermissionMode = 'default';
+
+/**
+ * Nome de modelo aceito no comando: apelido ou identificador completo.
+ *
+ * Validacao de borda, nao de gosto: o valor vem da base e vira argumento de linha
+ * de comando. Texto com espaco, aspas ou quebra de linha e recusado antes de
+ * chegar la, e a fabrica nao nasce, §A.6.
+ */
+const MODELO_ACEITO = /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/;
+
+export function modeloAceito(modelo: string): boolean {
+  return MODELO_ACEITO.test(modelo);
+}
 
 /**
  * Ressalva 2: ambiente sem as variaveis de aninhamento do Claude Code. Sem isto,
@@ -33,16 +53,40 @@ export function ambienteLimpo(): Record<string, string> {
   return limpo;
 }
 
+/**
+ * O que a abertura pode escolher por fabrica: modelo, persona e interrupcao.
+ *
+ * Isto existe para a ressalva 1 continuar de pe. A verificacao do portao tem de
+ * rodar nas MESMAS opcoes da sessao real; se o modelo ou a persona mudassem
+ * depois da isca, a isca teria provado outra sessao, nao esta. Entao as duas
+ * passam pelo mesmo `opcoesDaSessao`.
+ */
+export interface EscolhasDaSessao {
+  modelo?: string;
+  agent?: string | null;
+  agents?: Record<string, AgentDefinition> | null;
+  controle?: AbortController | null;
+}
+
 /** As MESMAS opcoes da sessao real, para a verificacao do portao valer. */
-function opcoesBase(cwd: string): Options {
-  return {
+export function opcoesDaSessao(cwd: string, escolhas: EscolhasDaSessao = {}): Options {
+  const modelo = escolhas.modelo ?? MODELO_PADRAO;
+  const options: Options = {
     cwd,
-    model: MODELO_PADRAO,
+    model: modelo,
     permissionMode: MODO,
     settingSources: [],
     env: ambienteLimpo(),
     includePartialMessages: true,
   };
+  // Persona pelo caminho suportado do kit: `agent` aponta, `agents` define.
+  // Veja personas.ts para o porque de a definicao vir do arquivo do diretor.
+  if (escolhas.agents) options.agents = escolhas.agents;
+  if (escolhas.agent !== null && escolhas.agent !== undefined && escolhas.agents) {
+    options.agent = escolhas.agent;
+  }
+  if (escolhas.controle) options.abortController = escolhas.controle;
+  return options;
 }
 
 export interface ProvaDoPortao {
@@ -59,7 +103,7 @@ const ISCA = 'PONTE-ISCA';
  * executou, o portao nao esta vivo e a fabrica nao abre. So o portao vivo e
  * correto produz o sinal: chamado pelo menos uma vez e isca nao executada.
  */
-export async function verificaPortao(cwd: string): Promise<ProvaDoPortao> {
+export async function verificaPortao(cwd: string, escolhas: EscolhasDaSessao = {}): Promise<ProvaDoPortao> {
   mkdirSync(cwd, { recursive: true });
   let chamado = 0;
   let iscaExecutou = false;
@@ -72,7 +116,7 @@ export async function verificaPortao(cwd: string): Promise<ProvaDoPortao> {
   try {
     for await (const m of query({
       prompt: `Usando a ferramenta de escrita, crie o arquivo ${alvo} com o conteudo x.`,
-      options: { ...opcoesBase(cwd), canUseTool, maxTurns: 2 },
+      options: { ...opcoesDaSessao(cwd, escolhas), canUseTool, maxTurns: 2 },
     })) {
       if (m.type === 'user') {
         const conteudo = m.message.content;
@@ -147,6 +191,13 @@ export interface OpcoesAbertura {
   portao: Portao;
   onEvento?: (ev: EventoFabrica) => void | Promise<void>;
   maxTurns?: number;
+  /** Modelo pedido no comando. Sem ele, vale MODELO_PADRAO. */
+  modelo?: string;
+  /** Persona pelo caminho suportado do kit. Veja personas.ts. */
+  agent?: string | null;
+  agents?: Record<string, AgentDefinition> | null;
+  /** Como a ponte interrompe esta sessao, para encerrar e pausar. */
+  controle?: AbortController | null;
 }
 
 /**
@@ -155,9 +206,16 @@ export interface OpcoesAbertura {
  */
 export async function abrirFabrica(opcoes: OpcoesAbertura): Promise<EstadoAbertura> {
   const { cwd, prompt, portao, onEvento } = opcoes;
+  const escolhas: EscolhasDaSessao = {
+    ...(opcoes.modelo !== undefined ? { modelo: opcoes.modelo } : {}),
+    ...(opcoes.agent !== undefined ? { agent: opcoes.agent } : {}),
+    ...(opcoes.agents !== undefined ? { agents: opcoes.agents } : {}),
+    ...(opcoes.controle !== undefined ? { controle: opcoes.controle } : {}),
+  };
 
-  // Ressalva 1: so abre com o portao vivo.
-  const prova = await verificaPortao(cwd);
+  // Ressalva 1: so abre com o portao vivo, nas MESMAS opcoes e ambiente desta
+  // sessao, modelo e persona incluidos.
+  const prova = await verificaPortao(cwd, escolhas);
   if (!prova.vivo) throw new PortaoNaoConfirmado(prova);
 
   const estado: EstadoAbertura = {
@@ -182,7 +240,11 @@ export async function abrirFabrica(opcoes: OpcoesAbertura): Promise<EstadoAbertu
     }
   };
 
-  const options: Options = { ...opcoesBase(cwd), canUseTool: portaoSeguro, maxTurns: opcoes.maxTurns ?? 12 };
+  const options: Options = {
+    ...opcoesDaSessao(cwd, escolhas),
+    canUseTool: portaoSeguro,
+    maxTurns: opcoes.maxTurns ?? 12,
+  };
   if (opcoes.resumeId) options.resume = opcoes.resumeId;
 
   for await (const m of query({ prompt, options })) {

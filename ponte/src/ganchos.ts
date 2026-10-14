@@ -33,7 +33,18 @@
 // 5. NADA AQUI ESCUTA PORTA. Este arquivo le arquivo local e escreve na base por
 //    conexao de saida, §A.6.
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { addDoc, collection, serverTimestamp, type Firestore } from 'firebase/firestore';
 import { PASTA_LOCAL } from './config.js';
@@ -372,10 +383,75 @@ export async function varrerFila(
   return r;
 }
 
+const CAMINHO_TRAVA = join(PASTA_LOCAL, 'fila-ganchos.lock');
+
+/**
+ * Trava de processo único do publicador.
+ *
+ * POR QUE EXISTE, e o achado que a criou: na própria OST 7, duas provas rodaram
+ * ao mesmo tempo na máquina e as duas tinham publicador ligado sobre a MESMA
+ * fila. O resultado foi uma prova mentindo: ela publicou, a contagem dela deu
+ * zero, e os passos apareceram na base pela mão do outro processo. Ninguém
+ * perdeu passo, porque a marca de bytes é por arquivo, mas dois publicadores
+ * sobre a mesma marca podem publicar o mesmo passo duas vezes, e a trilha não se
+ * apaga.
+ *
+ * Isso não é caso de laboratório: na máquina do diretor a ponte sobe por tarefa
+ * agendada, e nada impede ele de rodar uma segunda à mão.
+ *
+ * Trava de processo morto não prende a fila: se o dono anotado não existe mais,
+ * a trava é velha e pode ser tomada. Mesma técnica da trava por fábrica.
+ */
+function tomarTravaDaFila(): (() => void) | null {
+  mkdirSync(PASTA_LOCAL, { recursive: true });
+  const soltar = (fd: number) => (): void => {
+    try {
+      closeSync(fd);
+    } catch {
+      // ja fechado
+    }
+    try {
+      // Caminho nomeado, arquivo por arquivo, §A.18. Trava nao e evidencia.
+      unlinkSync(CAMINHO_TRAVA);
+    } catch {
+      // ja removida
+    }
+  };
+  const tomar = (modo: 'wx' | 'w'): (() => void) | null => {
+    try {
+      const fd = openSync(CAMINHO_TRAVA, modo);
+      writeFileSync(CAMINHO_TRAVA, String(process.pid), 'utf8');
+      return soltar(fd);
+    } catch {
+      return null;
+    }
+  };
+  const primeira = tomar('wx');
+  if (primeira) return primeira;
+
+  let dono = 0;
+  try {
+    dono = Number(readFileSync(CAMINHO_TRAVA, 'utf8').trim());
+  } catch {
+    dono = 0;
+  }
+  if (dono > 0 && dono !== process.pid) {
+    try {
+      process.kill(dono, 0);
+      return null; // dono vivo, este processo nao publica
+    } catch {
+      // dono morto, a trava e velha
+    }
+  }
+  return tomar('w');
+}
+
 export interface Publicador {
   parar(): void;
   /** Força uma passada agora, para prova e para o fechamento limpo. */
   agora(): Promise<ResultadoDaVarredura>;
+  /** Falso quando outro processo já é o dono da fila. Nada é publicado por este. */
+  ativo: boolean;
 }
 
 /**
@@ -396,14 +472,34 @@ export function iniciarPublicadorDeGanchos(
   let rodando = false;
   let parado = false;
 
+  const soltarTrava = tomarTravaDaFila();
+  const vazia: ResultadoDaVarredura = {
+    arquivosVistos: 0,
+    passosPublicados: 0,
+    sessoesNovas: 0,
+    sessoesEncerradas: 0,
+    linhasIlegiveis: 0,
+    mascaradas: 0,
+    erros: [],
+  };
+  if (!soltarTrava) {
+    // Falha fechada e falante: nao publica, e diz por que, em vez de publicar em
+    // dobro em silencio.
+    registrar(
+      'fila de ganchos: OUTRO processo da ponte ja e o dono desta fila nesta maquina, ' +
+        'entao este nao publica nada. Isso evita o mesmo passo subir duas vezes.'
+    );
+    return { parar: (): void => undefined, agora: async (): Promise<ResultadoDaVarredura> => vazia, ativo: false };
+  }
+
   const passada = async (): Promise<ResultadoDaVarredura> => {
-    if (rodando) return { arquivosVistos: 0, passosPublicados: 0, sessoesNovas: 0, sessoesEncerradas: 0, linhasIlegiveis: 0, mascaradas: 0, erros: [] };
+    if (rodando) return vazia;
     rodando = true;
     try {
       return await varrerFila(db, maquinaId, registrar);
     } catch (e) {
       registrar(`fila de ganchos, erro inesperado na passada: ${e instanceof Error ? e.message : String(e)}`);
-      return { arquivosVistos: 0, passosPublicados: 0, sessoesNovas: 0, sessoesEncerradas: 0, linhasIlegiveis: 0, mascaradas: 0, erros: [] };
+      return vazia;
     } finally {
       rodando = false;
     }
@@ -419,7 +515,9 @@ export function iniciarPublicadorDeGanchos(
     parar: (): void => {
       parado = true;
       clearInterval(relogio);
+      soltarTrava();
     },
     agora: passada,
+    ativo: true,
   };
 }

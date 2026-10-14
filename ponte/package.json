@@ -22,6 +22,9 @@
     "prova:tempo:emulador": "tsc -p tsconfig.json && cross-env PONTE_EMULADOR=1 node dist/testes/prova-tempo-esgotado.js",
     "prova:sessao": "tsc -p tsconfig.json && node dist/testes/prova-sessao-colada.js",
     "prova:ganchos": "tsc -p tsconfig.json && node dist/testes/prova-ganchos.js",
+    "prova:acoes": "tsc -p tsconfig.json && node dist/testes/prova-acoes.js",
+    "prova:acoes:sem-claude": "tsc -p tsconfig.json && cross-env PONTE_SEM_CLAUDE=1 node dist/testes/prova-acoes.js",
+    "prova:acoes:emulador": "tsc -p tsconfig.json && cross-env PONTE_EMULADOR=1 node dist/testes/prova-acoes-emulador.js",
     "medir:ganchos": "node ganchos/medir.mjs"
   },
   "dependencies": {

@@ -5,19 +5,22 @@
 // escreve na base, a ponte le e executa; a ponte escreve na base, o painel le.
 
 import { randomUUID } from 'node:crypto';
-import { closeSync, existsSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { onAuthStateChanged } from 'firebase/auth';
-import { abrirFabrica, PortaoNaoConfirmado, type EventoFabrica, type Portao } from './claudeCode.js';
+import { serverTimestamp } from 'firebase/firestore';
+import type { Portao } from './claudeCode.js';
 import {
   atualizarFabrica,
   esperarResposta,
   initBase,
   iniciarHeartbeat,
+  lerConversaDaFabrica,
   ouvirComandos,
   publicarAprovacao,
   publicarAtividade,
   reconciliarPendentes,
+  recusarAprovacoesDaFabrica,
   tomarComando,
 } from './base.js';
 import {
@@ -25,18 +28,22 @@ import {
   CAMINHO_SESSAO,
   CAMINHO_SESSAO_EMULADOR,
   PASTA_LOCAL,
-  PASTA_TRAVAS,
   carregarConfig,
-  garantirPastaLocal,
 } from './config.js';
 import { SessaoDesprotegida, exigirProtecao } from './protecaoSessao.js';
 import { iniciarPublicadorDeGanchos } from './ganchos.js';
-import type { ComandoTomado, NivelRisco, PacoteAprovacao } from './tipos.js';
+import { despachar, type MundoDaPonte } from './acoes.js';
+import { RegistroDeFabricas } from './vivas.js';
+import type { NivelRisco, PacoteAprovacao } from './tipos.js';
 import type { Firestore } from 'firebase/firestore';
 import type { PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 import { homedir } from 'node:os';
 
-const sessoesVivas = new Set<string>();
+/**
+ * As fabricas vivas deste processo, com o AbortController de cada uma. E por aqui
+ * que encerrar e pausar alcancam uma sessao que esta rodando agora.
+ */
+const registro = new RegistroDeFabricas();
 
 function cwdPadrao(): string {
   return process.env.PONTE_CWD ?? join(homedir(), 'a-fabrica-lab', 'projeto-cc');
@@ -115,6 +122,12 @@ export function portaoParaBase(
 ): Portao {
   return async (toolName, input): Promise<PermissionResult> => {
     try {
+      // A fabrica pode ter sido encerrada ou pausada pelo diretor justamente agora.
+      // Nesse caso nao se cria pedido novo: a sessao esta morrendo, e pedido de
+      // fabrica morta e pedido fantasma na tela. Recusa, §A.6.
+      if (registro.get(fabricaId)?.interrupcao !== null) {
+        return { behavior: 'deny', message: 'fabrica interrompida por ordem do diretor, recusado por seguranca' };
+      }
       const aprovacaoId = randomUUID();
       await publicarAprovacao(db, aprovacaoId, {
         fabricaId,
@@ -131,7 +144,12 @@ export function portaoParaBase(
       });
       await atualizarFabrica(db, fabricaId, { estado: 'aguardando aprovacao' });
       const r = await esperarResposta(db, aprovacaoId);
-      await atualizarFabrica(db, fabricaId, { estado: 'em execucao' });
+      // Volta para em execucao SO se a fabrica continua viva e sem ordem de parar.
+      // Sem esta conferencia, a resposta que chega depois de o diretor encerrar ou
+      // pausar reescreveria o estado e o painel passaria a mentir.
+      if (registro.get(fabricaId)?.interrupcao === null) {
+        await atualizarFabrica(db, fabricaId, { estado: 'em execucao' });
+      }
       return r.decisao === 'allow'
         ? { behavior: 'allow' }
         : { behavior: 'deny', message: r.resposta };
@@ -141,126 +159,27 @@ export function portaoParaBase(
   };
 }
 
-/** Trava de processo unico por fabrica. Trava de processo morto nao prende a fabrica. */
-function tentarTrava(fabricaId: string): (() => void) | null {
-  garantirPastaLocal();
-  const caminho = join(PASTA_TRAVAS, `${fabricaId}.lock`);
-  const soltar = (fd: number) => (): void => {
-    try {
-      closeSync(fd);
-    } catch {
-      // ja fechado
-    }
-    try {
-      // Caminho nomeado, arquivo por arquivo, §A.18. Trava nao e evidencia.
-      unlinkSync(caminho);
-    } catch {
-      // ja removida
-    }
+/**
+ * Monta o mundo da ponte: as portas que o roteador das acoes usa para falar com a
+ * base e com o Claude Code. O roteador nao conhece Firestore, e e isso que permite
+ * provar as cinco acoes sem base, com o Claude Code de verdade.
+ */
+export function mundoNaBase(db: Firestore, maquinaId: string, registrar: (l: string) => void): MundoDaPonte {
+  return {
+    maquinaId,
+    registro,
+    cwdPadrao,
+    registrar,
+    horaDoServidor: () => serverTimestamp(),
+    anotarFabrica: (fabricaId, dados) => atualizarFabrica(db, fabricaId, dados),
+    publicarPasso: async (fabricaId, passo): Promise<void> => {
+      await publicarAtividade(db, fabricaId, passo);
+    },
+    lerConversa: (fabricaId) => lerConversaDaFabrica(db, fabricaId),
+    recusarPendentes: (fabricaId, motivo) => recusarAprovacoesDaFabrica(db, fabricaId, motivo),
+    fazerPortao: (ctx) =>
+      portaoParaBase(db, maquinaId, ctx.fabricaId, ctx.tarefa, ctx.pegarTexto, ctx.pegarUltimoEventoEm),
   };
-  try {
-    const fd = openSync(caminho, 'wx');
-    writeFileSync(caminho, String(process.pid), 'utf8');
-    return soltar(fd);
-  } catch {
-    // Ja existe trava. Se o processo dono morreu, a trava e velha e pode ser reusada.
-    let dono = 0;
-    try {
-      dono = Number(readFileSync(caminho, 'utf8').trim());
-    } catch {
-      dono = 0;
-    }
-    let vivo = false;
-    if (dono > 0) {
-      try {
-        process.kill(dono, 0);
-        vivo = true;
-      } catch {
-        vivo = false;
-      }
-    }
-    if (vivo) return null;
-    try {
-      const fd = openSync(caminho, 'w');
-      writeFileSync(caminho, String(process.pid), 'utf8');
-      return soltar(fd);
-    } catch {
-      return null;
-    }
-  }
-}
-
-export interface ResultadoAbertura {
-  fabricaId: string;
-  sessionId: string | null;
-  estado: string;
-}
-
-async function abrir(db: Firestore, maquinaId: string, comando: ComandoTomado): Promise<ResultadoAbertura> {
-  const fabricaId = comando.fabricaId ?? randomUUID();
-  const cwd = comando.cwd ?? cwdPadrao();
-  const soltarTrava = tentarTrava(fabricaId);
-  if (!soltarTrava) return { fabricaId, sessionId: null, estado: 'ja em execucao nesta maquina' };
-  sessoesVivas.add(fabricaId);
-  let texto = '';
-  let ultimoEventoEm = Date.now();
-  try {
-    await atualizarFabrica(db, fabricaId, {
-      maquinaId,
-      projeto: cwd,
-      estado: 'em execucao',
-      inicio: new Date().toISOString(),
-      agente: 'claude code',
-    });
-    let seq = 0;
-    const estado = await abrirFabrica({
-      cwd,
-      prompt: comando.texto,
-      resumeId: comando.conversationId,
-      portao: portaoParaBase(
-        db,
-        maquinaId,
-        fabricaId,
-        comando.texto,
-        () => texto,
-        () => ultimoEventoEm
-      ),
-      onEvento: async (ev: EventoFabrica): Promise<void> => {
-        if (ev.tipo === 'init') {
-          await atualizarFabrica(db, fabricaId, {
-            conversationId: ev.sessionId ?? null,
-            modelo: ev.modelo ?? null,
-          });
-        }
-        if (ev.tipo === 'texto' && ev.texto) texto += ev.texto;
-        await publicarAtividade(db, fabricaId, {
-          seq: seq++,
-          tipo: ev.tipo,
-          ferramenta: ev.ferramenta ?? null,
-          subagente: ev.sub === true,
-          inicioSubagente: ev.inicioSubagente === true,
-        });
-        if (ev.tipo === 'fim') {
-          await atualizarFabrica(db, fabricaId, {
-            estado: ev.estado === 'success' ? 'concluida' : 'falhou',
-            consumo: ev.usage ?? null,
-          });
-        }
-        ultimoEventoEm = Date.now();
-      },
-    });
-    return { fabricaId, sessionId: estado.sessionId, estado: estado.resultado ?? 'sem resultado' };
-  } catch (e) {
-    const motivo =
-      e instanceof PortaoNaoConfirmado
-        ? `portao nao confirmado, prova ${JSON.stringify(e.prova)}`
-        : String(e).slice(0, 200);
-    await atualizarFabrica(db, fabricaId, { estado: 'falhou', erro: motivo }).catch(() => undefined);
-    return { fabricaId, sessionId: null, estado: `falhou: ${motivo}` };
-  } finally {
-    sessoesVivas.delete(fabricaId);
-    soltarTrava();
-  }
 }
 
 export interface OpcoesServico {
@@ -305,18 +224,22 @@ export async function main(opcoes: OpcoesServico = {}): Promise<void> {
   const ganchos = iniciarPublicadorDeGanchos(base.db, maquinaId, {
     registrar: (l) => console.log(`[ganchos] ${l}`),
   });
-  const r = await reconciliarPendentes(base.db, maquinaId, sessoesVivas);
+  const r = await reconciliarPendentes(base.db, maquinaId, registro);
   console.log(
     `reconciliacao no inicio: ${r.aprovacoesRecusadas} pedido(s) recusado(s) por seguranca, ` +
       `${r.fabricasMarcadasOffline} fabrica(s) marcada(s) como ponte offline`
   );
 
+  const mundo = mundoNaBase(base.db, maquinaId, (l) => console.log(`[acao] ${l}`));
+
   const off = ouvirComandos(base.db, maquinaId, (comandoId) => {
     void (async () => {
       const c = await tomarComando(base.db, comandoId); // idempotente: so pendente, uma vez
       if (c) {
-        const saida = await abrir(base.db, maquinaId, c);
-        console.log(`fabrica ${saida.fabricaId}: ${saida.estado}`);
+        const saida = await despachar(mundo, c);
+        console.log(
+          `fabrica ${saida.fabricaId}, acao ${saida.acao}: ${saida.cumprida ? 'cumprida' : 'recusada'}, ${saida.motivo}`
+        );
       }
     })();
   });
@@ -342,7 +265,7 @@ export async function main(opcoes: OpcoesServico = {}): Promise<void> {
     // Uma ultima passada na fila antes de morrer: o que o gancho escreveu nos
     // ultimos segundos nao fica para tras so porque a ponte esta encerrando.
     await ganchos.agora().catch(() => undefined);
-    await hb.parar(sessoesVivas);
+    await hb.parar([...registro.keys()]);
     process.exit(0);
   };
   process.on('SIGINT', () => void encerrar());
