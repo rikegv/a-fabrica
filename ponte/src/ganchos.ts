@@ -400,6 +400,21 @@ export async function varrerFila(
 const CAMINHO_TRAVA = join(PASTA_LOCAL, 'fila-ganchos.lock');
 
 /**
+ * Dono da fila DENTRO deste processo.
+ *
+ * Por que isto existe separado da trava em arquivo, e foi a prova que cobrou: a
+ * trava em arquivo guarda o identificador do processo dono, e por isso ela nao
+ * barra o PROPRIO processo pedindo de novo. Isso e proposital para a trava velha
+ * de um processo que morreu poder ser retomada, mas deixava passar o caso de
+ * alguem ligar dois publicadores no mesmo processo, que e erro de programacao e
+ * publicaria em dobro do mesmo jeito.
+ *
+ * Com os dois juntos: este sinalizador barra dentro do processo, a trava em
+ * arquivo barra entre processos.
+ */
+let donoNesteProcesso = false;
+
+/**
  * Trava de processo único do publicador.
  *
  * POR QUE EXISTE, e o achado que a criou: na própria OST 7, duas provas rodaram
@@ -417,8 +432,10 @@ const CAMINHO_TRAVA = join(PASTA_LOCAL, 'fila-ganchos.lock');
  * a trava é velha e pode ser tomada. Mesma técnica da trava por fábrica.
  */
 function tomarTravaDaFila(): (() => void) | null {
+  if (donoNesteProcesso) return null;
   mkdirSync(PASTA_LOCAL, { recursive: true });
   const soltar = (fd: number) => (): void => {
+    donoNesteProcesso = false;
     try {
       closeSync(fd);
     } catch {
@@ -435,6 +452,7 @@ function tomarTravaDaFila(): (() => void) | null {
     try {
       const fd = openSync(CAMINHO_TRAVA, modo);
       writeFileSync(CAMINHO_TRAVA, String(process.pid), 'utf8');
+      donoNesteProcesso = true;
       return soltar(fd);
     } catch {
       return null;

@@ -307,17 +307,113 @@ atrapalha a sessão do diretor está feita, e por acidente feliz ela é a prova 
 possível: não é que a ponte caiu no meio, é que ela nunca subiu, e as sessões funcionaram
 igual.
 
+## 4b. Um furo achado por acidente, e fechado
+
+Enquanto esta prova rodava, outra prova rodava na mesma máquina, e as duas tinham
+publicador ligado **sobre a mesma fila**. O resultado foi uma prova mentindo: ela publicou
+de verdade, a contagem dela deu zero, e os passos apareceram na base pela mão do outro
+processo. Levei um tempo convencido de que havia defeito na contagem, até perceber que
+havia dois publicadores.
+
+Ninguém perdeu passo, porque a marca de leitura é por arquivo e em bytes. Mas dois
+publicadores sobre a mesma marca **podem publicar o mesmo passo duas vezes**, e a trilha
+não se apaga, §A.6. E isso não é caso de laboratório: na máquina do diretor a ponte sobe
+por tarefa agendada, e nada impede ele de rodar uma segunda à mão.
+
+Fechado: o publicador agora toma uma **trava de processo único** da fila antes de começar.
+Quem não conseguir a trava não publica nada e diz por quê, em vez de publicar em dobro em
+silêncio. Trava de processo morto não prende a fila, mesma técnica da trava por fábrica que
+já existia.
+
+A primeira versão da trava protegia contra OUTRO processo e deixava passar o caso de dois
+publicadores no MESMO processo, porque a trava em arquivo guarda o identificador do dono e
+não barra o próprio. Isso é proposital, para trava velha de processo morto poder ser
+retomada, mas deixava um furo. A prova cobrou na hora, e agora são duas trancas juntas: um
+sinalizador dentro do processo e a trava em arquivo entre processos.
+
+A conferência também teve de ser refeita duas vezes, e as duas por honestidade. A primeira
+versão dizia que o segundo publicador não publicava, mas a fila estava vazia naquele
+instante: zero por falta de dado, não por trava. Agora a prova abre uma sessão nova de
+propósito, para a fila ter o que publicar. A segunda versão conferia o retorno da chamada
+do dono, e dava zero por motivo certo, porque o dono tem relógio próprio e já tinha
+publicado sozinho. Agora ela confere o EFEITO: os passos da sessão nova na base.
+
+Saída real:
+
+```
+  [dois] fila de ganchos: OUTRO processo da ponte ja e o dono desta fila nesta maquina,
+         entao este nao publica nada. Isso evita o mesmo passo subir duas vezes.
+  PASSOU o primeiro publicador e o dono da fila, o segundo sai calado:
+         primeiro ativo true, segundo ativo false
+  PASSOU o segundo nao publica NEM com a fila cheia e mandado publicar na mao
+  PASSOU o DONO da fila publicou a sessao nova, enquanto o segundo nao publicou nada
+  PASSOU quando o dono para, a fila volta a aceitar dono
+```
+
+## 4c. A prova de ponta a ponta, com a base no emulador
+
+Isto fecha o único pedaço que as provas anteriores não cobriam: a ponte lendo a fila de
+verdade e **publicando**, com sessões do Claude Code abertas na mão.
+
+O que é de verdade aqui, sem maquiar: a sessão do Claude Code, o gancho, a fila local (a
+mesma pasta que as sessões do diretor usam) e o publicador (o mesmo código que o serviço
+roda). O que **não** é a base real: a base é o emulador, com as mesmas regras que estão
+publicadas na nuvem. O rótulo é esse e não outro.
+
+**Correção de rota que preciso registrar:** eu disse antes, aqui e aos agentes, que o
+emulador não subia por causa da credencial vencida do Firebase CLI. **Estava errado.** O
+que matou a minha primeira tentativa foi o meu próprio tempo limite no comando, que
+encerrou o emulador com código 143. `emulators:start` não pede login; só `projects:list`
+pede. A afirmação errada atrasou o trabalho e foi desfeita assim que medi em vez de supor.
+
+```
+PARTE 1, duas sessoes do Claude Code abertas na mao AO MESMO TEMPO
+  PASSOU as duas sessoes do diretor terminaram normalmente: codigos 0 e 0, com a
+         ponte NAO rodando como servico
+  PASSOU as duas se anunciaram na fila, cada uma no seu arquivo: 2 arquivo(s) novo(s)
+
+PARTE 2, o publicador da ponte lendo a fila e publicando na base
+  PASSOU a varredura publicou sem erro
+  PASSOU a fabrica mao-4831b8d9 chegou na base com a sessao inteira: estado concluida,
+         projeto ...\projeto-um, 6 passo(s): init, comando do diretor, ferramenta,
+         ferramenta, fim de rodada, fim
+  PASSOU a fabrica mao-633a981a chegou na base com a sessao inteira: estado concluida,
+         projeto ...\projeto-dois, 8 passo(s)
+
+PARTE 3, segunda varredura: nada pode subir de novo
+  PASSOU a marca de leitura impede republicar: segunda varredura publicou 0 passo(s)
+
+PARTE 4, arquivo de sessao encerrada arquivado, nunca apagado, §A.17
+  PASSOU as duas sessoes encerradas foram movidas para a pasta de consumidas
+  PASSOU elas sairam da fila ativa
+
+PARTE 6, publicador MORTO com sessao do diretor acontecendo
+  PASSOU com NENHUM publicador no ar, a sessao do diretor terminou normalmente: codigo 0
+  PASSOU o que ela fez ficou guardado na fila, esperando a ponte voltar
+  PASSOU quando a ponte voltou, ela publicou o que estava guardado, nada perdido
+```
+
+A parte 6 é a prova que a OST pede por nome: **a ponte fora do ar e a sessão do diretor
+seguindo normal**, e mais do que isso, nada perdido quando ela volta.
+
+**A parte 5, que passou por vácuo e eu não vou contar como prova.** Ela pedia uma sessão
+que carregasse algo com cara de credencial no comando, para ver a máscara agindo no caminho
+de verdade. A sessão não executou o comando pedido (o Claude Code resolveu a tarefa de
+outro jeito, listando a pasta), então não havia credencial nenhuma para vazar, e a
+conferência passou sem conferir nada. Prova que passa por falta de dado não é prova. A
+máscara continua provada nas treze formas da parte 5 da seção 3, que são conferência de
+texto de verdade, e o caminho dela dentro do publicador está provado na parte 2 da prova
+de regras duras. O que falta é só o caso de ponta a ponta, e ele vale a pena refazer com
+um comando que a sessão não consiga contornar.
+
 ## 5. O que ficou faltando, e por quê
 
-1. **A sessão aberta na mão aparecendo NO PAINEL.** O caminho inteiro está pronto e
-   provado por partes, mas a publicação na base real não rodou, porque a ponte não tem
-   sessão do diretor: o login no navegador depende de um clique dele. O emulador também
-   não serve de alternativa agora, porque o Firebase CLI da máquina está sem credencial e
-   `emulators:start` morre sem subir.
-2. **Matar a ponte com uma sessão rodando, com a ponte de fato rodando antes.** Mesmo
-   motivo. O caso equivalente, ponte nunca no ar, está provado.
+1. **A sessão aberta na mão aparecendo no painel contra a BASE REAL.** O caminho inteiro
+   está pronto e provado contra o emulador, de ponta a ponta. O que falta é a base real, e
+   ela depende da ponte ter sessão do diretor, que é um clique dele no navegador.
+2. **O caso de ponta a ponta da máscara**, pelo motivo dito na seção 4c.
 
-Os dois destravam com o mesmo clique, e depois dele são minutos.
+O primeiro destrava com o clique, e depois dele são minutos.
 
 ## 6. Onde está cada evidência
 

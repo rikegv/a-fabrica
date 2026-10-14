@@ -247,11 +247,29 @@ async function principal() {
       'o primeiro publicador e o dono da fila, o segundo sai calado',
       `primeiro ativo ${String(primeiro.ativo)}, segundo ativo ${String(segundo.ativo)}`
     );
+    // Para esta conferencia NAO passar por vacuo, a fila precisa ter algo novo
+    // para publicar. Sem isso, zero passos seria zero por falta de dado, e nao
+    // porque a trava funcionou.
+    const cinco = await sessaoNaMao(PROJETO_A, 'Responda apenas com a palavra CINCO. Nao use nenhuma ferramenta.');
+    reg(`  sessao cinco, so para a fila ter o que publicar: ${cinco.sid ?? 'sem identificador'}`);
     const doSegundo = await segundo.agora();
     conferir(
       doSegundo.passosPublicados === 0,
-      'o segundo nao publica nem quando mandam publicar na mao',
-      `${doSegundo.passosPublicados} passo(s), tem de ser 0`
+      'o segundo nao publica NEM com a fila cheia e mandado publicar na mao',
+      `${doSegundo.passosPublicados} passo(s), tem de ser 0, e havia passo novo esperando`
+    );
+    // O que se confere aqui e o EFEITO, nao a chamada: o dono tem relogio proprio,
+    // de um segundo e meio, e pode ja ter publicado sozinho antes desta linha.
+    // Conferir o retorno de agora() daria zero por motivo certo e a prova acusaria
+    // errado, que foi o que aconteceu na primeira versao desta conferencia.
+    await primeiro.agora();
+    const passosDoCinco = cinco.sid
+      ? await getDocs(query(collection(db, 'fabricas', `${PREFIXO_MAO}${cinco.sid}`, 'atividade'), orderBy('seq', 'asc')))
+      : null;
+    conferir(
+      passosDoCinco !== null && passosDoCinco.size > 0,
+      'o DONO da fila publicou a sessao nova, enquanto o segundo nao publicou nada',
+      `${passosDoCinco?.size ?? 0} passo(s) da sessao cinco na base, tem de ser maior que 0`
     );
     primeiro.parar();
     const terceiro = iniciarPublicadorDeGanchos(db, 'maquina-prova-bloco1', { registrar: () => undefined });
