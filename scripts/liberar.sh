@@ -31,6 +31,30 @@ ESTADO="$RAIZ/.claude/state"
 MOTIVO="${1:-}"
 PALAVRAS="${2:-}"
 
+# REMOVER A AUTORIZACAO LEVE depois do uso, que e o que o §A.7 manda.
+#
+# Isto existe por um efeito pratico da propria trava: a negacao de escrita em
+# .claude/state tambem bloqueia comando que CITE esse caminho, entao a fabrica
+# consegue criar a flag leve por este script e nao consegue apaga-la escrevendo o
+# caminho na linha. Deixar a flag viva um dia inteiro seria pior do que ter uma
+# porta de limpeza aqui.
+#
+# Esta porta remove SOMENTE autorizacao leve, uma a uma, nomeada, §A.18. Ela nao
+# toca em PROD_, e nem precisaria: aquilo e do diretor e o gate bloqueia a fabrica
+# antes, de primeira ordem.
+if [ "$MOTIVO" = '--remover' ]; then
+  if ! ls "$ESTADO"/READY_* >/dev/null 2>&1; then
+    echo "liberar: nenhuma autorizacao leve para remover."
+    exit 0
+  fi
+  for ARQUIVO in "$ESTADO"/READY_*; do
+    echo "removendo $ARQUIVO"
+    rm -f "$ARQUIVO"
+  done
+  echo "liberar: autorizacao leve removida. Producao nao passa por aqui e nao foi tocada."
+  exit 0
+fi
+
 # ESTE SCRIPT E DE PESO LEVE, E SO. Branch de feature, §A.21.
 #
 # Producao tem outra porta, que a fabrica nao abre: scripts/autorizar-producao.sh,
