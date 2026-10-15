@@ -12,12 +12,22 @@
 # Ele devolve o Claude Code exatamente como era, tirando so as entradas que este
 # script colocou.
 #
+# METADADO DE TODOS, CONTEUDO SO DE LIBERADO, decisao do diretor na retomada da
+# OST 7. A liberacao de conteudo e projeto por projeto, e a lista comeca com so
+# a-fabrica. Projeto novo nasce SEM liberacao, sempre. Este script nunca libera
+# nada sozinho: fora do que o diretor passar em -Liberar, so mantem o que ja
+# estava liberado antes.
+#
 # Uso:
 #   powershell -ExecutionPolicy Bypass -File ponte\ganchos\ligar.ps1
 #   powershell -ExecutionPolicy Bypass -File ponte\ganchos\ligar.ps1 -Ignorar "C:\Users\Henrique\Desktop\centrafin-app"
+#   powershell -ExecutionPolicy Bypass -File ponte\ganchos\ligar.ps1 -Liberar "C:\Users\Henrique\a-fabrica"
 
 param(
-  [string[]]$Ignorar = @()
+  # Projeto que nao gera NEM metadado: sai do painel por inteiro.
+  [string[]]$Ignorar = @(),
+  # Projeto liberado para CONTEUDO. Sem isto, so metadado.
+  [string[]]$Liberar = @()
 )
 
 $ErrorActionPreference = 'Stop'
@@ -58,23 +68,33 @@ Write-Host "2. Gancho instalado em $ganchoInstalado"
 # 3. Configuracao dos ganchos, com a lista de projetos a ignorar
 # ---------------------------------------------------------------------------
 $ignoradosAtuais = @()
+$liberadosAtuais = @()
 if (Test-Path $configGanchos) {
   try {
     $antes = Get-Content $configGanchos -Raw | ConvertFrom-Json
     if ($antes.projetosIgnorados) { $ignoradosAtuais = @($antes.projetosIgnorados) }
-  } catch { $ignoradosAtuais = @() }
+    if ($antes.projetosLiberados) { $liberadosAtuais = @($antes.projetosLiberados) }
+  } catch { $ignoradosAtuais = @(); $liberadosAtuais = @() }
 }
 $listaIgnorar = @($ignoradosAtuais + $Ignorar | Where-Object { $_ } | Select-Object -Unique)
+# A lista de liberados NUNCA cresce sozinha. Projeto novo nasce sem liberacao, e
+# e o diretor quem acrescenta, um a um, com -Liberar.
+$listaLiberar = @($liberadosAtuais + $Liberar | Where-Object { $_ } | Select-Object -Unique)
 
 $cfg = [ordered]@{
   ligado             = $true
+  projetosLiberados  = $listaLiberar
   projetosIgnorados  = $listaIgnorar
   tetoBytesPorSessao = 4194304
   tetoArquivosNaFila = 2000
-  nota               = 'ligado=false desliga os ganchos na hora, sem mexer no Claude Code. projetosIgnorados compara pelo comeco do caminho da pasta do projeto.'
+  nota               = 'ligado=false desliga os ganchos na hora, sem mexer no Claude Code. projetosLiberados libera CONTEUDO (texto do comando, alvo, descricao, aviso, motivo) daquele projeto; fora dela sobe so METADADO. projetosIgnorados tira o projeto por inteiro, nem metadado. As duas comparam por fronteira de caminho: igual, ou seguido de separador, entao a-fabrica nao alcanca a-fabrica-lab.'
 }
 [System.IO.File]::WriteAllText($configGanchos, ($cfg | ConvertTo-Json), (New-Object System.Text.UTF8Encoding($false)))
-Write-Host "3. Configuracao em $configGanchos, $($listaIgnorar.Count) projeto(s) na lista de ignorar"
+Write-Host "3. Configuracao em $configGanchos"
+Write-Host "   $($listaLiberar.Count) projeto(s) liberado(s) para conteudo, $($listaIgnorar.Count) projeto(s) ignorado(s) por inteiro"
+if ($listaLiberar.Count -eq 0) {
+  Write-Host '   Nenhum projeto liberado para conteudo: o painel vai mostrar as fabricas, sem o texto.'
+}
 
 # ---------------------------------------------------------------------------
 # 4. Acrescentar as entradas em settings.json, sem tocar no que ja esta la

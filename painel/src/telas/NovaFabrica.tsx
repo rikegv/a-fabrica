@@ -46,7 +46,7 @@ export interface NovaFabricaProps {
 }
 
 function usarFormulario({ escrita, estado, aoAbrir }: Omit<NovaFabricaProps, 'aoCancelar' | 'celular'>) {
-  const sugestoes = useMemo(() => caminhosDeProjeto(estado.fabricas), [estado.fabricas]);
+  const sugestoes = useMemo(() => caminhosDeProjeto(estado.fabricasDeTrabalho), [estado.fabricasDeTrabalho]);
   const [caminho, setCaminho] = useState('');
   const [agente, setAgente] = useState(AGENTE_PADRAO);
   const [modoDoModelo, setModoDoModelo] = useState<'ponte' | 'mao'>('ponte');

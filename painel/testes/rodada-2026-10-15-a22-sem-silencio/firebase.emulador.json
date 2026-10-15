@@ -1,0 +1,33 @@
+{
+  "_comentario": [
+    "Emulador PROPRIO desta rodada, prova do §A.22.",
+    "Portas proprias para nao colidir com nenhum outro emulador desta noite.",
+    "Regras copiadas de firebase/firestore.rules como evidencia da rodada, §A.17."
+  ],
+  "firestore": {
+    "rules": "firestore.rules.copia",
+    "indexes": "firestore.indexes.copia.json"
+  },
+  "emulators": {
+    "auth": {
+      "host": "127.0.0.1",
+      "port": 9499
+    },
+    "firestore": {
+      "host": "127.0.0.1",
+      "port": 8399
+    },
+    "hub": {
+      "host": "127.0.0.1",
+      "port": 4959
+    },
+    "logging": {
+      "host": "127.0.0.1",
+      "port": 4969
+    },
+    "ui": {
+      "enabled": false
+    },
+    "singleProjectMode": true
+  }
+}

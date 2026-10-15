@@ -58,6 +58,9 @@ export function Computador({
      ordem chama avisar; nenhum guarda aviso proprio, senao dois apareceriam no
      mesmo ponto da tela e o antigo cobriria o novo. */
   const [aviso, setAviso] = useState<string | null>(null);
+  /* Qual fabrica foi pedida agora e quando, para a tela dela saber esperar em vez
+     de dizer que a fabrica nao existe mais, §A.22. */
+  const [pedidaEm, setPedidaEm] = useState<{ id: string; em: Date } | null>(null);
   const avisar = useCallback((mensagem: string) => setAviso(mensagem), []);
   const resposta = usarResposta(escrita, avisar);
 
@@ -80,8 +83,12 @@ export function Computador({
     ? TITULOS.factory
     : (TITULOS[tela] ?? ITENS.find((i) => i.id === tela)?.label ?? MARCA);
   const nomeDaFabrica = estado.fabricas.find((f) => f.id === fabricaId)?.project;
+  /* §A.22 ate no cabecalho: enquanto a fabrica pedida nao nasce, ele nao pode
+     dizer "fábrica fora do painel". Ela nao esta fora, esta a caminho, e a frase
+     errada assusta exatamente no momento em que esta tudo certo. */
+  const esperandoNascer = pedidaEm !== null && pedidaEm.id === fabricaId && !nomeDaFabrica;
   const sub = naFabrica
-    ? `Fábricas  ›  ${nomeDaFabrica ?? 'fábrica fora do painel'}`
+    ? `Fábricas  ›  ${nomeDaFabrica ?? (esperandoNascer ? 'abrindo a fábrica' : 'fábrica fora do painel')}`
     : tela === 'new'
       ? 'Escolha o projeto, o agente, o modelo e diga o que fazer primeiro'
       : tela === 'overview'
@@ -121,6 +128,7 @@ export function Computador({
         fabricaId={fabricaId as string}
         resposta={resposta}
         avisar={avisar}
+        pedidaEm={pedidaEm !== null && pedidaEm.id === fabricaId ? pedidaEm.em : null}
         verPedido={() => {
           setFabricaId(null);
           setTela('approvals');
@@ -145,9 +153,17 @@ export function Computador({
       <NovaFabrica
         escrita={escrita}
         estado={estado}
-        aoAbrir={(_fabricaId, mensagem) => {
+        aoAbrir={(novaFabricaId, mensagem) => {
+          // §A.22, e aqui estava o defeito que o diretor sentiu: o identificador
+          // da fabrica nova era jogado fora e ele voltava para uma lista onde a
+          // fabrica recem aberta e a ULTIMA, porque a ordem da grade poe quem
+          // precisa de atencao primeiro e quem concluiu no fim. Com vinte
+          // fabricas na lista, a dele ficava fora da tela. Agora o painel leva
+          // ele para a fabrica que ele acabou de abrir.
           setAviso(mensagem);
-          voltarParaVisaoGeral();
+          setFabricaId(novaFabricaId);
+          setPedidaEm({ id: novaFabricaId, em: new Date() });
+          setTela('factory');
         }}
         aoCancelar={voltarParaVisaoGeral}
       />
@@ -184,7 +200,7 @@ export function Computador({
               ? { ...item, count: estado.contagem.total || null }
               : item
         )}
-        projects={estado.fabricas.map((f) => ({ name: f.project, state: f.state }))}
+        projects={estado.fabricasDeTrabalho.map((f) => ({ name: f.project, state: f.state }))}
         bridge={{
           online: ponte.online,
           detail: ponte.online

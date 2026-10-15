@@ -43,7 +43,16 @@ import { ordenarTarefas, traduzirAtividade, traduzirTarefa } from '@/dados/tradu
 import { desdeQuando, plural } from '@/formato';
 import { usarAcoesDaFabrica, usarCaixaDeComando, type AcoesDaFabrica } from './FabricaTela';
 import { NovaFabricaCelular } from './NovaFabrica';
-import { Aviso, Confirmacao, ErroDeEscrita, MHead, Falha, Vazio } from './pecas';
+import {
+  Aviso,
+  Confirmacao,
+  ErroDeEscrita,
+  EsperandoNascer,
+  MHead,
+  Falha,
+  PRAZO_PARA_NASCER_MS,
+  Vazio
+} from './pecas';
 import { paraPedidoDeTela, usarResposta, type EstadoDaResposta } from './pedido';
 import { CONFIRMAR_ENCERRAR, DESTINOS_INERTES, motivoDeAbrirFabrica } from './textos';
 
@@ -111,13 +120,15 @@ export function Celular({
   const [aba, setAba] = useState<'pendentes' | 'historico'>('pendentes');
   /* UM aviso por vez, e a casca e a dona dele, § mesma razao do computador. */
   const [aviso, setAviso] = useState<string | null>(null);
+  /* Qual fabrica foi pedida agora e quando, §A.22. */
+  const [pedidaEm, setPedidaEm] = useState<{ id: string; em: Date } | null>(null);
   const avisar = useCallback((mensagem: string) => setAviso(mensagem), []);
   const tela = telaEscolhida ?? (!estado.carregando && estado.aprovacoes.length ? 'approvals' : 'factories');
   const resposta = usarResposta(escrita, avisar);
 
   const { lista: listaDeFabricas, cabem } = usarQuantosCartoesCabem(
     tela === 'factories',
-    `${estado.fabricas.length}|${estado.aprovacoes.length}|${estado.ponte.online}`
+    `${estado.fabricasDeTrabalho.length}|${estado.aprovacoes.length}|${estado.ponte.online}`
   );
 
   const ponte = estado.ponte;
@@ -217,15 +228,15 @@ export function Celular({
       </>
     );
   } else if (tela === 'factories') {
-    const total = Math.max(1, Math.ceil(estado.fabricas.length / cabem));
+    const total = Math.max(1, Math.ceil(estado.fabricasDeTrabalho.length / cabem));
     const atual = Math.min(pagina, total);
-    const visiveis = estado.fabricas.slice((atual - 1) * cabem, atual * cabem);
+    const visiveis = estado.fabricasDeTrabalho.slice((atual - 1) * cabem, atual * cabem);
     cabecalho = (
       <MHead
         title="Fábricas"
         sub={
-          estado.fabricas.length
-            ? `${plural(estado.fabricas.length, 'no painel', 'no painel')} · mais urgente primeiro`
+          estado.fabricasDeTrabalho.length
+            ? `${plural(estado.fabricasDeTrabalho.length, 'no painel', 'no painel')} · mais urgente primeiro`
             : 'Nenhuma no painel'
         }
         right={botaoDeNovaFabrica}
@@ -308,7 +319,7 @@ export function Celular({
             ))
           )}
         </div>
-        {estado.fabricas.length > cabem ? (
+        {estado.fabricasDeTrabalho.length > cabem ? (
           <div className="flex justify-end">
             <Pager page={atual} total={total} onChange={setPagina} />
           </div>
@@ -326,9 +337,13 @@ export function Celular({
           escrita={escrita}
           estado={estado}
           celular
-          aoAbrir={(_id, mensagem) => {
+          aoAbrir={(novaFabricaId, mensagem) => {
+            // §A.22: leva o diretor para a fabrica que ele acabou de abrir, no
+            // celular tambem. Antes o identificador era jogado fora.
             setAviso(mensagem);
-            setTela('factories');
+            setFabricaId(novaFabricaId);
+            setPedidaEm({ id: novaFabricaId, em: new Date() });
+            setTela('factory');
           }}
           aoCancelar={() => setTela('factories')}
         />
@@ -358,6 +373,14 @@ export function Celular({
         resposta={resposta}
         avisar={avisar}
         verPedido={() => setTela('approvals')}
+      />
+    ) : pedidaEm !== null && pedidaEm.id === fabricaId ? (
+      // §A.22, o mesmo conserto do computador: fabrica pedida agora espera, em vez
+      // de aparecer como fabrica que nao existe mais.
+      <EsperandoNascer
+        segundos={Math.round(Math.max(0, estado.agora.getTime() - pedidaEm.em.getTime()) / 1000)}
+        passouDoPrazo={estado.agora.getTime() - pedidaEm.em.getTime() > PRAZO_PARA_NASCER_MS}
+        pontePronta={escrita.pontePronta}
       />
     ) : (
       <Vazio

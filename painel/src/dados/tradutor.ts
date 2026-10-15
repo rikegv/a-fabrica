@@ -203,6 +203,8 @@ export interface Fabrica {
   pausada: boolean;
   nasceuNoPainel: boolean;
   erro: string | null;
+  /* Rodada de teste da própria fábrica. A grade esconde por padrão. */
+  teste: boolean;
 }
 
 /* O contrato nao tem campo para a frase do que a fabrica faz agora. Em vez de
@@ -255,7 +257,8 @@ export function traduzirFabrica(
     conversationId: doc.conversationId ?? null,
     pausada,
     nasceuNoPainel: semAcento(doc.origem ?? '') === 'painel' || doc.id.startsWith('painel-'),
-    erro: doc.erro?.trim() || null
+    erro: doc.erro?.trim() || null,
+    teste: doc.teste === true
   };
 }
 

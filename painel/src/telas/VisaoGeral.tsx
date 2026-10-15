@@ -62,28 +62,37 @@ export function VisaoGeral({
   abrirFabrica: (id: string) => void;
 }) {
   const [pagina, setPagina] = useState(1);
-  const total = Math.max(1, Math.ceil(estado.fabricas.length / POR_PAGINA));
+  const total = Math.max(1, Math.ceil(estado.fabricasDeTrabalho.length / POR_PAGINA));
   const atual = Math.min(pagina, total);
-  const visiveis = estado.fabricas.slice((atual - 1) * POR_PAGINA, atual * POR_PAGINA);
+  const visiveis = estado.fabricasDeTrabalho.slice((atual - 1) * POR_PAGINA, atual * POR_PAGINA);
 
   return (
     <div className="gf-body">
       <Panel
         title="Fábricas"
         sub={
-          estado.fabricas.length
-            ? `${plural(estado.fabricas.length, 'fábrica', 'fábricas')} · mais urgente primeiro`
-            : undefined
+          /* A grade esconde as fábricas de rodada de teste, e DIZ que esconde e
+             quantas. Filtro calado seria o mesmo pecado do botão que não responde,
+             §A.22: o diretor precisa saber que existe coisa fora da lista. */
+          estado.fabricasDeTrabalho.length
+            ? `${plural(estado.fabricasDeTrabalho.length, 'fábrica', 'fábricas')} · mais urgente primeiro${
+                estado.contagem.deTeste
+                  ? ` · ${plural(estado.contagem.deTeste, 'fábrica de teste escondida', 'fábricas de teste escondidas')}`
+                  : ''
+              }`
+            : estado.contagem.deTeste
+              ? `${plural(estado.contagem.deTeste, 'fábrica de teste escondida', 'fábricas de teste escondidas')}`
+              : undefined
         }
         right={
-          estado.fabricas.length > POR_PAGINA ? (
+          estado.fabricasDeTrabalho.length > POR_PAGINA ? (
             <Pager page={atual} total={total} onChange={setPagina} />
           ) : undefined
         }
       >
         {estado.erro ? (
           <Falha mensagem={estado.erro} />
-        ) : estado.fabricas.length === 0 ? (
+        ) : estado.fabricasDeTrabalho.length === 0 ? (
           <Vazio
             titulo={estado.carregando ? 'Lendo a base' : 'Nenhuma fábrica no painel'}
             detalhe={

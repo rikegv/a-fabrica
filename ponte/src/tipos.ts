@@ -63,6 +63,19 @@ export interface Fabrica {
   encerradaEm?: Momento;
   /** Onda 2: texto do motivo do encerramento, quando houver. */
   pedidoDeEncerramento?: string;
+  /**
+   * Esta fabrica nasceu de uma RODADA DE TESTE, e nao de trabalho de verdade.
+   *
+   * Decisao do diretor na retomada da OST 7: rotular e filtrar no painel, nunca
+   * apagar, §A.17. A trilha de teste fica na base, com registro de que e teste, e
+   * o painel esconde por padrao. Antes disto, quinze fabricas de teste disputavam
+   * espaco na tela com o trabalho de verdade, e foi assim que uma fabrica recem
+   * aberta pelo diretor acabou fora da tela.
+   *
+   * Quem liga: a propria rodada de teste, por PONTE_ROTULO_TESTE=1. Nunca e
+   * deduzido do nome da maquina, que seria adivinhacao.
+   */
+  teste?: boolean;
 }
 
 export type TipoAtividade = 'init' | 'texto' | 'pensamento' | 'ferramenta' | 'resultado' | 'fim';

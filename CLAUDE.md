@@ -149,3 +149,25 @@ O gcloud da máquina do diretor aponta por padrão para dash-iff, que é um sist
 
 ## A.21 Push de branch de feature é livre (regra permanente)
 Branch de feature sobe livre, a qualquer momento, sem esperar validação. É assim que o diretor lê e confere o trabalho no GitHub, em vez de depender de resumo no chat. A main continua protegida: só recebe trabalho validado. O gate de deploy continua valendo em todo push, com flag de liberação e remoção da flag depois.
+
+## A.22 Nenhuma ação do painel falha em silêncio (regra permanente)
+Toda ação do painel responde na tela, sempre. Vale para abrir, comandar, aprovar, recusar e encerrar.
+
+O diretor vê, em português e na própria tela: que a ordem foi aceita e está em caminho; ou o que deu errado e o que fazer. Escrita negada pela regra, ponte que não responde, fábrica que não nasce, tempo esgotado: tudo aparece. Não existe botão que parece funcionar e não faz nada.
+
+Ordem aceita não é o fim do aviso. Enquanto a fábrica não nascer, a tela diz que está esperando, e se não nascer no prazo, diz isso também, com o motivo mais provável e o próximo passo.
+
+A ordem também nunca se perde de vista: depois de abrir uma fábrica, o painel leva o diretor até ela. Não serve deixá-la numa lista onde ele precise procurar.
+
+Esta regra nasceu de um caso real na OST 7: o diretor abriu uma fábrica pelo painel, tudo funcionou, a fábrica rodou e concluiu, e ele não viu nada. A ordem foi gravada, a regra aceitou, a ponte executou, e a tela não disse uma palavra, nem antes nem depois.
+
+## A.23 Conteúdo só de projeto liberado (regra permanente)
+O gancho de ciclo de vida roda em todos os projetos do diretor, inclusive os que lidam com dado de cliente. Por isso:
+
+METADADO de todo projeto, sempre: qual projeto, estado, passos, nome da ferramenta, tempo, subagente. É o que o painel precisa para mostrar as fábricas.
+
+CONTEÚDO somente de projeto liberado, um a um, numa lista explícita: texto do comando do diretor, alvo da ferramenta, descrição, aviso e motivo. Projeto novo nasce sem liberação, sempre, e isso vale também quando a lista está ausente, vazia ou corrompida. A liberação nunca é deduzida e nunca cresce sozinha.
+
+A comparação é por fronteira de caminho, igual ou seguido de separador. Liberar a-fabrica não alcança a-fabrica-lab nem qualquer pasta de nome parecido.
+
+Quem decide é o gancho, dentro do projeto, e o que não está liberado não chega nem à fila em disco. Assim não existe conteúdo guardado esperando para vazar depois.

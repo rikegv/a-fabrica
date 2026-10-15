@@ -119,6 +119,11 @@ async function subirPonte(rotulo: string): Promise<PonteViva> {
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined) ambiente[k] = v;
   ambiente['PONTE_MAQUINA_ID'] = MAQUINA;
   ambiente['PONTE_CWD'] = PROJETO;
+  // Tudo que esta rodada criar na base nasce com rotulo de teste, para o painel
+  // esconder por padrao. Decisao do diretor: rotular e filtrar, nunca apagar,
+  // §A.17. Quinze fabricas de teste disputando espaco na tela com o trabalho de
+  // verdade foi o que escondeu uma fabrica recem aberta pelo diretor.
+  ambiente['PONTE_ROTULO_TESTE'] = '1';
   // A fila de atividade desta rodada mora DENTRO da rodada. Sem esta linha, a
   // ponte de teste le a fila de PRODUCAO e publica as sessoes de verdade do
   // diretor carimbadas com esta maquina de teste, que e um defeito que aconteceu

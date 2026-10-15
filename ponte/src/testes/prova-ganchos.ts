@@ -249,9 +249,18 @@ async function principal(): Promise<void> {
   const normal = traduzir({ ev: 'SessionEnd', sid: 's', motivo: 'clear' }, 0);
   conferir(normal.estado === 'concluida', 'SessionEnd sem erro NAO vira falhou', `estado ${String(normal.estado)}`);
 
-  // A traducao tem de mascarar, nao so a publicacao.
+  // A traducao tem de mascarar, nao so a publicacao. Linha LIBERADA de proposito:
+  // depois da inversao R6, mascara so faz sentido onde existe conteudo. Projeto
+  // nao liberado nao precisa de mascara porque nao tem texto nenhum, e isso esta
+  // provado nos casos de R6 mais abaixo.
   const comSegredo = traduzir(
-    { ev: 'PostToolUse', sid: 's', ferramenta: 'Bash', alvo: 'curl -H "Authorization: Bearer ya29.a0INVENTADO0123456789abcdefghij"' },
+    {
+      ev: 'PostToolUse',
+      sid: 's',
+      ferramenta: 'Bash',
+      conteudo: true,
+      alvo: 'curl -H "Authorization: Bearer ya29.a0INVENTADO0123456789abcdefghij"',
+    },
     0
   );
   conferir(
@@ -259,6 +268,176 @@ async function principal(): Promise<void> {
     'a traducao mascara antes de o passo existir',
     `alvo publicado: ${String(comSegredo.passo.alvo)}`
   );
+
+  // ---- R6, METADADO DE TODOS, CONTEUDO SO DE LIBERADO ---------------------
+  //
+  // Decisao do diretor na retomada da OST 7. Estes casos existem porque a regra
+  // vale mais que a entrega: se ela furar, texto de projeto de cliente vai para a
+  // base, contra o §A.4. Entao cada pedaco dela tem prova.
+  reg('');
+  reg('R6, a inversao: metadado de todo projeto, conteudo so de projeto liberado');
+
+  const naoLiberado = traduzir(
+    {
+      ev: 'PostToolUse',
+      sid: 's',
+      projeto: 'C:\\Users\\Henrique\\Desktop\\centrafin-app',
+      ferramenta: 'Read',
+      alvo: 'C:\\Users\\Henrique\\Desktop\\centrafin-app\\cliente-sigiloso.ts',
+      descricao: 'ler o cadastro do cliente',
+      erro: false,
+    },
+    0
+  );
+  conferir(
+    naoLiberado.passo.alvo === null && naoLiberado.passo.conteudoPublicado === false,
+    'projeto NAO liberado: o alvo nao e publicado, nem cortado, nem mascarado',
+    `alvo ${String(naoLiberado.passo.alvo)}, conteudoPublicado ${String(naoLiberado.passo.conteudoPublicado)}`
+  );
+  conferir(
+    naoLiberado.passo.ferramenta === 'Read' && naoLiberado.passo.tipo === 'ferramenta' && naoLiberado.estado === 'em execucao',
+    'projeto NAO liberado: o METADADO continua, o painel nao fica cego',
+    `ferramenta ${String(naoLiberado.passo.ferramenta)}, tipo ${naoLiberado.passo.tipo}, estado ${String(naoLiberado.estado)}`
+  );
+  conferir(
+    !JSON.stringify(naoLiberado.passo).includes('cliente-sigiloso') &&
+      !JSON.stringify(naoLiberado.passo).includes('cadastro do cliente'),
+    'projeto NAO liberado: nada do texto do cliente sobrou em canto nenhum do passo',
+    'procurei o nome do arquivo e a descricao no passo inteiro'
+  );
+
+  const promptNaoLiberado = traduzir(
+    { ev: 'UserPromptSubmit', sid: 's', projeto: 'C:\\Users\\Henrique\\Desktop\\CENTRA DASH', pedidoDoDiretor: 'corrija o saldo do cliente Fulano' },
+    0
+  );
+  conferir(
+    !JSON.stringify(promptNaoLiberado.passo).includes('Fulano') && promptNaoLiberado.passo.tipo === 'comando do diretor',
+    'projeto NAO liberado: o texto do comando do diretor NAO sobe, e o passo continua existindo',
+    `descricao ${JSON.stringify(promptNaoLiberado.passo.descricao)}`
+  );
+
+  const fimNaoLiberado = traduzir(
+    { ev: 'SessionEnd', sid: 's', projeto: 'C:\\Users\\Henrique\\Desktop\\SoulTrell', falhouNoFim: true },
+    0
+  );
+  conferir(
+    fimNaoLiberado.estado === 'falhou',
+    'projeto NAO liberado: o estado continua honesto, falhou e falhou, sem o texto do motivo',
+    `estado ${String(fimNaoLiberado.estado)}`
+  );
+
+  const liberado = traduzir(
+    {
+      ev: 'PostToolUse',
+      sid: 's',
+      projeto: 'C:\\Users\\Henrique\\a-fabrica',
+      conteudo: true,
+      ferramenta: 'Read',
+      alvo: 'C:\\Users\\Henrique\\a-fabrica\\CLAUDE.md',
+    },
+    0
+  );
+  conferir(
+    liberado.passo.alvo === 'C:\\Users\\Henrique\\a-fabrica\\CLAUDE.md' && liberado.passo.conteudoPublicado === true,
+    'projeto LIBERADO: o conteudo sobe inteiro, como antes',
+    `alvo ${String(liberado.passo.alvo)}`
+  );
+
+  // Falha fechada: marca ausente, estranha ou falsa nao libera nada.
+  for (const marca of [undefined, null, 'sim', 1, false, {}]) {
+    const r = traduzir({ ev: 'PostToolUse', sid: 's', conteudo: marca, ferramenta: 'Bash', alvo: 'segredo-que-nao-pode-subir' }, 0);
+    conferir(
+      r.passo.alvo === null && r.passo.conteudoPublicado === false,
+      `marca de liberacao ${JSON.stringify(marca) ?? 'ausente'} NAO libera conteudo, falha fechada`,
+      `alvo ${String(r.passo.alvo)}`
+    );
+  }
+
+  // R6 no GANCHO DE VERDADE, nao so na traducao. Aqui roda o programa que o Claude
+  // Code chama, com a configuracao de verdade, e le a linha que ele escreveu na
+  // fila. E a prova que vale: se o conteudo nao entra na fila em disco, nao tem
+  // como vazar depois, por nenhum caminho.
+  {
+    const base = join(RODADA, 'r6-gancho');
+    mkdirSync(base, { recursive: true });
+    writeFileSync(
+      join(base, 'ganchos.json'),
+      JSON.stringify({ ligado: true, projetosLiberados: ['C:\\Users\\Henrique\\a-fabrica'], projetosIgnorados: [] }),
+      'utf8'
+    );
+
+    const cargaDe = (pasta: string, sessao: string): string =>
+      JSON.stringify({
+        hook_event_name: 'PostToolUse',
+        session_id: sessao,
+        cwd: pasta,
+        tool_name: 'Read',
+        tool_input: { file_path: `${pasta}\\cliente-sigiloso.ts`, description: 'ler cadastro de cliente' },
+        tool_response: { content: 'dado de cliente', is_error: false },
+      });
+
+    const lerLinha = (sessao: string): Record<string, unknown> | null => {
+      const caminho = join(base, 'fila-ganchos', `${sessao}.jsonl`);
+      if (!existsSync(caminho)) return null;
+      const linhas = readFileSync(caminho, 'utf8').trim().split('\n');
+      const ultima = linhas[linhas.length - 1];
+      return ultima !== undefined && ultima.length > 0 ? (JSON.parse(ultima) as Record<string, unknown>) : null;
+    };
+
+    // Projeto de cliente: metadado sim, conteudo nao.
+    await rodarGancho(cargaDe('C:\\Users\\Henrique\\Desktop\\centrafin-app', 'cliente'), base);
+    const lCliente = lerLinha('cliente');
+    conferir(
+      lCliente !== null && lCliente['conteudo'] === false && lCliente['alvo'] === undefined && lCliente['descricao'] === undefined,
+      'gancho de verdade, projeto de CLIENTE: o campo de conteudo nem existe na linha da fila',
+      lCliente === null ? 'nao escreveu linha' : `chaves: ${Object.keys(lCliente).join(',')}`
+    );
+    conferir(
+      lCliente !== null && !JSON.stringify(lCliente).includes('cliente-sigiloso') && !JSON.stringify(lCliente).includes('cadastro'),
+      'gancho de verdade, projeto de CLIENTE: nada do texto encostou no disco',
+      'procurei o nome do arquivo e a descricao na linha inteira'
+    );
+    conferir(
+      lCliente !== null && lCliente['ferramenta'] === 'Read' && typeof lCliente['projeto'] === 'string',
+      'gancho de verdade, projeto de CLIENTE: o metadado continua, qual projeto e qual ferramenta',
+      lCliente === null ? 'nao escreveu linha' : `ferramenta ${String(lCliente['ferramenta'])}`
+    );
+
+    // A FRONTEIRA. Liberar a-fabrica NAO pode liberar a-fabrica-lab, que e outra
+    // pasta e que um dia pode ser uma pasta de cliente com nome parecido.
+    await rodarGancho(cargaDe('C:\\Users\\Henrique\\a-fabrica-lab\\rodadas\\x', 'vizinha'), base);
+    const lVizinha = lerLinha('vizinha');
+    conferir(
+      lVizinha !== null && lVizinha['conteudo'] === false && lVizinha['alvo'] === undefined,
+      'gancho de verdade, FRONTEIRA: liberar a-fabrica nao alcanca a-fabrica-lab',
+      lVizinha === null ? 'nao escreveu linha' : `conteudo ${String(lVizinha['conteudo'])}`
+    );
+
+    // E o projeto liberado de verdade continua com conteudo, senao o painel vira
+    // uma lista de nomes e a entrega perde sentido.
+    await rodarGancho(cargaDe('C:\\Users\\Henrique\\a-fabrica\\ponte', 'liberada'), base);
+    const lLiberada = lerLinha('liberada');
+    conferir(
+      lLiberada !== null && lLiberada['conteudo'] === true && typeof lLiberada['alvo'] === 'string',
+      'gancho de verdade, projeto LIBERADO: conteudo sobe, inclusive em subpasta dele',
+      lLiberada === null ? 'nao escreveu linha' : `alvo ${String(lLiberada['alvo'])}`
+    );
+
+    // Configuracao SEM a lista: nasce sem liberacao, nunca o contrario.
+    const semLista = join(RODADA, 'r6-sem-lista');
+    mkdirSync(semLista, { recursive: true });
+    writeFileSync(join(semLista, 'ganchos.json'), JSON.stringify({ ligado: true }), 'utf8');
+    await rodarGancho(cargaDe('C:\\Users\\Henrique\\a-fabrica', 'sem-lista'), semLista);
+    const caminhoSemLista = join(semLista, 'fila-ganchos', 'sem-lista.jsonl');
+    const lSemLista = existsSync(caminhoSemLista)
+      ? (JSON.parse(readFileSync(caminhoSemLista, 'utf8').trim().split('\n')[0] ?? '{}') as Record<string, unknown>)
+      : null;
+    conferir(
+      lSemLista !== null && lSemLista['conteudo'] === false && lSemLista['alvo'] === undefined,
+      'gancho de verdade, configuracao SEM a lista de liberados: nao libera nada, falha fechada',
+      lSemLista === null ? 'nao escreveu linha' : `conteudo ${String(lSemLista['conteudo'])}`
+    );
+  }
 
   // ---- PARTE 3 ------------------------------------------------------------
   reg('');

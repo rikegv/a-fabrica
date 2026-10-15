@@ -15,6 +15,15 @@ export const DIRETOR = 'henrique.vieira@soulan.com.br';
 export const PROJETO_NUVEM = 'a-fabrica-soulan';
 export const VERSAO_PONTE = '0.2.0';
 
+/**
+ * Esta ponte e de RODADA DE TESTE? Decisao do diretor: rotular e filtrar, §A.17.
+ *
+ * Ligado pela propria rodada de teste, com PONTE_ROTULO_TESTE=1. Nunca deduzido
+ * do nome da maquina: nome e convencao, e convencao quebra calada. Tudo que esta
+ * ponte criar na base nasce com o rotulo, e o painel esconde por padrao.
+ */
+export const ROTULO_DE_TESTE = process.env.PONTE_ROTULO_TESTE === '1';
+
 /** Pasta local da ponte. Trocavel por variavel de ambiente para teste de rodada. */
 export const PASTA_LOCAL = process.env.PONTE_PASTA_LOCAL
   ? String(process.env.PONTE_PASTA_LOCAL)

@@ -121,6 +121,58 @@ export function Vazio({ titulo, detalhe, icone }: { titulo: string; detalhe: str
   );
 }
 
+/* Quanto tempo a fabrica pode levar para nascer antes de o painel dizer que algo
+   deu errado. A ponte costuma criar a fabrica em menos de um segundo; vinte
+   segundos e folga larga para maquina ocupada, e e curto o bastante para o
+   diretor nao ficar olhando tela parada sem explicacao. */
+export const PRAZO_PARA_NASCER_MS = 20_000;
+
+/*
+ * A FABRICA PEDIDA E AINDA NAO NASCIDA, §A.22.
+ *
+ * Este estado nao existia, e a falta dele foi o defeito que o diretor sentiu na
+ * pele: ele abria uma fabrica, a ordem era aceita, e a tela nao dizia nada. Pior,
+ * se o painel levasse ele para a fabrica nova, a tela diria "esta fabrica nao
+ * esta mais no painel", porque nao sabia diferenciar "ainda nao nasceu" de "foi
+ * encerrada". Uma frase falsa e assustadora para uma fabrica que estava a caminho.
+ *
+ * Agora sao tres momentos, e cada um diz a verdade daquele momento:
+ *   esperando  a ordem foi registrada e a ponte vai abrir
+ *   demorou    passou do prazo, com o motivo mais provavel e o proximo passo
+ *   encerrada  a fabrica existiu e nao esta mais aqui
+ */
+export function EsperandoNascer({
+  segundos,
+  passouDoPrazo,
+  pontePronta
+}: {
+  segundos: number;
+  passouDoPrazo: boolean;
+  pontePronta: boolean;
+}) {
+  if (!passouDoPrazo) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-5 py-6 text-center">
+        <div className="title-sm">Ordem registrada, abrindo a fábrica</div>
+        <p className="body gf-muted max-w-reading">
+          A ordem está na fila da ponte e ela abre a fábrica em instantes. Esta tela se preenche sozinha
+          quando os primeiros passos chegarem. Esperando há {segundos} segundo(s).
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-2 px-5 py-6 text-center">
+      <div className="title-sm">A fábrica não nasceu em {segundos} segundos</div>
+      <p className="body gf-muted max-w-reading">
+        {pontePronta
+          ? 'A ordem foi registrada e a ponte está no ar, então ela recebeu a ordem e algo travou na abertura. O motivo mais provável é a pasta do projeto não existir na máquina, ou o modelo pedido ter sido recusado. Veja a Visão geral: se a fábrica aparecer com falha, o motivo está escrito nela.'
+          : 'A ponte ficou offline depois que a ordem foi registrada, então ninguém executou. A ordem continua na fila e é entregue quando a ponte voltar. Inicie a ponte na máquina.'}
+      </p>
+    </div>
+  );
+}
+
 /* Falha de leitura da base. Fica acima do conteudo, porque pede acao. */
 export function Falha({ mensagem }: { mensagem: string }) {
   return (

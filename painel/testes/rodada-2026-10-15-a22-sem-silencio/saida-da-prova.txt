@@ -1,0 +1,14 @@
+{"passo":"0 base no comeco","ordensDeAbrirQueJaExistiam":3}
+{"veredito":"PASSOU","rotulo":"a visao geral diz que existem fabricas de teste escondidas, em vez de filtrar calada","detalhe":"A Fábrica Operação de Rike Visão geral Aprovações 3 Fábricas 7 Relatórios Indicadores Configurações PROJETOS Portal de V"}
+{"veredito":"PASSOU","rotulo":"o painel gravou UMA ordem de abrir na base, e so uma","detalhe":"ja existiam 3, agora 4, diferenca 1"}
+{"passo":"1 ordem gravada","fabricaId":"painel-bd0c259f-4a2d-4781-9796-18b6f8f98126","origem":"painel no computador, henrique.vieira@soulan.com.br"}
+{"veredito":"PASSOU","rotulo":"ANTES: o painel voltava calado para a lista. AGORA: ele leva o diretor para a fabrica e diz que a ordem foi registrada","detalhe":"Ordem registrada, abrindo a fábrica A ordem está na fila da ponte e ela abre a fábrica em instantes."}
+{"veredito":"PASSOU","rotulo":"o painel esta na tela DA FABRICA que ele acabou de abrir, nao na lista","detalhe":"cabecalho Posto de comando na tela"}
+{"veredito":"PASSOU","rotulo":"a tela NAO diz que a fabrica nao existe mais, que era a frase falsa de antes","detalhe":"a frase falsa nao aparece"}
+{"veredito":"PASSOU","rotulo":"passado o prazo, a tela diz que a fabrica nao nasceu, em vez de ficar parada sem explicacao","detalhe":"não nasceu em 24 segundos A ordem foi registrada e a ponte está no ar, então ela recebeu a ordem e algo travou na abertura."}
+{"veredito":"PASSOU","rotulo":"a tela diz o motivo mais provavel e o proximo passo, nao so que deu errado","detalhe":"O motivo mais provável é a pasta do projeto não existir na máquina, ou o modelo pedido ter sido recusado."}
+{"veredito":"PASSOU","rotulo":"com a ponte parada, a tela da fabrica troca o motivo: diz que ninguem executou e que a ordem espera a ponte voltar","detalhe":"A ponte ficou offline depois que a ordem foi registrada, então ninguém executou."}
+{"veredito":"PASSOU","rotulo":"a tela diz o PROXIMO PASSO, nao so o motivo","detalhe":"proximo passo na tela"}
+{"veredito":"PASSOU","rotulo":"com a ponte offline a tela diz, sem o diretor precisar tentar para descobrir","detalhe":"A Fábrica Operação de Rike Visão geral Aprovações 3 Fábricas 7 Relatórios Indicadores Configurações PROJETOS Site Institucional Triagem Inteligente Folha Integração Portal de Vagas App do Colaborador "}
+{"veredito":"PASSOU","rotulo":"com a ponte offline o botao de abrir esta desabilitado, e o motivo aparece do lado","detalhe":"desabilitado: true"}
+{"veredito":"PASSOU","rotulo":"no celular tambem: o painel leva para a fabrica e diz que a ordem foi registrada","detalhe":"Ordem registrada, abrindo a fábrica A ordem está na fila da ponte e ela abre a fábrica em instantes."}

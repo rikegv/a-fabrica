@@ -40,6 +40,33 @@
 //   R4 Interruptor de um passo. Sem o arquivo de configuracao, ou com ligado
 //      falso, ele sai na hora sem escrever nada.
 //   R5 Lista de projetos a ignorar, para o diretor deixar uma frente de fora.
+//   R6 METADADO DE TODOS, CONTEUDO SO DE PROJETO LIBERADO. Decisao do diretor na
+//      retomada da OST 7, e ela INVERTEU a logica anterior. Veja abaixo.
+//
+// R6, A LOGICA INVERTIDA, e por que ela existe
+// --------------------------------------------
+// Antes: o gancho guardava o texto de tudo, em todos os projetos, e o diretor
+// podia tirar um projeto da lista de ignorados. Isso punha o texto dos comandos
+// dele sobre CentraFin, CENTRA DASH e SoulTrell, que lidam com dado de cliente,
+// na base da Fabrica, contra o §A.4. A lista de ignorados estava vazia, entao a
+// protecao existia no papel e nao no arquivo.
+//
+// Agora, e so assim:
+//   METADADO de todo projeto, sempre. Qual projeto, qual evento, nome da
+//   ferramenta, se deu erro, subagente, modo de permissao, tempo. E o que o
+//   painel precisa para mostrar as fabricas.
+//   CONTEUDO somente de projeto LIBERADO, um a um, em projetosLiberados. Texto do
+//   comando do diretor, alvo da ferramenta, descricao, aviso e motivo.
+//
+// Projeto novo nasce SEM liberacao, e isso vale inclusive quando a configuracao
+// nao tem a lista, esta corrompida ou vazia: nesses casos nada de conteudo sai.
+// Falha fechada. A lista nunca e deduzida, nunca cresce sozinha.
+//
+// A comparacao e por FRONTEIRA DE CAMINHO, nao por comeco de texto. Isto nao e
+// detalhe: liberar "C:\Users\Henrique\a-fabrica" por comeco de texto liberaria
+// tambem "C:\Users\Henrique\a-fabrica-lab" e qualquer pasta futura que comece
+// igual, inclusive uma de cliente. So passa o caminho igual, ou seguido de
+// separador.
 //
 // ORDEM DE PROPOSITO: a entrada de texto e lida ANTES de qualquer decisao.
 // Achado da propria medicao: se o gancho morre sem ler a entrada, quem escreveu
@@ -64,6 +91,32 @@ function pedacoDeTexto(valor, teto) {
   return valor.length > teto ? valor.slice(0, teto) + '[...cortado]' : valor;
 }
 
+/** Deixa um caminho do Windows comparavel: minusculo, barra invertida, sem barra no fim. */
+function caminhoComparavel(valor) {
+  let t = String(valor).toLowerCase().replace(/\//g, '\\');
+  while (t.length > 1 && t.charAt(t.length - 1) === '\\') t = t.slice(0, t.length - 1);
+  return t;
+}
+
+/**
+ * O projeto esta dentro de um dos caminhos da lista, respeitando fronteira?
+ *
+ * Fronteira quer dizer: igual, ou seguido de separador. "a-fabrica" NAO alcanca
+ * "a-fabrica-lab". Veja a nota de R6 no cabecalho; e o que impede uma liberacao
+ * de pegar pasta vizinha por acidente de nome.
+ */
+function dentroDe(projeto, lista) {
+  if (!Array.isArray(lista) || lista.length === 0) return false;
+  const p = caminhoComparavel(projeto);
+  for (let i = 0; i < lista.length; i++) {
+    const alvo = lista[i];
+    if (typeof alvo !== 'string' || alvo.length === 0) continue;
+    const a = caminhoComparavel(alvo);
+    if (p === a || p.startsWith(a + '\\')) return true;
+  }
+  return false;
+}
+
 function principal() {
   // 1. Ler a entrada ANTES de tudo. Veja a nota de ordem no cabecalho.
   const bruto = readFileSync(0, 'utf8');
@@ -78,18 +131,13 @@ function principal() {
   const sessao = payload.session_id || 'sem-sessao';
   const projeto = payload.cwd || process.cwd();
 
-  // R5, lista de projetos a ignorar. Comparacao por comeco de caminho, sem caso,
-  // porque o diretor pensa em pasta de projeto, nao em caminho exato.
-  const ignorados = Array.isArray(config.projetosIgnorados) ? config.projetosIgnorados : [];
-  if (ignorados.length > 0) {
-    const projetoMinusculo = String(projeto).toLowerCase().replace(/\//g, '\\');
-    for (let i = 0; i < ignorados.length; i++) {
-      const alvo = ignorados[i];
-      if (typeof alvo === 'string' && alvo.length > 0 && projetoMinusculo.startsWith(alvo.toLowerCase().replace(/\//g, '\\'))) {
-        return;
-      }
-    }
-  }
+  // R5, lista de projetos a ignorar. Projeto ignorado nao gera NEM metadado: ele
+  // sai do painel por inteiro, e e o que o diretor usa para deixar uma frente de
+  // fora de tudo.
+  if (dentroDe(projeto, config.projetosIgnorados)) return;
+
+  // R6, a liberacao de CONTEUDO. Ausente, vazia ou corrompida: nao libera nada.
+  const liberado = dentroDe(projeto, config.projetosLiberados);
 
   const fila = pasta + '\\fila-ganchos';
   const arquivo = fila + '\\' + String(sessao).replace(/[^A-Za-z0-9_-]/g, '_') + '.jsonl';
@@ -114,6 +162,10 @@ function principal() {
   const entrada = payload.tool_input && typeof payload.tool_input === 'object' ? payload.tool_input : {};
   const resposta = payload.tool_response;
 
+  const motivoBruto = typeof payload.reason === 'string' ? payload.reason : null;
+
+  // METADADO, de todo projeto, sempre. Nada aqui carrega texto escrito pelo
+  // diretor, pelo agente ou por arquivo de cliente.
   const linha = {
     t: new Date().toISOString(),
     ev: evento,
@@ -121,9 +173,29 @@ function principal() {
     projeto: projeto,
     origem: 'mao',
     ferramenta: typeof payload.tool_name === 'string' ? payload.tool_name : null,
+    // R3: da resposta da ferramenta sai SO se deu erro. O conteudo nao entra.
+    erro: resposta && typeof resposta === 'object' ? resposta.is_error === true || typeof resposta.error === 'string' : false,
+    subagente: pedacoDeTexto(payload.subagent_type || payload.agent_type || null, 120),
+    permissao: pedacoDeTexto(payload.permission_mode || null, 60),
+    fonte: pedacoDeTexto(payload.source || null, 60),
+    // A CLASSIFICACAO do fim, sem o texto do fim. A ponte precisa saber se a
+    // sessao falhou para nao mentir o estado na tela, e nao precisa do motivo
+    // escrito para isso. Projeto nao liberado continua tendo estado honesto.
+    falhouNoFim: motivoBruto !== null && /error|fail|crash|falh/i.test(motivoBruto),
+    // Este projeto esta liberado para CONTEUDO? A ponte le isto e nao deduz.
+    conteudo: liberado,
+    // Quanto este gancho custou por dentro, em milissegundos. Fica na propria
+    // linha para a medicao nao depender de instrumento de fora.
+    custoMs: Number(process.hrtime.bigint() - COMECOU) / 1e6,
+  };
+
+  // CONTEUDO, somente de projeto liberado. Fora da liberacao estes campos nao
+  // sao cortados nem mascarados: eles NAO EXISTEM na linha, e por isso nao tem
+  // como vazar depois, nem pela fila em disco, nem pela base, nem por relatorio.
+  if (liberado) {
     // O alvo e o que a ferramenta mexe: comando, arquivo, padrao de busca ou
     // endereco. Um so campo, porque o painel mostra uma linha por passo.
-    alvo: pedacoDeTexto(
+    linha.alvo = pedacoDeTexto(
       entrada.command ||
         entrada.file_path ||
         entrada.path ||
@@ -132,20 +204,12 @@ function principal() {
         entrada.notebook_path ||
         null,
       TETO_ALVO
-    ),
-    descricao: pedacoDeTexto(entrada.description || null, 300),
-    // R3: da resposta da ferramenta sai SO se deu erro. O conteudo nao entra.
-    erro: resposta && typeof resposta === 'object' ? resposta.is_error === true || typeof resposta.error === 'string' : false,
-    pedidoDoDiretor: pedacoDeTexto(payload.prompt || null, TETO_PROMPT),
-    subagente: pedacoDeTexto(payload.subagent_type || payload.agent_type || null, 120),
-    permissao: pedacoDeTexto(payload.permission_mode || null, 60),
-    fonte: pedacoDeTexto(payload.source || null, 60),
-    motivo: pedacoDeTexto(payload.reason || null, 200),
-    aviso: pedacoDeTexto(payload.message || null, 500),
-    // Quanto este gancho custou por dentro, em milissegundos. Fica na propria
-    // linha para a medicao nao depender de instrumento de fora.
-    custoMs: Number(process.hrtime.bigint() - COMECOU) / 1e6,
-  };
+    );
+    linha.descricao = pedacoDeTexto(entrada.description || null, 300);
+    linha.pedidoDoDiretor = pedacoDeTexto(payload.prompt || null, TETO_PROMPT);
+    linha.motivo = pedacoDeTexto(motivoBruto, 200);
+    linha.aviso = pedacoDeTexto(payload.message || null, 500);
+  }
 
   appendFileSync(arquivo, JSON.stringify(linha) + '\n', 'utf8');
 }

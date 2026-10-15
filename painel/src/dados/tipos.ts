@@ -33,6 +33,9 @@ export interface MaquinaBase {
   vistoPorUltimo?: HoraDaBase;
   versaoPonte?: string;
   pareadoEm?: HoraDaBase;
+  /* Máquina de rodada de teste. Fica na base, rotulada, e não conta para o estado
+     da ponte na tela, §A.17. */
+  teste?: boolean;
 }
 
 export interface ConsumoBase {
@@ -64,6 +67,10 @@ export interface FabricaBase {
   pedidoDeEncerramento?: string;
   /* Motivo da falha, quando o portão não confirma e a fábrica não nasce. */
   erro?: string;
+  /* Nasceu de uma rodada de teste da fábrica, não de trabalho de verdade. A ponte
+     escreve quando a rodada pede. Decisão do diretor: rotular e filtrar no painel,
+     nunca apagar, §A.17. */
+  teste?: boolean;
 }
 
 export interface TarefaBase {

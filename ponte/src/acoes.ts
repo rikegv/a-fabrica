@@ -36,6 +36,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { modeloAceito, MODELO_PADRAO } from './claudeCode.js';
+import { ROTULO_DE_TESTE } from './config.js';
 import { aplicarPersona, nomeDeAgenteAceito } from './personas.js';
 import { PREFIXO_MAO } from './ganchos.js';
 import { rodarSessao, type PedidoDeSessao, type PortasDaSessao, type ResultadoDaSessao } from './sessao.js';
@@ -143,6 +144,9 @@ async function abrirSessao(
     inicio: new Date().toISOString(),
     agente: comando.agente ?? 'claude code',
     erro: null,
+    // Rodada de teste nasce rotulada, para o painel poder esconder, §A.17: a
+    // trilha de teste fica, e so sai da frente do trabalho de verdade.
+    ...(ROTULO_DE_TESTE ? { teste: true } : {}),
     ...extras,
   };
   // A fabrica que o diretor abriu na mao pertence ao Bloco 1 e a origem dela nao se

@@ -28,7 +28,14 @@ import { usarAprovacoes, usarFabricas, usarMaquinas, usarRelogio } from './ouvin
 
 export interface EstadoDoPainel {
   ponte: Ponte;
+  /* TODAS as fábricas, inclusive as de rodada de teste. Serve para abrir uma
+     fábrica por identificador, que precisa achar qualquer uma. */
   fabricas: Fabrica[];
+  /* As que valem para o dia a dia: sem as de rodada de teste. É esta que a grade
+     mostra por padrão. Decisão do diretor: rotular e filtrar, nunca apagar,
+     §A.17. Quinze fábricas de teste na frente do trabalho de verdade foi o que
+     deixou uma fábrica recém aberta fora da tela. */
+  fabricasDeTrabalho: Fabrica[];
   aprovacoes: Aprovacao[];
   /* Pedidos já respondidos, do mais recente para o mais antigo. É o histórico da
      tela de Aprovações, e sai do mesmo ouvinte, sem leitura nova na base. */
@@ -39,6 +46,8 @@ export interface EstadoDoPainel {
   agora: Date;
   contagem: {
     total: number;
+    /* Quantas estão escondidas por serem de rodada de teste. */
+    deTeste: number;
     emExecucao: number;
     aguardandoAprovacao: number;
     falharam: number;
@@ -55,7 +64,14 @@ export function usarPainel(base: Firestore | null): EstadoDoPainel {
   const aprovacoes = usarAprovacoes(base);
 
   return useMemo(() => {
-    const ponte = avaliarPonte(maquinas.itens, agora);
+    /* Maquina de rodada de teste nao conta para o estado da ponte. Ela existe na
+       base, rotulada, e fica offline para sempre por natureza; se entrasse na
+       conta, a tela poderia dizer que a ponte caiu por causa de uma maquina que
+       nunca existiu. §A.17, rotular e filtrar, nunca apagar. */
+    const ponte = avaliarPonte(
+      maquinas.itens.filter((m) => m.teste !== true),
+      agora
+    );
     const pontePerdida = !ponte.online;
 
     const pendentes = ordenarAprovacoes(
@@ -84,19 +100,23 @@ export function usarPainel(base: Firestore | null): EstadoDoPainel {
       })
     );
 
+    const deTrabalho = lista.filter((f) => !f.teste);
+
     const contagem = {
-      total: lista.length,
-      emExecucao: lista.filter((f) => f.state === 'running').length,
+      total: deTrabalho.length,
+      deTeste: lista.length - deTrabalho.length,
+      emExecucao: deTrabalho.filter((f) => f.state === 'running').length,
       aguardandoAprovacao: pendentes.length,
-      falharam: lista.filter((f) => f.state === 'failed').length,
-      concluidas: lista.filter((f) => f.state === 'done').length,
-      tokens: lista.reduce((soma, f) => soma + f.tokens, 0),
-      tempoMs: lista.reduce((soma, f) => soma + f.elapsedMs, 0)
+      falharam: deTrabalho.filter((f) => f.state === 'failed').length,
+      concluidas: deTrabalho.filter((f) => f.state === 'done').length,
+      tokens: deTrabalho.reduce((soma, f) => soma + f.tokens, 0),
+      tempoMs: deTrabalho.reduce((soma, f) => soma + f.elapsedMs, 0)
     };
 
     return {
       ponte,
       fabricas: lista,
+      fabricasDeTrabalho: deTrabalho,
       aprovacoes: pendentes,
       decisoes,
       porFabrica,

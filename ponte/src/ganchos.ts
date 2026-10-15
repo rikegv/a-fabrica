@@ -61,7 +61,7 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import { addDoc, collection, serverTimestamp, type Firestore } from 'firebase/firestore';
-import { PASTA_LOCAL } from './config.js';
+import { PASTA_LOCAL, ROTULO_DE_TESTE } from './config.js';
 import { atualizarFabrica } from './base.js';
 import { mascarar } from './mascara.js';
 import type { EstadoFabrica } from './tipos.js';
@@ -118,6 +118,16 @@ export interface LinhaDeGancho {
   permissao?: unknown;
   fonte?: unknown;
   motivo?: unknown;
+  /**
+   * O projeto desta sessao esta liberado para CONTEUDO, R6 do gancho.
+   *
+   * A ponte LE isto e nao deduz. Ausente vale como nao liberado, falha fechada:
+   * linha antiga, de antes da inversao, entra como se nao tivesse liberacao, e o
+   * texto dela nao e publicado.
+   */
+  conteudo?: unknown;
+  /** Classificacao do fim, sem o texto do fim. Serve para o estado nao mentir. */
+  falhouNoFim?: unknown;
   aviso?: unknown;
   custoMs?: unknown;
 }
@@ -136,6 +146,14 @@ export interface PassoPublicado {
   inicioSubagente: boolean;
   erro: boolean;
   origem: 'mao';
+  /**
+   * Este passo trouxe CONTEUDO, ou so metadado?
+   *
+   * R6, decisao do diretor na retomada da OST 7. Gravado na base de proposito: a
+   * regra tem de ser conferivel pela propria trilha, e nao pela palavra da
+   * fabrica. Falso significa que o projeto desta sessao nao esta liberado.
+   */
+  conteudoPublicado: boolean;
   evento: string;
   /** Hora que o gancho anotou na maquina. A hora de ordenacao e a do servidor, em `em`. */
   anotadoEm: string | null;
@@ -169,17 +187,49 @@ export function traduzir(linha: LinhaDeGancho, seq: number): { passo: PassoPubli
     return r.texto;
   };
 
+  // R6, a inversao decidida pelo diretor na retomada da OST 7: METADADO de todo
+  // projeto, CONTEUDO so de projeto liberado. Quem decide e o gancho, que roda
+  // dentro do projeto; aqui a ponte apenas OBEDECE a marca.
+  //
+  // Ausente vale como NAO liberado, e isso cobre dois casos de uma vez: linha
+  // escrita antes da inversao, que ficou na fila, e linha de gancho velho que o
+  // diretor ainda nao trocou. Nos dois, o texto nao sobe. Falha fechada.
+  const liberado = linha.conteudo === true;
+  const soSeLiberado = (v: unknown): string | null => (liberado ? limpar(v) : null);
+
   const ferramenta = texto(linha.ferramenta);
-  const alvo = limpar(linha.alvo);
-  const pedido = limpar(linha.pedidoDoDiretor);
-  const aviso = limpar(linha.aviso);
-  const motivo = limpar(linha.motivo);
+  const alvo = soSeLiberado(linha.alvo);
+  const pedido = soSeLiberado(linha.pedidoDoDiretor);
+  const aviso = soSeLiberado(linha.aviso);
+  const motivo = soSeLiberado(linha.motivo);
   const subagente = texto(linha.subagente);
+  /**
+   * O fim falhou?
+   *
+   * A CLASSIFICACAO le o motivo CRU, liberado ou nao, e isso e de proposito: saber
+   * que a sessao falhou e metadado, e o painel nao pode mentir o estado so porque
+   * o projeto nao libera texto. O texto do motivo continua fora quando nao ha
+   * liberacao; o que entra aqui e um sim ou um nao.
+   *
+   * Ler o cru tambem cobre a linha ANTIGA, escrita antes da inversao, que tem
+   * motivo e nao tem a marca de classificacao. A prova dos ganchos pegou
+   * exatamente esse caso.
+   */
+  const motivoCruParaClassificar = texto(linha.motivo) ?? '';
+  const falhou =
+    linha.falhouNoFim === true || /error|fail|crash|falh/i.test(motivoCruParaClassificar);
+  /**
+   * O que a tela diz quando o conteudo nao foi publicado.
+   *
+   * Nao e erro e nao e falta: e a regra funcionando. O diretor tem de ler isso e
+   * entender na hora, sem achar que a fabrica perdeu o passo. §A.11, sem travessao.
+   */
+  const SEM_CONTEUDO = 'conteudo nao publicado, este projeto nao esta liberado para conteudo';
 
   let tipo = 'passo';
   let estado: EstadoFabrica | null = 'em execucao';
   let encerra = false;
-  let descricao = limpar(linha.descricao);
+  let descricao = soSeLiberado(linha.descricao);
 
   switch (evento) {
     case 'SessionStart':
@@ -188,7 +238,10 @@ export function traduzir(linha: LinhaDeGancho, seq: number): { passo: PassoPubli
       break;
     case 'UserPromptSubmit':
       tipo = 'comando do diretor';
-      descricao = pedido;
+      // O passo continua existindo, e o painel continua mostrando que o diretor
+      // mandou algo e quando. So o TEXTO fica de fora quando o projeto nao esta
+      // liberado, que e exatamente o que a decisao dele pediu.
+      descricao = liberado ? pedido : SEM_CONTEUDO;
       break;
     case 'PostToolUse':
       tipo = 'ferramenta';
@@ -207,16 +260,18 @@ export function traduzir(linha: LinhaDeGancho, seq: number): { passo: PassoPubli
       break;
     case 'SessionEnd':
       tipo = 'fim';
-      // Honestidade de estado: so vira falhou quando o motivo diz que falhou.
-      // Sessao que o diretor fechou na mao nao e falha.
-      estado = motivo !== null && /error|fail|crash|falh/i.test(motivo) ? 'falhou' : 'concluida';
+      // Honestidade de estado: so vira falhou quando o fim diz que falhou. Sessao
+      // que o diretor fechou na mao nao e falha. A classificacao vem da marca do
+      // gancho, que existe com liberacao ou sem, entao projeto nao liberado
+      // continua com estado honesto na tela, so sem o texto do motivo.
+      estado = falhou ? 'falhou' : 'concluida';
       descricao = motivo !== null ? `sessao encerrada, motivo ${motivo}` : 'sessao encerrada';
       encerra = true;
       break;
     case 'Notification':
       tipo = 'aviso';
       estado = null;
-      descricao = aviso;
+      descricao = liberado ? aviso : SEM_CONTEUDO;
       break;
     default:
       tipo = 'passo';
@@ -234,6 +289,10 @@ export function traduzir(linha: LinhaDeGancho, seq: number): { passo: PassoPubli
       inicioSubagente: evento === 'SubagentStart',
       erro: linha.erro === true,
       origem: 'mao',
+      // Fica gravado na base se este passo trouxe conteudo ou so metadado. Serve
+      // para o diretor conferir a regra pela propria trilha, em vez de confiar na
+      // palavra da fabrica, e para o painel poder dizer na tela.
+      conteudoPublicado: liberado,
       evento,
       anotadoEm: texto(linha.t),
       custoDoGanchoMs: typeof linha.custoMs === 'number' ? linha.custoMs : null,
@@ -375,6 +434,7 @@ export async function varrerFila(
             agente: 'claude code',
             inicio: texto(linha.t) ?? new Date().toISOString(),
             ...(projeto !== null ? { projeto } : {}),
+            ...(ROTULO_DE_TESTE ? { teste: true } : {}),
           });
           r.sessoesNovas++;
         } else if (!identificadas.has(fabricaId)) {

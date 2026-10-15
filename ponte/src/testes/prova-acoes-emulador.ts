@@ -109,6 +109,8 @@ async function subirPonte(): Promise<PonteViva> {
   ambiente['PONTE_MAQUINA_ID'] = MAQUINA;
   ambiente['PONTE_CWD'] = PROJETO;
   ambiente['PONTE_EMULADOR'] = '1';
+  // Rotulo de teste em tudo que esta rodada criar, para o painel esconder, §A.17.
+  ambiente['PONTE_ROTULO_TESTE'] = '1';
   // Fila de atividade desta rodada dentro da rodada, para a ponte de teste nao
   // encostar na atividade real do diretor.
   ambiente['PONTE_PASTA_FILA_GANCHOS'] = join(RODADA, 'fila-de-ganchos-da-rodada');

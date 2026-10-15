@@ -45,7 +45,16 @@ import type { EstadoDoPainel } from '@/dados/painel';
 import type { Fabrica } from '@/dados/tradutor';
 import { ordenarTarefas, traduzirAtividade, traduzirTarefa } from '@/dados/tradutor';
 import { consumoEmPartes, plural } from '@/formato';
-import { Confirmacao, ErroDeEscrita, Falha, MarcaDeOrigem, Panel, Vazio } from './pecas';
+import {
+  Confirmacao,
+  ErroDeEscrita,
+  EsperandoNascer,
+  Falha,
+  MarcaDeOrigem,
+  Panel,
+  PRAZO_PARA_NASCER_MS,
+  Vazio
+} from './pecas';
 import { type EstadoDaResposta } from './pedido';
 import { AVISOS, CONFIRMAR_ENCERRAR, motivoDaCaixaDeComando, motivoDasAcoesDaFabrica } from './textos';
 import { usarOrdem, type Ordem } from './usarOrdem';
@@ -132,7 +141,8 @@ export function FabricaTela({
   fabricaId,
   resposta,
   avisar,
-  verPedido
+  verPedido,
+  pedidaEm = null
 }: {
   base: Firestore | null;
   estado: EstadoDoPainel;
@@ -141,6 +151,8 @@ export function FabricaTela({
   resposta: EstadoDaResposta;
   avisar: (mensagem: string) => void;
   verPedido: () => void;
+  /** Quando a ordem de abrir ESTA fabrica foi aceita, se foi nesta visita. §A.22. */
+  pedidaEm?: Date | null;
 }) {
   const [aba, setAba] = useState('atividade');
   const fabrica = estado.fabricas.find((f) => f.id === fabricaId) ?? null;
@@ -159,13 +171,26 @@ export function FabricaTela({
   );
 
   if (!fabrica) {
+    // §A.22: "ainda nao nasceu" e "nao esta mais aqui" sao coisas diferentes e
+    // nao podem ter a mesma frase. Quando o painel acabou de registrar a ordem de
+    // abrir, ele passa `pedidaEm`, e ai a tela espera em vez de dar por perdida.
+    const esperando = pedidaEm !== null;
+    const ms = esperando ? Math.max(0, estado.agora.getTime() - pedidaEm.getTime()) : 0;
     return (
       <div className="gf-body" style={{ gridTemplateColumns: 'minmax(0,1fr)' }}>
         <Panel>
-          <Vazio
-            titulo="Esta fábrica não está mais no painel"
-            detalhe="A ponte removeu ou encerrou a fábrica. Volte para a Visão geral para ver o que está aberto agora."
-          />
+          {esperando ? (
+            <EsperandoNascer
+              segundos={Math.round(ms / 1000)}
+              passouDoPrazo={ms > PRAZO_PARA_NASCER_MS}
+              pontePronta={escrita.pontePronta}
+            />
+          ) : (
+            <Vazio
+              titulo="Esta fábrica não está mais no painel"
+              detalhe="A ponte removeu ou encerrou a fábrica. Volte para a Visão geral para ver o que está aberto agora."
+            />
+          )}
         </Panel>
       </div>
     );
