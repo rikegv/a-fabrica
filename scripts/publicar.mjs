@@ -65,22 +65,61 @@ function guardar(nome, conteudo) {
   writeFileSync(join(RODADA, nome), conteudo, 'utf8');
 }
 
-/** §A.7: sem flag de liberacao, nao publica. Falha fechada. */
+/**
+ * §A.7: sem AUTORIZACAO DO DIRETOR, nao publica. Falha fechada.
+ *
+ * PUBLICAR E PESO PESADO, entao aqui so vale a autorizacao de producao, a PROD_,
+ * que so o diretor cria, na mao, na sessao. A flag leve da fabrica, a READY_, NAO
+ * serve: ela e para branch de feature.
+ *
+ * Esta conferencia ja existia e ficou para tras quando o diretor separou os pesos:
+ * o gate passou a exigir a autorizacao certa e este script continuou procurando a
+ * errada, entao a publicacao autorizada por ele era recusada aqui. Cinto e
+ * suspensorio so funciona se os dois estiverem na mesma cintura.
+ *
+ * A autorizacao tem de trazer as palavras dele e estar dentro da validade, pelas
+ * mesmas razoes do gate: arquivo vazio nao autoriza, e palavra de ontem nao
+ * autoriza hoje.
+ */
+const VALIDADE_PRODUCAO_MS = 30 * 60 * 1000;
+
 function exigirFlag(oQue) {
   let flags = [];
   try {
-    flags = readdirSync(ESTADO).filter((n) => n.startsWith('READY_'));
+    flags = readdirSync(ESTADO).filter((n) => n.startsWith('PROD_'));
   } catch {
     flags = [];
   }
   if (flags.length === 0) {
     console.error(`publicar: BLOQUEADO (${oQue}).`);
-    console.error(`Motivo: nenhuma flag READY_ em ${ESTADO}, §A.7.`);
-    console.error('Para liberar, apos validacao do diretor: touch .claude/state/READY_<motivo>');
-    console.error('Remova a flag logo depois de publicar.');
+    console.error(`Motivo: nenhuma autorizacao de producao em ${ESTADO}, §A.7.`);
+    console.error('Publicar e peso pesado: a flag leve da fabrica nao serve aqui.');
+    console.error('Quem autoriza e o diretor, na mao, nesta sessao:');
+    console.error('  ! bash scripts/autorizar-producao.sh <motivo> "<as suas palavras>"');
     process.exit(2);
   }
-  reg(`flag de liberacao encontrada (${flags.join(', ')}), publicacao de ${oQue} liberada, §A.7`);
+
+  const caminho = join(ESTADO, flags[0]);
+  const conteudo = readFileSync(caminho, 'utf8');
+  const linha = conteudo.split('\n').find((l) => l.startsWith('autorizacao:'));
+  const palavras = linha ? linha.slice('autorizacao:'.length).trim() : '';
+  if (palavras.length === 0) {
+    console.error(`publicar: BLOQUEADO (${oQue}).`);
+    console.error(`Motivo: ${flags[0]} nao traz a autorizacao escrita do diretor, §A.7.`);
+    process.exit(2);
+  }
+
+  const idadeMs = Date.now() - statSync(caminho).mtimeMs;
+  if (idadeMs > VALIDADE_PRODUCAO_MS) {
+    console.error(`publicar: BLOQUEADO (${oQue}).`);
+    console.error(`Motivo: a autorizacao ${flags[0]} tem ${Math.round(idadeMs / 60000)} minuto(s) e vale 30.`);
+    console.error('Palavra de ontem nao autoriza hoje, §A.7. Peca uma nova ao diretor.');
+    process.exit(2);
+  }
+
+  reg(`autorizacao de producao encontrada (${flags[0]}), ${Math.round(idadeMs / 60000)} minuto(s) de idade`);
+  reg(`palavras do diretor, registradas: ${palavras}`);
+  reg(`publicacao de ${oQue} liberada, §A.7`);
 }
 
 function token() {
