@@ -52,7 +52,8 @@ export interface EstadoDoPainel {
     aguardandoAprovacao: number;
     falharam: number;
     concluidas: number;
-    tokens: number;
+    /* Nulo quer dizer que nenhuma fábrica do dia tem medida de consumo. */
+    tokens: number | null;
     tempoMs: number;
   };
 }
@@ -109,7 +110,12 @@ export function usarPainel(base: Firestore | null): EstadoDoPainel {
       aguardandoAprovacao: pendentes.length,
       falharam: deTrabalho.filter((f) => f.state === 'failed').length,
       concluidas: deTrabalho.filter((f) => f.state === 'done').length,
-      tokens: deTrabalho.reduce((soma, f) => soma + f.tokens, 0),
+      /* Soma só o que foi MEDIDO. Se nenhuma fábrica tem medida, o total é nulo,
+         e a tela diz não medido em vez de zero, que seria afirmar que o dia não
+         gastou nada. */
+      tokens: deTrabalho.some((f) => f.tokens != null)
+        ? deTrabalho.reduce((soma, f) => soma + (f.tokens ?? 0), 0)
+        : null,
       tempoMs: deTrabalho.reduce((soma, f) => soma + f.elapsedMs, 0)
     };
 

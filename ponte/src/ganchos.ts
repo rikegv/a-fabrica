@@ -60,7 +60,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
-import { addDoc, collection, serverTimestamp, type Firestore } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, serverTimestamp, type Firestore } from 'firebase/firestore';
 import { PASTA_LOCAL, ROTULO_DE_TESTE } from './config.js';
 import { atualizarFabrica } from './base.js';
 import { mascarar } from './mascara.js';
@@ -94,6 +94,37 @@ const PASTA_BASE_DA_FILA: string = ((): string => {
  * entrada por sessao que a ponte pegou no meio, e zera quando o servico reinicia.
  */
 const identificadas = new Set<string>();
+
+/**
+ * A fabrica JA tem identificacao gravada na base?
+ *
+ * DEFEITO QUE ISTO CONSERTA, e ele apareceu na tela do diretor: o conserto da
+ * fabrica fantasma preenchia maquina, agente e projeto a partir da linha que
+ * estava passando, e o gancho escreve o `cwd` de CADA evento. Quando a sessao
+ * andava para uma subpasta, a linha seguinte trazia a subpasta, e o projeto da
+ * fabrica era SOBRESCRITO. A sessao viva do diretor, aberta em
+ * C:\Users\Henrique\a-fabrica, apareceu no painel como a-fabrica\ponte, e ele
+ * deixou de reconhecer a propria fabrica na lista.
+ *
+ * A raiz certa sempre esteve na primeira linha da fila, a de abertura. Entao a
+ * regra agora e: PREENCHER o que falta, NUNCA sobrescrever o que ja existe. O
+ * `identificadas` sozinho nao bastava, porque ele zera quando o servico
+ * reinicia, e dai a sobrescrita voltava.
+ *
+ * Custo: uma leitura por sessao que a ponte pegou no meio, uma vez por reinicio.
+ */
+async function temIdentificacao(db: Firestore, fabricaId: string): Promise<boolean> {
+  try {
+    const d = await getDoc(doc(db, 'fabricas', fabricaId));
+    if (!d.exists()) return false;
+    const f = d.data();
+    return typeof f['projeto'] === 'string' && String(f['projeto']).length > 0;
+  } catch {
+    // Na duvida, NAO escreve. Deixar campo faltando e menos grave do que trocar a
+    // raiz do projeto do diretor por uma subpasta.
+    return true;
+  }
+}
 
 export const PASTA_FILA = join(PASTA_BASE_DA_FILA, 'fila-ganchos');
 export const PASTA_CONSUMIDA = join(PASTA_BASE_DA_FILA, 'fila-ganchos-consumida');
@@ -437,7 +468,7 @@ export async function varrerFila(
             ...(ROTULO_DE_TESTE ? { teste: true } : {}),
           });
           r.sessoesNovas++;
-        } else if (!identificadas.has(fabricaId)) {
+        } else if (!identificadas.has(fabricaId) && !(await temIdentificacao(db, fabricaId))) {
           // FABRICA FANTASMA, conserto de defeito achado ao vivo na OST 7.
           //
           // A ponte so escrevia maquina, agente e projeto no evento de abertura.

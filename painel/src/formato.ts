@@ -33,8 +33,16 @@ function comVirgula(valor: number, casas: number): string {
 }
 
 /* "412 mil tokens", "1,2 mi tokens", "0 tokens". */
+/*
+ * NÃO MEDIDO não é ZERO, e essa diferença estava escondida na tela.
+ *
+ * Fábrica que o diretor abre na mão não tem contagem de token: o gancho do Claude
+ * Code não entrega essa informação. A tela mostrava "0 tokens", que afirma que
+ * ela não gastou nada, e é falso. Agora nulo aparece como não medido.
+ */
 export function consumo(tokens: number | null | undefined): string {
-  const n = Number.isFinite(tokens) ? Number(tokens) : 0;
+  if (tokens == null || !Number.isFinite(tokens)) return 'consumo não medido';
+  const n = Number(tokens);
   if (n >= 1_000_000) return `${comVirgula(n / 1_000_000, 1)} mi tokens`;
   if (n >= 1_000) return `${Math.round(n / 1_000)} mil tokens`;
   return `${n} tokens`;
@@ -42,7 +50,8 @@ export function consumo(tokens: number | null | undefined): string {
 
 /* Valor e unidade separados, para o KpiTile. */
 export function consumoEmPartes(tokens: number | null | undefined): { valor: string; unidade: string } {
-  const n = Number.isFinite(tokens) ? Number(tokens) : 0;
+  if (tokens == null || !Number.isFinite(tokens)) return { valor: 'não', unidade: 'medido' };
+  const n = Number(tokens);
   if (n >= 1_000_000) return { valor: comVirgula(n / 1_000_000, 1), unidade: 'mi tokens' };
   if (n >= 1_000) return { valor: String(Math.round(n / 1_000)), unidade: 'mil tokens' };
   return { valor: String(n), unidade: 'tokens' };

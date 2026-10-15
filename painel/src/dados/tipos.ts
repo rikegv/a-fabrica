@@ -38,7 +38,26 @@ export interface MaquinaBase {
   teste?: boolean;
 }
 
+/*
+ * CONSUMO, do jeito que ele CHEGA na base, e não do jeito que alguém imaginou.
+ *
+ * Defeito achado na tela do diretor: o painel lia totalTokens, e a ponte nunca
+ * escreveu esse campo. Ela grava o `usage` do kit do Claude Code tal e qual, com
+ * os nomes dele, em letra minúscula com sublinhado. Resultado: fábrica com
+ * consumo de verdade gravado aparecia marcando zero token, e ninguém notava
+ * porque zero é um número plausível.
+ *
+ * As duas grafias ficam aceitas: a do kit, que é o que existe hoje, e a nossa,
+ * para o dia em que a ponte resolver traduzir antes de gravar.
+ */
 export interface ConsumoBase {
+  /* A grafia do kit, que é a que a ponte grava hoje. */
+  input_tokens?: number;
+  output_tokens?: number;
+  cache_read_input_tokens?: number;
+  cache_creation_input_tokens?: number;
+  output_tokens_details?: { thinking_tokens?: number };
+  /* A nossa grafia, aceita se um dia aparecer. */
   inputTokens?: number;
   outputTokens?: number;
   thinkingTokens?: number;

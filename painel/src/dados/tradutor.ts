@@ -53,6 +53,7 @@ import {
 import type {
   AprovacaoBase,
   AtividadeBase,
+  ConsumoBase,
   FabricaBase,
   HoraDaBase,
   MaquinaBase,
@@ -193,7 +194,9 @@ export interface Fabrica {
   doing: string;
   startedAt: Date | null;
   elapsedMs: number;
-  tokens: number;
+  /* Nulo quer dizer NÃO MEDIDO, que é diferente de zero. Fábrica aberta na mão
+     não tem contagem de token, porque o gancho do Claude Code não entrega. */
+  tokens: number | null;
   elapsed: string;
   usage: string;
   pending: string | null;
@@ -222,6 +225,31 @@ function frasePeloEstado(estado: FactoryState, temPedido: boolean, pausada = fal
   return 'A ponte está offline, o painel não sabe o passo atual.';
 }
 
+/*
+ * Soma os tokens do consumo, aceitando a grafia do kit e a nossa.
+ *
+ * Devolve null quando NAO EXISTE medida, que é o caso de toda fábrica aberta na
+ * mão: o gancho não recebe contagem de token do Claude Code. Zero seria mentira,
+ * porque zero afirma que ela não gastou nada.
+ */
+export function somarTokens(consumo: ConsumoBase | undefined | null): number | null {
+  if (consumo == null || typeof consumo !== 'object') return null;
+  const n = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 0);
+  if (typeof consumo.totalTokens === 'number') return consumo.totalTokens;
+  const soma =
+    n(consumo.input_tokens) +
+    n(consumo.output_tokens) +
+    n(consumo.cache_read_input_tokens) +
+    n(consumo.cache_creation_input_tokens) +
+    n(consumo.inputTokens) +
+    n(consumo.outputTokens) +
+    n(consumo.cacheReadTokens) +
+    n(consumo.thinkingTokens);
+  /* Objeto de consumo existe mas sem nenhum número conhecido: isso é medida que
+     não deu para ler, e continua sendo "não medido", não zero. */
+  return soma > 0 ? soma : null;
+}
+
 export function traduzirFabrica(
   doc: FabricaBase,
   opcoes: { pontePerdida: boolean; pedidoParado?: number | null; agora?: Date }
@@ -230,13 +258,40 @@ export function traduzirFabrica(
   const inicio = paraData(doc.inicio);
   const estadoGravado = traduzirEstado(doc.estado);
   const state: FactoryState = opcoes.pontePerdida ? 'offline' : estadoGravado;
+  /*
+   * TEMPO DECORRIDO, e o que ele mede de verdade.
+   *
+   * Defeito achado na tela do diretor: fábrica CONCLUÍDA mostrava 19h57, e a
+   * sessão não trabalhou 19 horas seguidas. O relógio era contado da abertura até
+   * AGORA, para todo estado, então fábrica encerrada continuava contando a noite
+   * inteira, o computador dormindo e o tempo parado junto.
+   *
+   * Agora o relógio PARA quando a fábrica para. Para a que já terminou, conta do
+   * início até o fim; para a que está viva, conta do início até agora.
+   *
+   * O que este número é, dito sem enfeite: tempo de PAREDE desde a abertura, e
+   * não tempo de trabalho. Fábrica aberta de manhã e usada duas vezes no dia
+   * mostra o dia inteiro, porque o relógio não sabe distinguir espera de
+   * trabalho. Medir tempo de trabalho de verdade é somar os intervalos entre
+   * passos, e isso muda o desenho do §A.4: está proposto ao diretor, não feito.
+   */
+  const fimGravado = paraData(doc.encerradaEm) ?? paraData(doc.atualizadoEm);
+  const acabou = estadoGravado === 'done' || estadoGravado === 'failed';
   const decorrido =
     typeof doc.tempoDecorridoMs === 'number' && doc.tempoDecorridoMs >= 0
       ? doc.tempoDecorridoMs
       : inicio
-        ? agora.getTime() - inicio.getTime()
+        ? Math.max(0, (acabou && fimGravado ? fimGravado.getTime() : agora.getTime()) - inicio.getTime())
         : 0;
-  const tokens = doc.consumo?.totalTokens ?? 0;
+
+  /*
+   * CONSUMO. `null` quer dizer NÃO MEDIDO, e isso é diferente de zero.
+   *
+   * Fábrica que o diretor abre na mão não tem medida nenhuma: o gancho do Claude
+   * Code não entrega contagem de token, e inventar zero ali seria dizer que ela
+   * não gastou nada. Fábrica aberta pelo painel tem a medida do kit.
+   */
+  const tokens = somarTokens(doc.consumo);
   const temPedido = opcoes.pedidoParado != null;
   const pausada = doc.pausada === true;
   return {
@@ -244,7 +299,22 @@ export function traduzirFabrica(
     project: doc.projeto?.trim() || 'Projeto sem nome',
     folder: doc.pasta?.trim() || null,
     agent: doc.agente?.trim() || 'Agente não informado',
-    model: doc.modelo?.trim() || 'modelo não informado',
+    /*
+     * MODELO. Quando falta, a tela tem de dizer POR QUE falta.
+     *
+     * "modelo não informado" soava como campo que alguém esqueceu de preencher.
+     * A verdade é outra: numa sessão que o diretor abre na mão, o gancho do
+     * Claude Code não recebe o modelo, e nenhuma parte da Fábrica tem como saber
+     * qual é. Conferido na fila de verdade: as chaves que chegam são t, ev, sid,
+     * projeto, origem, ferramenta, alvo, descricao, erro, pedidoDoDiretor,
+     * subagente, permissao, fonte, motivo, aviso, custoMs, e nenhuma é modelo.
+     * Fábrica aberta pelo painel tem modelo, porque ali quem escolhe é a ponte.
+     */
+    model:
+      doc.modelo?.trim() ||
+      (semAcento(doc.origem ?? '') === 'mao' || doc.id.startsWith('mao-')
+        ? 'modelo não reportado pelo Claude Code'
+        : 'modelo não informado'),
     state,
     doing: frasePeloEstado(state, temPedido, pausada),
     startedAt: inicio,
