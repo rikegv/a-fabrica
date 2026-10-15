@@ -70,16 +70,42 @@ elif printf '%s' "$COMMAND" | grep -Eq "$SCRIPT_RE" &&
 fi
 
 if [ -n "$MOTIVO" ]; then
-  # Comando de deploy ou push detectado. Precisa de flag de liberação.
-  if ls "$STATE_DIR"/READY_* >/dev/null 2>&1; then
-    echo "gate-deploy: flag READY_ encontrada em .claude/state/, deploy liberado ($MOTIVO)." >&2
+  # Comando de deploy ou push detectado. Precisa de flag de liberação, E a flag
+  # precisa carregar a AUTORIZAÇÃO ESCRITA DO DIRETOR.
+  #
+  # DECISÃO DO DIRETOR NA OST 7: a flag autoassinada acaba. Antes, qualquer
+  # arquivo vazio em .claude/state/ liberava, e criar arquivo é escrita comum:
+  # a fábrica criava a própria autorização de publicar, sem rastro de quem
+  # autorizou nem por quê. Agora a flag só vale com as PALAVRAS DELE dentro, e
+  # elas ficam no registro, que é o que torna a autorização conferível depois.
+  #
+  # O LIMITE DISTO, dito aqui porque esconder limite de segurança é pior que não
+  # ter o controle: nenhum arquivo impede um agente com terminal de escrever
+  # outro arquivo. Isto não torna a forja impossível, torna a forja EXPLÍCITA e
+  # atribuível, porque alguém teria de inventar, por escrito, uma frase que o
+  # diretor nunca disse. O fechamento de verdade é tirar a autorização do
+  # alcance do agente, e está proposto ao diretor no relatório da OST 7.
+  FLAG="$(ls "$STATE_DIR"/READY_* 2>/dev/null | head -n 1 || true)"
+  if [ -n "$FLAG" ]; then
+    AUTORIZACAO="$(grep -m 1 '^autorizacao:' "$FLAG" 2>/dev/null | sed 's/^autorizacao:[[:space:]]*//' || true)"
+    if [ -z "$AUTORIZACAO" ]; then
+      echo "gate-deploy: deploy BLOQUEADO." >&2
+      echo "Motivo da vigilância: $MOTIVO." >&2
+      echo "Motivo do bloqueio: a flag $(basename "$FLAG") NÃO traz a autorização escrita do diretor." >&2
+      echo "Flag vazia não libera mais nada, por decisão do diretor na OST 7." >&2
+      echo "Para liberar: bash scripts/liberar.sh <motivo> \"<as palavras do diretor, como ele escreveu>\"" >&2
+      exit 2
+    fi
+    echo "gate-deploy: liberado ($MOTIVO)." >&2
+    echo "Flag: $(basename "$FLAG")" >&2
+    echo "Autorização do diretor, registrada: $AUTORIZACAO" >&2
     exit 0
   fi
   echo "gate-deploy: deploy BLOQUEADO." >&2
   echo "Motivo da vigilância: $MOTIVO." >&2
   echo "Motivo do bloqueio: nenhuma flag READY_ em .claude/state/." >&2
   echo "Comando recusado: $COMMAND" >&2
-  echo "Para liberar, após validação do diretor: touch .claude/state/READY_<motivo>" >&2
+  echo "Para liberar: bash scripts/liberar.sh <motivo> \"<as palavras do diretor>\"" >&2
   echo "Remova a flag logo após o push." >&2
   exit 2
 fi

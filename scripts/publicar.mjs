@@ -390,6 +390,78 @@ async function publicarPainel() {
   reg(`https://${SITE}.web.app/ responde HTTP ${r.status}, ${html.length} byte(s)`);
   const init = await fetch(`https://${SITE}.web.app/__/firebase/init.json`);
   reg(`a hospedagem serve a configuracao do cliente: HTTP ${init.status}`);
+
+  await conferirPainelNoAr(mapa);
+}
+
+/**
+ * CONDICAO 14 do parecer da seguranca: toda publicacao deixa evidencia, e para o
+ * painel isso quer dizer comparar o que esta NO AR com o pacote local.
+ *
+ * Por que isso precisa existir: a rodada ja gravava a versao e o identificador da
+ * publicacao, e isso prova que a API aceitou, nao que o diretor esta vendo o
+ * arquivo certo. Ja aconteceu de painel/out deixar de corresponder ao que estava
+ * no ar sem ninguem notar. Aqui a conferencia e por EFEITO: baixa cada arquivo do
+ * endereco publico e compara o resumo do conteudo com o do arquivo local.
+ *
+ * O que ela NAO alcanca, dito para ninguem confiar demais: a hospedagem pode
+ * servir de cache de borda por alguns segundos. Arquivo que diferir e relatado com
+ * o caminho, e a rodada guarda a lista, em vez de um "tudo certo" sem lista.
+ */
+async function conferirPainelNoAr(mapa) {
+  reg('');
+  reg('conferindo o que esta NO AR contra o pacote local, arquivo por arquivo, condicao 14');
+  const caminhos = Object.keys(mapa).sort();
+  const diferentes = [];
+  const naoBaixaram = [];
+  let iguais = 0;
+
+  for (const caminho of caminhos) {
+    const local = readFileSync(join(PASTA_PAINEL, ...caminho.slice(1).split('/')));
+    const resumoLocal = createHash('sha256').update(local).digest('hex');
+    let resposta;
+    try {
+      resposta = await fetch(`https://${SITE}.web.app${caminho}`, { headers: { 'cache-control': 'no-cache' } });
+    } catch (e) {
+      naoBaixaram.push(`${caminho}: ${e instanceof Error ? e.message : String(e)}`);
+      continue;
+    }
+    if (!resposta.ok) {
+      naoBaixaram.push(`${caminho}: HTTP ${resposta.status}`);
+      continue;
+    }
+    const bytes = Buffer.from(await resposta.arrayBuffer());
+    const resumoNoAr = createHash('sha256').update(bytes).digest('hex');
+    if (resumoNoAr === resumoLocal) iguais++;
+    else diferentes.push(`${caminho}\n    local: ${resumoLocal}\n    no ar: ${resumoNoAr} (${bytes.length} byte(s), local ${local.length})`);
+  }
+
+  reg(`arquivos conferidos: ${caminhos.length}, iguais byte a byte: ${iguais}, diferentes: ${diferentes.length}, nao baixaram: ${naoBaixaram.length}`);
+  for (const d of diferentes) reg(`  DIFERE ${d}`);
+  for (const n of naoBaixaram) reg(`  NAO BAIXOU ${n}`);
+  guardar(
+    'conferencia-do-que-esta-no-ar.txt',
+    [
+      `endereco: https://${SITE}.web.app`,
+      `pacote local: ${PASTA_PAINEL}`,
+      `arquivos: ${caminhos.length}, iguais: ${iguais}, diferentes: ${diferentes.length}, nao baixaram: ${naoBaixaram.length}`,
+      '',
+      ...caminhos,
+      '',
+      'diferentes:',
+      ...(diferentes.length === 0 ? ['nenhum'] : diferentes),
+      '',
+      'nao baixaram:',
+      ...(naoBaixaram.length === 0 ? ['nenhum'] : naoBaixaram),
+    ].join('\n')
+  );
+
+  if (diferentes.length > 0 || naoBaixaram.length > 0) {
+    throw new Error(
+      `publicou, mas o que esta no ar NAO confere com o pacote local: ${diferentes.length} diferente(s), ${naoBaixaram.length} que nao baixaram. Veja a rodada.`
+    );
+  }
+  reg('CONFERIDO: todo arquivo no ar e byte a byte o arquivo do pacote local.');
 }
 
 // ---------------------------------------------------------------------------

@@ -90,9 +90,34 @@ conferir "listar arquivos" "ls -la" 0
 conferir "ler o estado do repositorio" "git status --short" 0
 conferir "script de publicacao em modo de SO CONFERIR, nao publica" "node scripts/publicar.mjs --conferir" 0
 
-echo "PARTE 3, COM flag: o que publica tem de LIBERAR (codigo 0)"
+echo "PARTE 2B, flag VAZIA nao libera mais nada, decisao do diretor na OST 7"
+# A flag autoassinada acabou: arquivo vazio era autorizacao sem autor e sem
+# motivo. Agora a flag so vale com as palavras do diretor dentro.
 mkdir -p "$ESTADO"
 : > "$FLAG"
+conferir "flag VAZIA nao libera envio de ramo" "git push origin feature/exemplo" 2
+conferir "flag VAZIA nao libera publicacao pela API" \
+  'curl -s -X POST https://firebaserules.googleapis.com/v1/projects/a-fabrica-soulan/rulesets' 2
+rm -f "$FLAG"
+
+echo "PARTE 2C, o script de liberar RECUSA carimbo e aceita a frase do diretor"
+if bash "$RAIZ/scripts/liberar.sh" prova-do-gate "ok" >/dev/null 2>&1; then
+  echo "  FALHOU liberar com carimbo: criou a flag mesmo assim"
+  erros=$((erros + 1))
+  rm -f "$FLAG"
+else
+  echo "  PASSOU liberar com carimbo: recusado"
+fi
+if bash "$RAIZ/scripts/liberar.sh" prova-do-gate "curto" >/dev/null 2>&1; then
+  echo "  FALHOU liberar com frase curta: criou a flag mesmo assim"
+  erros=$((erros + 1))
+  rm -f "$FLAG"
+else
+  echo "  PASSOU liberar com frase curta demais: recusado"
+fi
+
+echo "PARTE 3, COM flag de verdade: o que publica tem de LIBERAR (codigo 0)"
+bash "$RAIZ/scripts/liberar.sh" prova-do-gate "Esta frase faz o papel da autorizacao escrita do diretor, so na prova do gate." >/dev/null
 conferir "envio de ramo com flag" "git push origin feature/exemplo" 0
 conferir "publicar regra pela API com flag" \
   'curl -s -X POST https://firebaserules.googleapis.com/v1/projects/a-fabrica-soulan/rulesets' 0

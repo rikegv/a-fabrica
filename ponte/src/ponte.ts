@@ -52,6 +52,17 @@ function cwdPadrao(): string {
 
 export function risco(cmd: string): NivelRisco {
   const c = String(cmd).toLowerCase();
+  // A PASTA DA PROPRIA PONTE E RISCO ALTO, SEMPRE, e isto nao e lista de pasta
+  // proibida: nada aqui bloqueia, o portao continua perguntando igual. Isto e
+  // HONESTIDADE DA TELA. Na prova da condicao 12, uma fabrica mandada ler
+  // C:\Users\Henrique\.a-fabrica-ponte\sessao.json chegou ao diretor classificada
+  // como risco BAIXO, porque a classificacao so olhava verbo perigoso e ler
+  // arquivo nao tem verbo nenhum. Acontece que aquele arquivo e a CHAVE DE
+  // APROVACAO da ponte: e a leitura mais perigosa que existe neste sistema, e
+  // era a que aparecia mais inofensiva na hora de ele decidir.
+  if (c.includes('.a-fabrica-ponte') || c.includes('sessao.json') || c.includes('sessao-emulador.json')) {
+    return 'alto';
+  }
   if (/\b(rm|remove-item|del|format|dd|curl|wget|invoke-webrequest|git\s+push|npm\s+publish|shutdown)\b|>/.test(c)) {
     return 'alto';
   }
@@ -110,6 +121,13 @@ export function montarPacote(d: DadosPacote): PacoteAprovacao {
     medio: 'Cria ou altera arquivo ou estado local.',
     alto: 'Pode apagar, publicar ou acessar rede.',
   };
+  // Quando o alvo e a pasta da propria ponte, o diretor precisa ler a frase certa,
+  // e nao a frase generica de risco alto. Ali mora a sessao que vale como chave de
+  // aprovacao: quem ler aquilo pode responder aprovacao no lugar dele.
+  const mexeNaPonte = /\.a-fabrica-ponte|sessao\.json|sessao-emulador\.json/i.test(String(cmd));
+  const frasedeImpacto = mexeNaPonte
+    ? 'Toca a pasta da propria ponte, onde mora a sessao que vale como chave de aprovacao. Nenhuma fabrica precisa disso para trabalhar.'
+    : impacto[r];
   const textoCru = d.textoAoVivo.trim();
   const textoMascarado = mascararCampo(textoCru.slice(0, TETO_TEXTO_DO_AGENTE));
   const texto = textoMascarado.valor ?? '';
@@ -133,7 +151,7 @@ export function montarPacote(d: DadosPacote): PacoteAprovacao {
           : 'O agente nao narrou; a ponte infere pela tarefa.',
       origem: 'ponte',
     },
-    impacto: { valor: impacto[r], origem: 'ponte' },
+    impacto: { valor: frasedeImpacto, origem: 'ponte' },
     oQueSeraTocado: {
       valor: String(cmd).match(/[A-Za-z0-9._\-:\\/]+\.[A-Za-z0-9]{1,6}/g) ?? ['nada identificado'],
       origem: 'fato mais leitura da ponte',
