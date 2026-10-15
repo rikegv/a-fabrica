@@ -94,7 +94,17 @@ Modo de permissão fixado na mão, sempre. Nunca deixar no padrão, porque o pad
 Verificação do portão na abertura. Antes de abrir qualquer fábrica, a ponte confirma que o portão está ativo e respondendo. Sem confirmação, não abre, e registra o motivo.
 
 ## A.7 Gate de deploy
-O hook PreToolUse nasce amarrado em .claude/settings.json ao scripts/gate-deploy.sh, cobrindo git push, deploy, firebase deploy e docker push. Sem flag em .claude/state/READY_*, bloqueia com exit 2. Teste obrigatório: push sem flag tem de ser bloqueado de fato. Nenhum agente contorna esse gate.
+O hook PreToolUse nasce amarrado em .claude/settings.json ao scripts/gate-deploy.sh, cobrindo git push, deploy, firebase deploy, docker push e as APIs de administração que publicam. O hook cobre toda ferramenta que executa comando, não só uma. Teste obrigatório: push sem autorização tem de ser bloqueado de fato, e a prova é scripts/prova-gate.sh. Nenhum agente contorna esse gate.
+
+A autorização é separada POR PESO, e os dois pesos não se misturam.
+
+PESO LEVE, branch de feature. A fábrica pode autorizar, com a flag .claude/state/READY_*, que carrega as palavras do diretor. Risco baixo: o trabalho não vai para produção e o §A.21 pede ritmo.
+
+PESO PESADO, main e produção. Só o diretor cria a autorização, na mão, na sessão, com a flag .claude/state/PROD_*. Isso cobre push para a main e qualquer publicação em produção, inclusive o painel, a regra e os índices. A fábrica NUNCA cria essa autorização, nem repete palavra dele de rodada antiga. Se ele não autorizou agora, não sobe e não publica.
+
+A autorização de produção é de UMA VEZ e tem validade curta: vale para um pedido, expira sozinha e é removida depois do uso. Palavra de ontem não autoriza hoje.
+
+LIMITE DECLARADO, porque esconder limite de segurança é pior do que não ter o controle: a fábrica roda como o mesmo usuário do Windows que o diretor. Tudo que ele escreve, ela consegue escrever. Nenhum arquivo nesta máquina é inalcançável para ela. O que este desenho faz é obrigar a fábrica a desobedecer de forma EXPLÍCITA e auditável, em vez de autorizar a si mesma em silêncio: o gate bloqueia toda tentativa dela de criar ou tocar a autorização de produção, a escrita por ferramenta de arquivo é negada pela configuração, e a autorização expira. Separação de verdade só existe fora desta máquina, com proteção de branch no GitHub e credencial de publicação que a fábrica não possua. Isso está proposto ao diretor, não construído.
 
 ## A.8 Ondas de implantação
 ONDA 1, ENXERGAR. Ponte instalada, base na nuvem, visão geral e tela da fábrica em modo leitura.

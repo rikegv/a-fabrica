@@ -31,6 +31,17 @@
       "Bash(git checkout:*)",
       "Bash(git branch:*)"
     ],
-    "deny": []
+    "deny": [
+      "Write(.claude/state/PROD_*)",
+      "Edit(.claude/state/PROD_*)",
+      "Write(.claude/state/**)",
+      "Edit(.claude/state/**)",
+      "Write(scripts/gate-deploy.sh)",
+      "Edit(scripts/gate-deploy.sh)",
+      "Write(scripts/autorizar-producao.sh)",
+      "Edit(scripts/autorizar-producao.sh)",
+      "Write(.claude/settings.json)",
+      "Edit(.claude/settings.json)"
+    ]
   }
 }

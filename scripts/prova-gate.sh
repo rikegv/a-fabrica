@@ -46,6 +46,33 @@ conferir() {
   fi
 }
 
+# A parte de PESO PESADO roda contra uma pasta de projeto FALSA, feita aqui.
+#
+# Motivo, e ele e de regra e nao de conveniencia: a autorizacao de producao e do
+# diretor, §A.7, e a fabrica nao cria nenhuma. Se esta prova criasse uma de
+# verdade em .claude/state, ela seria exatamente a autoassinatura que a regra
+# acabou de proibir, e ficaria valendo por trinta minutos para qualquer
+# publicacao. Numa pasta falsa, a autorizacao de mentira so autoriza na mentira.
+FALSO=''
+chamarFalso() {
+  local comando="$1"
+  local corpo
+  corpo="$(node -e 'process.stdout.write(JSON.stringify({tool_input:{command:process.argv[1]}}))' "$comando")"
+  printf '%s' "$corpo" | CLAUDE_PROJECT_DIR="$FALSO" bash "$GATE" >/dev/null 2>&1
+  echo $?
+}
+conferirFalso() {
+  local rotulo="$1" comando="$2" esperado="$3"
+  local obtido
+  obtido="$(chamarFalso "$comando")"
+  if [ "$obtido" = "$esperado" ]; then
+    echo "  PASSOU $rotulo: codigo $obtido (esperado $esperado)"
+  else
+    echo "  FALHOU $rotulo: codigo $obtido (esperado $esperado)"
+    erros=$((erros + 1))
+  fi
+}
+
 # Guarda qualquer flag que exista agora, para a prova nao mexer no estado do
 # diretor. Nada e apagado: se existir flag, a prova para e avisa.
 if ls "$ESTADO"/READY_* >/dev/null 2>&1; then
@@ -119,9 +146,13 @@ fi
 echo "PARTE 3, COM flag de verdade: o que publica tem de LIBERAR (codigo 0)"
 bash "$RAIZ/scripts/liberar.sh" prova-do-gate "Esta frase faz o papel da autorizacao escrita do diretor, so na prova do gate." >/dev/null
 conferir "envio de ramo com flag" "git push origin feature/exemplo" 0
-conferir "publicar regra pela API com flag" \
-  'curl -s -X POST https://firebaserules.googleapis.com/v1/projects/a-fabrica-soulan/rulesets' 0
-conferir "script de publicacao com flag" "node scripts/publicar.mjs --painel" 0
+# Estes dois eram liberados pela flag da fabrica ate a decisao do diretor separar
+# peso. Publicar regra e publicar painel sao PRODUCAO: a flag leve nao serve mais,
+# e o esperado agora e bloqueio. A liberacao deles esta provada na PARTE 5, com a
+# autorizacao do diretor.
+conferir "flag da fabrica NAO libera publicar regra pela API, agora e producao" \
+  'curl -s -X POST https://firebaserules.googleapis.com/v1/projects/a-fabrica-soulan/rulesets' 2
+conferir "flag da fabrica NAO libera o script de publicacao, agora e producao" "node scripts/publicar.mjs --painel" 2
 # Caminho completo e nomeado, §A.18. Esta e a flag que ESTA prova criou.
 rm -f "$FLAG"
 
@@ -136,9 +167,68 @@ fi
 echo "PARTE 4, SEM flag de novo, para provar que a liberacao nao ficou presa"
 conferir "envio de ramo depois de remover a flag" "git push origin feature/exemplo" 2
 
+echo "PARTE 5, PESO PESADO: main e producao so com autorizacao DO DIRETOR, §A.7"
+echo "  (contra uma pasta de projeto falsa, para a prova nao criar autorizacao de verdade)"
+FALSO="$(mktemp -d)"
+mkdir -p "$FALSO/.claude/state" "$FALSO/scripts"
+cp "$GATE" "$FALSO/scripts/gate-deploy.sh"
+git -C "$FALSO" init -q 2>/dev/null || true
+
+# 5.1 Sem autorizacao nenhuma: main bloqueada, ramo de feature tambem.
+conferirFalso "push para a MAIN sem autorizacao" "git push origin main" 2
+conferirFalso "publicar painel sem autorizacao" "node scripts/publicar.mjs --painel" 2
+
+# 5.2 A flag LEVE da fabrica NAO serve para producao. Este e o coracao da decisao.
+printf 'autorizacao: frase de peso leve, criada pela fabrica, so para ramo de feature\n' > "$FALSO/.claude/state/READY_leve"
+conferirFalso "flag LEVE da fabrica NAO libera push para a main" "git push origin main" 2
+conferirFalso "flag LEVE da fabrica NAO libera publicacao do painel" "node scripts/publicar.mjs --painel" 2
+conferirFalso "flag LEVE libera push de ramo de feature, que e o peso dela" "git push origin feature/exemplo" 0
+
+# 5.3 Autorizacao de producao vazia nao vale.
+: > "$FALSO/.claude/state/PROD_exemplo"
+conferirFalso "autorizacao de producao VAZIA nao libera a main" "git push origin main" 2
+
+# 5.4 Autorizacao de producao com as palavras do diretor libera.
+printf 'autorizacao: Sobe tudo de uma vez, eu validei a Onda 2 na tela.\nmotivo: exemplo\n' > "$FALSO/.claude/state/PROD_exemplo"
+conferirFalso "autorizacao de producao com as palavras do diretor libera a main" "git push origin main" 0
+conferirFalso "a mesma autorizacao libera a publicacao do painel" "node scripts/publicar.mjs --painel" 0
+
+# 5.5 Autorizacao VENCIDA nao vale: palavra de ontem nao autoriza hoje.
+touch -d '2 hours ago' "$FALSO/.claude/state/PROD_exemplo" 2>/dev/null ||
+  touch -t "$(date -d '2 hours ago' '+%Y%m%d%H%M' 2>/dev/null || echo 202001010000)" "$FALSO/.claude/state/PROD_exemplo"
+conferirFalso "autorizacao de producao VENCIDA nao libera a main" "git push origin main" 2
+
+# 5.6 Push sem nomear ramo, parado em cima da main, conta como producao.
+rm -f "$FALSO/.claude/state/PROD_exemplo"
+git -C "$FALSO" checkout -q -b main 2>/dev/null || git -C "$FALSO" checkout -q main 2>/dev/null || true
+conferirFalso "push sem nomear ramo, em cima da main, conta como producao" "git push" 2
+
+# Limpeza, caminho completo e nomeado, §A.18.
+rm -f "$FALSO/.claude/state/READY_leve"
+rm -f "$FALSO/.claude/state/PROD_exemplo"
+rm -rf "$FALSO"
+
+echo "PARTE 6, a fabrica NAO encosta na autorizacao de producao, bloqueio de primeira ordem"
+conferir "criar autorizacao de producao pela fabrica" "bash scripts/autorizar-producao.sh x \"palavras inventadas pela fabrica\"" 2
+conferir "copiar autorizacao de producao de outro lugar" "cp /tmp/qualquer .claude/state/PROD_roubada" 2
+conferir "renovar a data de uma autorizacao de producao" "touch .claude/state/PROD_exemplo" 2
+conferir "so LER a pasta de autorizacao de producao" "cat .claude/state/PROD_exemplo" 2
+
+echo "PARTE 7, o liberar.sh recusa motivo com cara de producao"
+for motivo in subir-main publicar-painel deploy-producao; do
+  if bash "$RAIZ/scripts/liberar.sh" "$motivo" "Uma frase longa o bastante para passar na conferencia de tamanho." >/dev/null 2>&1; then
+    echo "  FALHOU liberar com motivo '$motivo': criou a flag mesmo assim"
+    erros=$((erros + 1))
+    rm -f "$ESTADO/READY_$motivo"
+  else
+    echo "  PASSOU liberar com motivo '$motivo': recusado, producao nao passa por ali"
+  fi
+done
+
 echo ""
 if [ "$erros" -eq 0 ]; then
   echo "RESUMO: o gate bloqueia o que publica, libera leitura, obedece a flag e volta a bloquear."
+  echo "E separa peso: ramo de feature a fabrica autoriza, main e producao so o diretor."
   exit 0
 fi
 echo "RESUMO: $erros caso(s) fora do esperado. O gate NAO esta confiavel."

@@ -1,5 +1,10 @@
-# Flags de liberação do gate de deploy, locais e nunca versionadas
+# Autorizações do gate de deploy, locais e NUNCA versionadas, §A.7.
+# READY_ é a de peso leve, que a fábrica cria para branch de feature.
+# PROD_ é a de peso pesado, que só o diretor cria, na mão, para main e produção.
+# Nenhuma das duas entra no repositório: autorização versionada viraria autorização
+# permanente, e a de produção vale uma vez e expira.
 .claude/state/READY_*
+.claude/state/PROD_*
 
 # Node
 node_modules/

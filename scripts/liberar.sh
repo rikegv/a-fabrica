@@ -31,6 +31,23 @@ ESTADO="$RAIZ/.claude/state"
 MOTIVO="${1:-}"
 PALAVRAS="${2:-}"
 
+# ESTE SCRIPT E DE PESO LEVE, E SO. Branch de feature, §A.21.
+#
+# Producao tem outra porta, que a fabrica nao abre: scripts/autorizar-producao.sh,
+# rodado pelo diretor na mao. Se alguem tentar usar este aqui para producao, a
+# recusa e explicita, em vez de criar uma flag que o gate vai ignorar e deixar o
+# agente achando que autorizou.
+case "$(printf '%s' "$MOTIVO" | tr '[:upper:]' '[:lower:]')" in
+  *main* | *producao* | *produção* | *publicar* | *publicacao* | *deploy* | *painel* | *regra* | *indices*)
+    echo "liberar: RECUSADO. Isto tem cara de PRODUCAO, e producao nao passa por aqui." >&2
+    echo "" >&2
+    echo "Peso leve, branch de feature: este script." >&2
+    echo "Peso pesado, main e producao: so o diretor, na mao, na sessao:" >&2
+    echo "  ! bash scripts/autorizar-producao.sh $MOTIVO \"<as palavras dele>\"" >&2
+    exit 2
+    ;;
+esac
+
 if [ -z "$MOTIVO" ] || [ -z "$PALAVRAS" ]; then
   echo "liberar: RECUSADO, falta argumento." >&2
   echo "Uso: bash scripts/liberar.sh <motivo-curto> \"<as palavras do diretor>\"" >&2

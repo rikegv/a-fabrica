@@ -52,6 +52,30 @@ SCRIPT_RE='publicar\.mjs'
 # existe exceção: --conferir ao lado nao salva.
 PUBLICA_RE='--(regra|indices|painel)'
 
+# ---------------------------------------------------------------------------
+# TRAVA DE PRIMEIRA ORDEM: a fabrica NAO toca a autorizacao de producao.
+# ---------------------------------------------------------------------------
+# Decisao do diretor, §A.7: a autorizacao de producao e dele, na mao, na sessao.
+# Entao qualquer comando DA FABRICA que mencione .claude/state/PROD_ ou o script
+# que a cria e bloqueado aqui, antes de qualquer outra coisa, inclusive comando
+# que so leria. Ler nao e o problema; o problema e que uma linha que mexe nesse
+# caminho nunca deveria sair da fabrica, e bloquear tudo tira a discussao de
+# qual mexida era inocente.
+#
+# Esta trava vale para o que a FABRICA executa. O diretor roda o comando dele na
+# propria sessao, com o prefixo de exclamacao, e aquilo nao e chamada de
+# ferramenta da fabrica: nao passa por este gancho. E essa a assimetria que faz a
+# separacao existir neste harness.
+if printf '%s' "$COMMAND" | grep -Eq 'PROD_|autorizar-producao'; then
+  echo "gate-deploy: BLOQUEADO, e este bloqueio e de primeira ordem." >&2
+  echo "A fabrica NAO cria, nao copia, nao renova e nao encosta na autorizacao de producao, §A.7." >&2
+  echo "Comando recusado: $COMMAND" >&2
+  echo "" >&2
+  echo "Quem autoriza producao e o diretor, na mao, nesta sessao, com o prefixo de exclamacao:" >&2
+  echo "  ! bash scripts/autorizar-producao.sh <motivo> \"<as suas palavras>\"" >&2
+  exit 2
+fi
+
 MOTIVO=''
 if printf '%s' "$COMMAND" | grep -Eiq "$DEPLOY_RE"; then
   MOTIVO='verbo de deploy ou push'
@@ -69,6 +93,37 @@ elif printf '%s' "$COMMAND" | grep -Eq "$SCRIPT_RE" &&
   MOTIVO='script de publicacao da fabrica'
 fi
 
+# ---------------------------------------------------------------------------
+# O PESO, e e ele que decide QUEM pode autorizar, §A.7.
+# ---------------------------------------------------------------------------
+#   leve    branch de feature. A fabrica pode autorizar, flag READY_.
+#   pesado  main e qualquer publicacao em producao. So o diretor, flag PROD_.
+#
+# Um push conta como pesado quando a linha nomeia a main, e TAMBEM quando a linha
+# nao nomeia ramo nenhum e o ramo de agora e a main: "git push" sozinho, parado em
+# cima da main, e push para a main, e seria um furo bobo de deixar passar.
+PESO='leve'
+case "$MOTIVO" in
+  'verbo de deploy ou push')
+    if printf '%s' "$COMMAND" | grep -Eq '(^|[^a-z])(main|master)([^a-z]|$)'; then
+      PESO='pesado'
+    elif printf '%s' "$COMMAND" | grep -Eq 'git[[:space:]]+push' &&
+      ! printf '%s' "$COMMAND" | grep -Eq 'git[[:space:]]+push[^|;&]*[[:space:]][^-][^[:space:]]*[[:space:]][^-]'; then
+      RAMO_DE_AGORA="$(git -C "$PROJECT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
+      case "$RAMO_DE_AGORA" in
+        main | master) PESO='pesado' ;;
+      esac
+    fi
+    # Publicacao por outro verbo que nao e push e sempre producao.
+    if printf '%s' "$COMMAND" | grep -Eiq 'deploy|docker[[:space:]]+push|kubectl[[:space:]]+apply'; then
+      PESO='pesado'
+    fi
+    ;;
+  'escrita na API de publicacao'* | 'script de publicacao da fabrica')
+    PESO='pesado'
+    ;;
+esac
+
 if [ -n "$MOTIVO" ]; then
   # Comando de deploy ou push detectado. Precisa de flag de liberação, E a flag
   # precisa carregar a AUTORIZAÇÃO ESCRITA DO DIRETOR.
@@ -85,29 +140,71 @@ if [ -n "$MOTIVO" ]; then
   # atribuível, porque alguém teria de inventar, por escrito, uma frase que o
   # diretor nunca disse. O fechamento de verdade é tirar a autorização do
   # alcance do agente, e está proposto ao diretor no relatório da OST 7.
-  FLAG="$(ls "$STATE_DIR"/READY_* 2>/dev/null | head -n 1 || true)"
-  if [ -n "$FLAG" ]; then
-    AUTORIZACAO="$(grep -m 1 '^autorizacao:' "$FLAG" 2>/dev/null | sed 's/^autorizacao:[[:space:]]*//' || true)"
-    if [ -z "$AUTORIZACAO" ]; then
-      echo "gate-deploy: deploy BLOQUEADO." >&2
-      echo "Motivo da vigilância: $MOTIVO." >&2
-      echo "Motivo do bloqueio: a flag $(basename "$FLAG") NÃO traz a autorização escrita do diretor." >&2
-      echo "Flag vazia não libera mais nada, por decisão do diretor na OST 7." >&2
-      echo "Para liberar: bash scripts/liberar.sh <motivo> \"<as palavras do diretor, como ele escreveu>\"" >&2
-      exit 2
-    fi
-    echo "gate-deploy: liberado ($MOTIVO)." >&2
-    echo "Flag: $(basename "$FLAG")" >&2
-    echo "Autorização do diretor, registrada: $AUTORIZACAO" >&2
-    exit 0
+  # Qual porta vale, pelo peso. A de produção não aceita flag da fábrica, e a de
+  # ramo de feature não é satisfeita por autorização de produção vencida.
+  if [ "$PESO" = 'pesado' ]; then
+    PREFIXO='PROD_'
+    QUEM='o diretor, na mão, nesta sessão'
+    COMO="  ! bash scripts/autorizar-producao.sh <motivo> \"<as suas palavras>\""
+  else
+    PREFIXO='READY_'
+    QUEM='a fábrica, com as palavras do diretor'
+    COMO="  bash scripts/liberar.sh <motivo> \"<as palavras do diretor>\""
   fi
-  echo "gate-deploy: deploy BLOQUEADO." >&2
-  echo "Motivo da vigilância: $MOTIVO." >&2
-  echo "Motivo do bloqueio: nenhuma flag READY_ em .claude/state/." >&2
-  echo "Comando recusado: $COMMAND" >&2
-  echo "Para liberar: bash scripts/liberar.sh <motivo> \"<as palavras do diretor>\"" >&2
-  echo "Remova a flag logo após o push." >&2
-  exit 2
+
+  FLAG="$(ls "$STATE_DIR"/${PREFIXO}* 2>/dev/null | head -n 1 || true)"
+
+  if [ -z "$FLAG" ]; then
+    echo "gate-deploy: BLOQUEADO." >&2
+    echo "Motivo da vigilância: $MOTIVO." >&2
+    echo "Peso: $PESO. Quem autoriza este peso: $QUEM." >&2
+    echo "Motivo do bloqueio: nenhuma autorização ${PREFIXO}em .claude/state/." >&2
+    echo "Comando recusado: $COMMAND" >&2
+    echo "Para autorizar:" >&2
+    echo "$COMO" >&2
+    exit 2
+  fi
+
+  AUTORIZACAO="$(grep -m 1 '^autorizacao:' "$FLAG" 2>/dev/null | sed 's/^autorizacao:[[:space:]]*//' || true)"
+  if [ -z "$AUTORIZACAO" ]; then
+    echo "gate-deploy: BLOQUEADO." >&2
+    echo "Motivo da vigilância: $MOTIVO (peso $PESO)." >&2
+    echo "Motivo do bloqueio: $(basename "$FLAG") NÃO traz a autorização escrita do diretor." >&2
+    echo "Autorização vazia não libera nada, §A.7." >&2
+    exit 2
+  fi
+
+  # VALIDADE CURTA, e ela vale para os dois pesos, com prazos diferentes.
+  #
+  # Decisão do diretor: a autorização de produção é de uma vez e expira sozinha,
+  # para palavra de ontem não autorizar hoje. É isso que impede a fábrica de
+  # reaproveitar uma frase antiga dele, que seria a autoassinatura voltando pela
+  # porta dos fundos.
+  if [ "$PESO" = 'pesado' ]; then
+    VALIDADE_S=1800
+  else
+    VALIDADE_S=86400
+  fi
+  NASCEU="$(stat -c %Y "$FLAG" 2>/dev/null || echo 0)"
+  AGORA="$(date +%s)"
+  IDADE=$((AGORA - NASCEU))
+  if [ "$NASCEU" -gt 0 ] && [ "$IDADE" -gt "$VALIDADE_S" ]; then
+    echo "gate-deploy: BLOQUEADO." >&2
+    echo "Motivo da vigilância: $MOTIVO (peso $PESO)." >&2
+    echo "Motivo do bloqueio: a autorização $(basename "$FLAG") tem $((IDADE / 60)) minuto(s) e vale $((VALIDADE_S / 60))." >&2
+    echo "Autorização vencida não autoriza, §A.7. Palavra de ontem não vale hoje." >&2
+    echo "Para autorizar de novo:" >&2
+    echo "$COMO" >&2
+    exit 2
+  fi
+
+  echo "gate-deploy: liberado ($MOTIVO, peso $PESO)." >&2
+  echo "Autorização: $(basename "$FLAG"), $((IDADE / 60)) minuto(s) de idade." >&2
+  echo "Palavras registradas: $AUTORIZACAO" >&2
+  if [ "$PESO" = 'pesado' ]; then
+    echo "Lembrete: autorização de produção é de UMA VEZ. Remova-a agora que foi usada." >&2
+  fi
+  exit 0
 fi
 
 # Não é deploy nem push, segue normal.
