@@ -203,4 +203,140 @@ A pasta de trabalho da fábrica vem **de dentro do comando**, escolhida por quem
 escreve no painel. Falta prova de que leitura fora dela passa pelo portão e é negada,
 ou decisão escrita do diretor aceitando o risco.
 
+## 2026-10-15, OST 7: o vazamento do gancho, o painel que falhava calado, e a autorização fora do alcance da fábrica
+
+Agente: **coordenador** em tudo, §A.15. A auditoria da véspera foi da **seguranca**, e
+metade do trabalho deste dia saiu do veto dela.
+
+Dez commits, de `234e50b` a `0de0670`. Ramo `feature/ost5-madrugada`, árvore limpa.
+
+### Três regras permanentes nasceram hoje
+**§A.22, nenhuma ação do painel falha em silêncio.** Nasceu de um caso real: o diretor
+abriu uma fábrica, tudo funcionou, a fábrica rodou e concluiu, e a tela não disse nada.
+
+**§A.23, conteúdo só de projeto liberado.** Metadado de todo projeto, conteúdo só dos
+liberados, um a um, começando com `a-fabrica` e mais nada.
+
+**§A.7 reescrito, autorização separada por peso.** Peso leve, branch de feature: a fábrica
+autoriza. Peso pesado, main e qualquer publicação: só o diretor, na mão, na sessão, com
+validade de 30 minutos e de uma vez.
+
+### O vazamento do gancho, prioridade zero do dia
+O gancho capturava o TEXTO dos comandos de todos os projetos, e a lista de ignorados
+estava vazia. CentraFin, CENTRA DASH e SoulTrell lidam com dado de cliente: a proteção do
+§A.4 existia no papel e não no arquivo.
+
+A lógica foi invertida. Quem decide é o gancho, dentro do projeto, então o que não está
+liberado **não chega nem à fila em disco**. Projeto novo nasce sem liberação, inclusive com
+a lista ausente, vazia ou corrompida. Comparação por fronteira de caminho: liberar
+`a-fabrica` não alcança `a-fabrica-lab`.
+
+**Nenhum byte de projeto de cliente chegou à base.** A fila local prova: as duas sessões
+publicadas eram só de `a-fabrica`. Foram limpos 4 passos de uma sessão de teste do
+laboratório, campo por campo, com aviso no lugar do conteúdo. Nada apagado.
+
+### O bug que o diretor sentiu: abria fábrica e não via nada
+Rastreado pela base, sem adivinhação. A ordem dele **funcionou inteira**: painel gravou,
+regra aceitou, ponte leu e entregou no mesmo segundo, fábrica nasceu e concluiu em 22
+segundos. O defeito era de exibição, e eram três: o painel jogava fora o identificador da
+fábrica nova; na lista, concluída vai para o fim e a dele era a última de vinte, numa tela
+que não rola; e se ele fosse levado até ela, a tela diria "esta fábrica não está mais no
+painel", confundindo "ainda não nasceu" com "foi encerrada".
+
+Agora o painel leva ele até a fábrica, no computador e no celular, com três momentos
+honestos: esperando, passou do prazo com motivo e próximo passo, e encerrada.
+
+### Cinco números que não batiam com a realidade
+O diretor olhou a visão geral e apontou cinco. Causa de cada um, achada com evidência:
+
+1. **Sessão viva aparecendo como concluída.** Causa minha: o conserto da fábrica fantasma
+   preenchia o projeto a partir da linha que passava, e o gancho escreve o `cwd` de cada
+   evento. A raiz era sobrescrita por subpasta. Ficou: preenche o que falta, nunca
+   sobrescreve, e confere na base porque o controle em memória zera no reinício.
+2. **Pasta do laboratório como fábrica de verdade.** Eu tinha aberto exceção para fábrica
+   aberta por ele no painel. Ele disse o contrário e tem razão: regra sem exceção.
+3. **Consumo 0 tokens.** Dois defeitos: a ponte grava o `usage` do kit e o painel lia
+   `totalTokens`, campo que nunca existiu; e fábrica aberta na mão não tem medida nenhuma,
+   porque o gancho não recebe contagem de token. Ficou: soma as duas grafias, e ausência
+   virou "consumo não medido", que é diferente de zero.
+4. **Tempo de 19h57.** O relógio contava até agora, em todo estado. Ficou: para quando a
+   fábrica para. **O número é tempo de parede, não de trabalho**, e medir trabalho de
+   verdade muda o §A.4: proposto, não feito.
+5. **"Modelo não informado".** O gancho não recebe o modelo, conferido na fila. Ficou:
+   "modelo não reportado pelo Claude Code", que explica a falta.
+
+### Defeitos achados ao vivo e consertados, fora os acima
+Gate cego para a ferramenta PowerShell, com push passando inteiro por fora. Publicação sem
+o Firebase CLI quebrada, por vocabulário trocado com a API. Ponte de teste comendo a fila
+de produção e carimbando sessões reais com máquina de teste. Fábrica fantasma, sem máquina,
+agente nem projeto. Máscara ausente no caminho da aprovação, que era o único caminho
+permanente sem filtro. Furo do `--conferir` no gate. Risco **baixo** para a fábrica ler a
+própria credencial, que era a leitura mais perigosa do sistema com a cara mais inofensiva.
+
+### O que está no ar
+Painel em https://a-fabrica-soulan.web.app, publicado com autorização do diretor e
+conferido arquivo por arquivo: **22 no ar, 22 iguais byte a byte** ao pacote local,
+condição 14 cumprida. Regra do Firestore byte a byte igual ao arquivo. Ponte de produção
+rodando solta, máquina `maquina-b06c5b1e81b4`. Base com 28 fábricas, **2 na tela** e 26
+rotuladas de teste, nenhuma apagada. Zero aprovações pendentes.
+
+### Provado contra a base real
+Sete testes, 7 de 7, **quatro rodadas**. Tempo esgotado com recusa por tempo e resposta
+tardia negada pela regra. Bloco 1 fim a fim, 9 de 9, sessão aberta na mão aparecendo
+sozinha em 3 segundos. Abrir pelo painel, 7 de 7, fábrica nascendo em 13,7 s. Condição 12
+pelo portão: a fábrica mandada ler a credencial da ponte foi barrada, **tentou de novo pelo
+PowerShell e foi barrada de novo**, e nada vazou. §A.22 com navegador de verdade, 12 de 12,
+com print de cada tela. Gate do §A.7, 23 de 24.
+
+**Custo do gancho: p95 de 72 ms por passo**, dos quais 2,4 ms é trabalho dele.
+
+### A trava que me pegou, e é para ficar
+A decisão do diretor tirou o gate do alcance da fábrica. Funcionou na hora: tentei editar
+`gate-deploy.sh` e recebi recusa da ferramenta, **no meio de um conserto de verdade**. Não
+contornei. O conserto ficou escrito em `scripts/CONSERTO-PENDENTE-DO-GATE.md` e a prova do
+§A.7 deixa o caso falhando de propósito.
+
+O preço é real: a fábrica não mantém mais o gate nem o `settings.json`. Cada conserto deles
+passa pelo diretor.
+
+E o limite, dito sem maquiagem: a fábrica roda como o mesmo usuário do Windows. A negação
+pega o caminho direto e não pega o indireto, um script dela alcança a pasta sem citá-la.
+Isso é disciplina com campainha, não parede. Parede de verdade é fora desta máquina.
+
+### Para retomar, nesta ordem
+1. **Validação visual do diretor**, §A.13, dos cinco pontos da visão geral.
+2. **A main**, 24 commits à frente, esperando só a validação dele. A subida agora exige
+   `! bash scripts/autorizar-producao.sh subir-main "<as palavras dele>"`.
+3. **Conserto do gate**, `scripts/CONSERTO-PENDENTE-DO-GATE.md`: push sem nomear ramo, em
+   cima da main, ainda não conta como produção.
+4. **Remover a autorização de produção usada**, se tiver sobrado:
+   `! rm -f .claude/state/PROD_publicar-correcoes-da-visao-geral`.
+
+### Decisões em aberto, todas do diretor
+**Faturamento do projeto**, que destrava a recuperação a ponto no tempo. Sem ela, "a trilha
+não se apaga" vale para o painel e para a ponte, e não para quem tem a conta.
+
+**Publicação fora desta máquina**, por fluxo do GitHub que só dispara com aprovação dele,
+com a fábrica sem credencial de produção nenhuma. É o que tira o atrito do gcloud, que
+venceu três vezes num dia, sem desfazer o controle.
+
+**Dois cartões com o mesmo título** quando duas fábricas dividem o projeto. Mostrar a hora
+de abertura resolveria, e mexe no desenho do cartão.
+
+**Tempo de trabalho** em vez de tempo de parede, que muda o §A.4.
+
+**Rótulo em máquina de teste**: pela regra, exigiria escrever que ela foi vista agora, o
+que seria mentira. Ficaram sem rótulo, visíveis só como offline. Mudar isso é mudar a regra
+ou usar a API de administração.
+
+**Condição 11**, dois sub-itens: processo órfão do Claude Code, e rede caindo no instante
+exato da gravação da trilha.
+
+### Onde está escrito
+`docs/ost7-seguranca-retomada.md`, o parecer e o veto. `scripts/CONSERTO-PENDENTE-DO-GATE.md`,
+o conserto que a trava impediu. Evidências em
+`C:\Users\Henrique\a-fabrica-lab\rodadas\2026-10-14-ost7-retomada` e em
+`painel/testes/rodada-2026-10-15-a22-sem-silencio`, com print de cada tela. Nada
+sobrescrito, nada apagado, §A.17.
+
 <!-- Nova entrada acima desta linha. Formato: ## AAAA-MM-DD, título curto -->
