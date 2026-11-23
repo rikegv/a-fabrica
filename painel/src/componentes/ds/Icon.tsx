@@ -15,7 +15,8 @@ export type IconName =
   | 'folder'
   | 'pause'
   | 'back'
-  | 'copy';
+  | 'copy'
+  | 'closed';
 
 const TRACOS: Record<IconName, string> = {
   overview: 'M3.5 3.5h5.5v5.5H3.5zM11 3.5h5.5v5.5H11zM3.5 11h5.5v5.5H3.5zM11 11h5.5v5.5H11z',
@@ -32,7 +33,9 @@ const TRACOS: Record<IconName, string> = {
   folder: 'M2.5 5.5a1 1 0 0 1 1-1h4l2 2h7a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1Z',
   pause: 'M7 4.5v11M13 4.5v11',
   back: 'M15 10H5M9 5l-5 5 5 5',
-  copy: 'M7 7h9v9H7zM4 13V4h9'
+  copy: 'M7 7h9v9H7zM4 13V4h9',
+  /* OST 11: Fábricas fechadas, uma caixa de arquivo. */
+  closed: 'M3 4.5h14v3.5H3zM4.5 8v7.5h11V8M8 11h4'
 };
 
 export interface IconProps {

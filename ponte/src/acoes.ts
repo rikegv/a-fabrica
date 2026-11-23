@@ -37,7 +37,7 @@
 import { randomUUID } from 'node:crypto';
 import { modeloAceito, MODELO_PADRAO } from './claudeCode.js';
 import { ROTULO_DE_TESTE } from './config.js';
-import { aplicarPersona, nomeDeAgenteAceito } from './personas.js';
+import { agentesParaABase, aplicarPersonaComTime, nomeDeAgenteAceito } from './personas.js';
 import { PREFIXO_MAO } from './ganchos.js';
 import { rodarSessao, type PedidoDeSessao, type PortasDaSessao, type ResultadoDaSessao } from './sessao.js';
 import type { AcaoComando, ComandoTomado, Fabrica, Momento } from './tipos.js';
@@ -140,10 +140,10 @@ async function abrirSessao(
     );
   }
 
-  const persona = aplicarPersona(comando.agente, cwd, escolha.modelo, comando.texto);
-  if (comando.agente !== null) {
-    mundo.registrar?.(`fabrica ${fabricaId}, agente ${comando.agente}: ${persona.nota}`);
-  }
+  // OST 11: a persona MAIS o time inteiro do projeto, para o coordenador ter quem
+  // despachar. Sem agente pedido e com coordenador no projeto, a principal e ele.
+  const persona = aplicarPersonaComTime(comando.agente, cwd, escolha.modelo, comando.texto);
+  mundo.registrar?.(`fabrica ${fabricaId}, agente ${persona.agent ?? comando.agente ?? "nenhum"}: ${persona.nota}`);
 
   // Campos iniciais da fabrica. O caminho da Onda 1 escrevia estes quatro; a Onda 2
   // acrescenta, nunca tira.
@@ -152,7 +152,9 @@ async function abrirSessao(
     projeto: cwd,
     estado: 'em execucao',
     inicio: new Date().toISOString(),
-    agente: comando.agente ?? 'claude code',
+    agente: persona.agent ?? comando.agente ?? 'claude code',
+    // OST 11: os agentes do projeto, nome e descricao, para o painel desenhar o time.
+    agentesDoProjeto: agentesParaABase(persona.time),
     erro: null,
     // Rodada de teste nasce rotulada, para o painel poder esconder, §A.17: a
     // trilha de teste fica, e so sai da frente do trabalho de verdade.

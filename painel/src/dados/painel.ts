@@ -38,6 +38,12 @@ export interface EstadoDoPainel {
      §A.17. Quinze fábricas de teste na frente do trabalho de verdade foi o que
      deixou uma fábrica recém aberta fora da tela. */
   fabricasDeTrabalho: Fabrica[];
+  /* OST 11: a Visão geral mostra só estas, a fábrica ativa e a que perdeu a
+     conexão nas últimas 24 horas. */
+  fabricasAbertas: Fabrica[];
+  /* OST 11: Fábricas fechadas. Concluída, ou sem conexão há mais de 24 horas.
+     Nada é apagado, §A.17: só muda de lugar. A mais recente primeiro. */
+  fabricasFechadas: Fabrica[];
   aprovacoes: Aprovacao[];
   /* Pedidos já respondidos, do mais recente para o mais antigo. É o histórico da
      tela de Aprovações, e sai do mesmo ouvinte, sem leitura nova na base. */
@@ -48,6 +54,8 @@ export interface EstadoDoPainel {
   agora: Date;
   contagem: {
     total: number;
+    /* OST 11: quantas foram para Fábricas fechadas. */
+    fechadas: number;
     /* Quantas estão escondidas por serem de rodada de teste. */
     deTeste: number;
     emExecucao: number;
@@ -117,22 +125,27 @@ export function montarEstadoDoPainel(
       ordenarFabricas(
         fabricas.itens.map((doc) => {
           const parado = porFabrica.get(doc.id)?.[0]?.waitingMs ?? null;
-          return traduzirFabrica(doc, { pontePerdida, pedidoParado: parado, agora });
+          return traduzirFabrica(doc, { pontePerdida, pedidoParado: parado, agora, ponteVistaEm: ponte.vistoPorUltimo });
         })
       ),
       agora
     );
 
-    const deTrabalho = lista.filter((f) => !f.teste);
+    const deTodoDia = lista.filter((f) => !f.teste);
+    const deTrabalho = deTodoDia.filter((f) => !f.fechada);
+    const fechadas = deTodoDia
+      .filter((f) => f.fechada)
+      .sort((a, b) => (b.startedAt?.getTime() ?? 0) - (a.startedAt?.getTime() ?? 0));
     const andando = deTrabalho.filter((f) => f.tarefaAndando && f.taskMs !== null);
 
     const contagem = {
       total: deTrabalho.length,
-      deTeste: lista.length - deTrabalho.length,
+      fechadas: fechadas.length,
+      deTeste: lista.length - deTodoDia.length,
       emExecucao: deTrabalho.filter((f) => f.state === 'running').length,
       aguardandoAprovacao: pendentes.length,
       falharam: deTrabalho.filter((f) => f.state === 'failed').length,
-      concluidas: deTrabalho.filter((f) => f.state === 'done').length,
+      concluidas: deTodoDia.filter((f) => f.state === 'done').length,
       /* Soma só o que foi MEDIDO. Se nenhuma fábrica tem medida, o total é nulo,
          e a tela diz não medido em vez de zero, que seria afirmar que o dia não
          gastou nada. */
@@ -146,7 +159,9 @@ export function montarEstadoDoPainel(
     return {
       ponte,
       fabricas: lista,
-      fabricasDeTrabalho: deTrabalho,
+      fabricasDeTrabalho: deTodoDia,
+      fabricasAbertas: deTrabalho,
+      fabricasFechadas: fechadas,
       aprovacoes: pendentes,
       decisoes,
       porFabrica,

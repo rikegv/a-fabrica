@@ -14,7 +14,7 @@
  * encerrar pede confirmacao, sempre.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Firestore } from 'firebase/firestore';
 import {
   AlertBanner,
@@ -22,7 +22,6 @@ import {
   ApprovalItem,
   BridgeStatus,
   Button,
-  CommandBox,
   Icon,
   KpiTile,
   MobileNav,
@@ -30,17 +29,13 @@ import {
   Segmented,
   StateBadge,
   StateIcon,
-  Tabs,
-  TaskRow,
   rotuloCurto
 } from '@/componentes/ds';
 import type { Entrada } from '@/dados/autenticacao';
 import { impedimentoDaEscrita, type ContextoDeEscrita } from '@/dados/escritas';
 import { TituloEditavel } from './renomear';
-import { usarTarefas } from '@/dados/ouvintes';
 import type { EstadoDoPainel } from '@/dados/painel';
-import { ordenarTarefas, traduzirTarefa } from '@/dados/tradutor';
-import { LinhaDoTempo, usarLinhaDoTempo } from './LinhaDoTempo';
+import { ChatComCoordenador, RodapeDaFabrica, TimeNoCelular, usarTimeDaFabrica } from './FabricaViva';
 import { desdeQuando, plural } from '@/formato';
 import { usarAcoesDaFabrica, usarCaixaDeComando, type AcoesDaFabrica } from './FabricaTela';
 import { NovaFabricaCelular } from './NovaFabrica';
@@ -66,7 +61,6 @@ import { CONFIRMAR_ENCERRAR, DESTINOS_INERTES, motivoDeAbrirFabrica } from './te
    que a fabrica faz, que e a unica com recorte, some. */
 const FABRICAS_POR_PAGINA = 3;
 const VAO_ENTRE_CARTOES = 8;
-const TAREFAS_NO_CELULAR = 4;
 
 /* chave: o que muda o desenho acima da lista, como a faixa da ponte e a faixa de
    aprovacao. Quando muda, a lista mede de novo. */
@@ -117,6 +111,7 @@ export function Celular({
   const [telaEscolhida, setTela] = useState<string | null>(null);
   const [fabricaId, setFabricaId] = useState<string | null>(null);
   const [pagina, setPagina] = useState(1);
+  const [vistaDasFabricas, setVistaDasFabricas] = useState<'abertas' | 'fechadas'>('abertas');
   const [aba, setAba] = useState<'pendentes' | 'historico'>('pendentes');
   /* UM aviso por vez, e a casca e a dona dele, § mesma razao do computador. */
   const [aviso, setAviso] = useState<string | null>(null);
@@ -128,7 +123,7 @@ export function Celular({
 
   const { lista: listaDeFabricas, cabem } = usarQuantosCartoesCabem(
     tela === 'factories',
-    `${estado.fabricasDeTrabalho.length}|${estado.aprovacoes.length}|${estado.ponte.online}`
+    `${estado.fabricasAbertas.length}|${estado.aprovacoes.length}|${estado.ponte.online}`
   );
 
   const ponte = estado.ponte;
@@ -228,16 +223,20 @@ export function Celular({
       </>
     );
   } else if (tela === 'factories') {
-    const total = Math.max(1, Math.ceil(estado.fabricasDeTrabalho.length / cabem));
+    /* OST 11: abertas e fechadas, como no computador. Nada é apagado. */
+    const listaDaVez = vistaDasFabricas === 'fechadas' ? estado.fabricasFechadas : estado.fabricasAbertas;
+    const total = Math.max(1, Math.ceil(listaDaVez.length / cabem));
     const atual = Math.min(pagina, total);
-    const visiveis = estado.fabricasDeTrabalho.slice((atual - 1) * cabem, atual * cabem);
+    const visiveis = listaDaVez.slice((atual - 1) * cabem, atual * cabem);
     cabecalho = (
       <MHead
         title="Fábricas"
         sub={
-          estado.fabricasDeTrabalho.length
-            ? `${plural(estado.fabricasDeTrabalho.length, 'no painel', 'no painel')} · mais urgente primeiro`
-            : 'Nenhuma no painel'
+          vistaDasFabricas === 'fechadas'
+            ? 'Concluídas e sem conexão há mais de 24 horas'
+            : estado.fabricasAbertas.length
+              ? `${plural(estado.fabricasAbertas.length, 'aberta', 'abertas')} · mais urgente primeiro`
+              : 'Nenhuma aberta agora'
         }
         right={botaoDeNovaFabrica}
       />
@@ -268,12 +267,25 @@ export function Celular({
             hint={estado.aprovacoes[0] ? `há ${estado.aprovacoes[0].waiting}` : 'nada parado'}
           />
         </div>
+        <Segmented
+          block
+          label="Abertas ou fechadas"
+          value={vistaDasFabricas}
+          onChange={(id) => {
+            setVistaDasFabricas(id as 'abertas' | 'fechadas');
+            setPagina(1);
+          }}
+          options={[
+            { id: 'abertas', label: `Abertas (${estado.fabricasAbertas.length})` },
+            { id: 'fechadas', label: `Fechadas (${estado.fabricasFechadas.length})` }
+          ]}
+        />
         <div ref={listaDeFabricas} className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
           {estado.erro ? (
             <Falha mensagem={estado.erro} />
           ) : visiveis.length === 0 ? (
             <Vazio
-              titulo={estado.carregando ? 'Lendo a base' : 'Nenhuma fábrica no painel'}
+              titulo={estado.carregando ? 'Lendo a base' : vistaDasFabricas === 'fechadas' ? 'Nenhuma fábrica fechada' : 'Nenhuma fábrica aberta agora'}
               detalhe={
                 estado.carregando
                   ? 'O painel está abrindo os ouvintes ao vivo.'
@@ -312,7 +324,7 @@ export function Celular({
             ))
           )}
         </div>
-        {estado.fabricasDeTrabalho.length > cabem ? (
+        {listaDaVez.length > cabem ? (
           <div className="flex justify-end">
             <Pager page={atual} total={total} onChange={setPagina} />
           </div>
@@ -451,48 +463,16 @@ function CelularFabrica({
   avisar: (mensagem: string) => void;
   verPedido: () => void;
 }) {
-  const [aba, setAba] = useState('atividade');
   const [folha, setFolha] = useState<'acoes' | null>(null);
   const fabrica = estado.fabricas.find((f) => f.id === fabricaId) ?? null;
   const pedido = (estado.porFabrica.get(fabricaId) ?? [])[0];
-  const linhaDoTempo = usarLinhaDoTempo(base, fabricaId);
-  const tarefas = usarTarefas(base, fabricaId);
+  /* OST 11: a fábrica viva também no celular. Chat com o coordenador em cima,
+     o time em coluna embaixo, quem trabalha agora primeiro. */
+  const vivo = usarTimeDaFabrica(base, fabrica);
   const acoes = usarAcoesDaFabrica(escrita, fabrica, avisar);
   const caixa = usarCaixaDeComando(escrita, fabrica, avisar);
 
-  const listaDeTarefas = useMemo(
-    () => ordenarTarefas(tarefas.itens.map((t) => traduzirTarefa(t, estado.agora))),
-    [tarefas.itens, estado.agora]
-  );
-
   if (!fabrica) return null;
-
-  let miolo: React.ReactNode;
-  if (aba === 'atividade') {
-    miolo = (
-      <LinhaDoTempo
-        dados={linhaDoTempo}
-        agentePrincipal={`agente ${fabrica.agent}`}
-        viva={fabrica.state === 'running' || fabrica.state === 'approval'}
-        agora={estado.agora}
-      />
-    );
-  } else {
-    miolo = tarefas.erro ? (
-      <Falha mensagem={tarefas.erro} />
-    ) : listaDeTarefas.length === 0 ? (
-      <Vazio
-        titulo={tarefas.carregando ? 'Lendo as tarefas' : 'Nenhuma tarefa delegada'}
-        detalhe="Quando a fábrica delegar uma tarefa, ela aparece aqui com a situação dela."
-      />
-    ) : (
-      <div className="gf-card gf-glass">
-        {listaDeTarefas.slice(0, TAREFAS_NO_CELULAR).map((t) => (
-          <TaskRow key={t.id} state={t.state} title={t.title} elapsed={t.elapsed} />
-        ))}
-      </div>
-    );
-  }
 
   return (
     <>
@@ -518,25 +498,14 @@ function CelularFabrica({
           <span className="caption gf-muted">Responder</span>
         </button>
       ) : null}
-      <Tabs
-        value={aba}
-        onChange={setAba}
-        tabs={[
-          { id: 'atividade', label: 'Atividade' },
-          { id: 'tarefas', label: 'Tarefas' }
-        ]}
-      />
-      <div className="min-h-0 flex-1 overflow-hidden">{miolo}</div>
+      <ChatComCoordenador dados={vivo} coordenador="Coordenador" caixa={caixa} celular />
+      <div className="min-h-0 flex-1 overflow-hidden flex flex-col">
+        {vivo.time ? <TimeNoCelular time={vivo.time} agora={vivo.agora} /> : null}
+      </div>
+      <RodapeDaFabrica fabrica={fabrica} estado={estado} time={vivo.time} />
       {acoes.ordem.erro && !acoes.confirmando && !folha ? (
         <ErroDeEscrita mensagem={acoes.ordem.erro} aoFechar={acoes.ordem.limparErro} />
       ) : null}
-      <CommandBox
-        touch
-        disabledReason={caixa.motivo}
-        error={caixa.ordem.erro}
-        onDismissError={caixa.ordem.limparErro}
-        onSend={caixa.enviar}
-      />
       <Button
         variant="secondary"
         size="touch"

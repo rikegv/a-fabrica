@@ -182,13 +182,8 @@ if (-not $loginOk) {
 # 5. Subir sozinha quando o computador liga
 # ---------------------------------------------------------------------------
 Write-Host '5. Registrando a ponte para subir sozinha quando o computador liga'
-$node = (Get-Command node).Source
-$script = Join-Path $raiz 'dist\ponte.js'
-$acao = New-ScheduledTaskAction -Execute $node -Argument "`"$script`"" -WorkingDirectory $raiz
-$gatilho = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
-$ajustes = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit (New-TimeSpan -Days 0)
-Register-ScheduledTask -TaskName 'A Fabrica Ponte' -Action $acao -Trigger $gatilho -Settings $ajustes -Description 'Ponte local da Fabrica. So conexao de saida, nunca abre porta.' -Force | Out-Null
-Write-Host '   tarefa agendada A Fabrica Ponte criada'
+# OST 11: a tarefa mora em registrar-tarefa.ps1 (sem janela, religa a cada 5 min).
+& (Join-Path $raiz 'registrar-tarefa.ps1') -SemSubir
 
 # ---------------------------------------------------------------------------
 # 6. Subir a ponte agora

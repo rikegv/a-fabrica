@@ -390,6 +390,11 @@ export async function reconciliarPendentes(
         let n = 0;
         for (const s of snap.docs) {
           const fabricaId = textoDe(s.data(), 'fabricaId') ?? s.id;
+          // OST 11: a sessao que o diretor abriu na mao NAO roda dentro da ponte.
+          // Reiniciar a ponte nao derruba essa sessao, entao ela nao vira ponte
+          // offline. Antes disto, todo reinicio pintava de offline o trabalho vivo
+          // dele, ate o proximo passo do gancho corrigir.
+          if (fabricaId.startsWith('mao-')) continue;
           if (!sessoesVivas.has(fabricaId)) {
             const estado: EstadoFabrica = 'ponte offline';
             await atualizarFabrica(db, fabricaId, { estado }).catch(() => undefined);

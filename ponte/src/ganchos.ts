@@ -66,6 +66,7 @@ import { atualizarFabrica, somarConsumoDaFabrica } from './base.js';
 import { lerTranscricao, type MarcaDaTranscricao } from './transcricao.js';
 import { mascarar } from './mascara.js';
 import type { EstadoFabrica } from './tipos.js';
+import { agentesParaABase, lerAgentesDoProjeto } from './personas.js';
 
 /**
  * Onde mora a fila de atividade. Producao: a pasta local da ponte.
@@ -95,6 +96,8 @@ const PASTA_BASE_DA_FILA: string = ((): string => {
  * entrada por sessao que a ponte pegou no meio, e zera quando o servico reinicia.
  */
 const identificadas = new Set<string>();
+/** OST 11: fabricas que ja receberam a lista de agentes do projeto nesta vida da ponte. */
+const timePublicado = new Set<string>();
 
 /**
  * A fabrica JA tem identificacao gravada na base?
@@ -558,11 +561,16 @@ export async function varrerFila(
 
       try {
         const projeto = texto(linha.projeto);
+        // OST 11: o agente principal da sessao. Quando o diretor abre o Claude Code
+        // como um agente (no Antigravity, ou com --agent), o gancho ja traz o nome
+        // na abertura. Sem nome, a principal e o coordenador por regra, e o painel
+        // diz isso; aqui fica o que foi medido.
+        const principal = passo.tipo === 'init' ? passo.agente : null;
         if (passo.tipo === 'init') {
           await atualizarFabrica(db, fabricaId, {
             maquinaId,
             estado: 'em execucao',
-            agente: 'claude code',
+            agente: principal ?? 'claude code',
             inicio: texto(linha.t) ?? new Date().toISOString(),
             ...(projeto !== null ? { projeto } : {}),
             ...(ROTULO_DE_TESTE ? { teste: true } : {}),
@@ -587,6 +595,12 @@ export async function varrerFila(
             ...(projeto !== null ? { projeto } : {}),
           });
           identificadas.add(fabricaId);
+        }
+        // OST 11: a lista de agentes do projeto, uma vez por vida da ponte, para o
+        // painel desenhar um cartao por agente. So nome e descricao.
+        if (projeto !== null && !timePublicado.has(fabricaId)) {
+          timePublicado.add(fabricaId);
+          await atualizarFabrica(db, fabricaId, { agentesDoProjeto: agentesParaABase(lerAgentesDoProjeto(projeto)) });
         }
         await addDoc(collection(db, 'fabricas', fabricaId, 'atividade'), { ...passo, em: serverTimestamp() });
         if (estado !== null) await atualizarFabrica(db, fabricaId, { estado });

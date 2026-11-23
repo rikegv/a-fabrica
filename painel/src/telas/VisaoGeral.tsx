@@ -34,7 +34,7 @@ export function LinhaDeIndicadores({ estado }: { estado: EstadoDoPainel }) {
         value={String(contagem.emExecucao)}
         unit={`de ${contagem.total}`}
         progress={contagem.total ? contagem.emExecucao / contagem.total : 0}
-        hint={contagem.total ? plural(contagem.concluidas, 'concluída', 'concluídas') : 'nenhuma fábrica ainda'}
+        hint={contagem.fechadas ? `${plural(contagem.fechadas, 'em Fábricas fechadas', 'em Fábricas fechadas')}` : 'nenhuma fechada ainda'}
       />
       <KpiTile
         label="Aguardando você"
@@ -77,9 +77,9 @@ export function VisaoGeral({
   abrirFabrica: (id: string) => void;
 }) {
   const [pagina, setPagina] = useState(1);
-  const total = Math.max(1, Math.ceil(estado.fabricasDeTrabalho.length / POR_PAGINA));
+  const total = Math.max(1, Math.ceil(estado.fabricasAbertas.length / POR_PAGINA));
   const atual = Math.min(pagina, total);
-  const visiveis = estado.fabricasDeTrabalho.slice((atual - 1) * POR_PAGINA, atual * POR_PAGINA);
+  const visiveis = estado.fabricasAbertas.slice((atual - 1) * POR_PAGINA, atual * POR_PAGINA);
 
   return (
     <div className="gf-body">
@@ -89,8 +89,12 @@ export function VisaoGeral({
           /* A grade esconde as fábricas de rodada de teste, e DIZ que esconde e
              quantas. Filtro calado seria o mesmo pecado do botão que não responde,
              §A.22: o diretor precisa saber que existe coisa fora da lista. */
-          estado.fabricasDeTrabalho.length
-            ? `${plural(estado.fabricasDeTrabalho.length, 'fábrica', 'fábricas')} · mais urgente primeiro${
+          estado.fabricasAbertas.length
+            ? `${plural(estado.fabricasAbertas.length, 'fábrica aberta', 'fábricas abertas')} · mais urgente primeiro${
+                estado.contagem.fechadas
+                  ? ` · ${plural(estado.contagem.fechadas, 'fechada', 'fechadas')} em Fábricas fechadas`
+                  : ''
+              }${
                 estado.contagem.deTeste
                   ? ` · ${plural(estado.contagem.deTeste, 'fábrica de teste escondida', 'fábricas de teste escondidas')}`
                   : ''
@@ -100,20 +104,22 @@ export function VisaoGeral({
               : undefined
         }
         right={
-          estado.fabricasDeTrabalho.length > POR_PAGINA ? (
+          estado.fabricasAbertas.length > POR_PAGINA ? (
             <Pager page={atual} total={total} onChange={setPagina} />
           ) : undefined
         }
       >
         {estado.erro ? (
           <Falha mensagem={estado.erro} />
-        ) : estado.fabricasDeTrabalho.length === 0 ? (
+        ) : estado.fabricasAbertas.length === 0 ? (
           <Vazio
-            titulo={estado.carregando ? 'Lendo a base' : 'Nenhuma fábrica no painel'}
+            titulo={estado.carregando ? 'Lendo a base' : 'Nenhuma fábrica aberta agora'}
             detalhe={
               estado.carregando
                 ? 'O painel está abrindo os ouvintes ao vivo da base.'
-                : 'A ponte ainda não abriu nenhuma fábrica. Quando abrir a primeira, o cartão aparece aqui, ao vivo, sem recarregar a página.'
+                : estado.contagem.fechadas
+                  ? 'Aqui ficam a fábrica ativa e a que perdeu a conexão nas últimas 24 horas. As concluídas estão em Fábricas fechadas, no menu.'
+                  : 'A ponte ainda não abriu nenhuma fábrica. Quando abrir a primeira, o cartão aparece aqui, ao vivo, sem recarregar a página.'
             }
           />
         ) : (

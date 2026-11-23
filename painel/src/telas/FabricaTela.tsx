@@ -14,23 +14,15 @@
  * O painel nunca fala com a fabrica, §A.3: todo botao daqui escreve em comandos
  * ou em aprovacoes, e a ponte le.
  *
- * As abas do pacote sao quatro. Existem as duas que o contrato alimenta,
- * Atividade e Tarefas; Relatórios e Alterações ficam ditos na tela, sem tela
- * inventada, §A.12.
+ * OST 11: o corpo virou a FÁBRICA VIVA (FabricaViva.tsx): chat com o
+ * coordenador no topo, coordenador no centro, um cartão por agente embaixo,
+ * ligados por linhas de luz. A lista por ordem de hora e os cartões grandes da
+ * direita saíram; tempo da rodada, consumo e máquina viraram o rodapé.
  */
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { Firestore } from 'firebase/firestore';
-import {
-  Button,
-  CommandBox,
-  FactoryHeader,
-  KpiTile,
-  RiskTag,
-  StateIcon,
-  Tabs,
-  TaskRow
-} from '@/componentes/ds';
+import { Button, FactoryHeader, RiskTag, StateIcon } from '@/componentes/ds';
 import {
   encerrarFabrica,
   impedimentoDaEscrita,
@@ -39,28 +31,15 @@ import {
   reiniciarFabrica,
   type ContextoDeEscrita
 } from '@/dados/escritas';
-import { usarTarefas } from '@/dados/ouvintes';
 import type { EstadoDoPainel } from '@/dados/painel';
 import type { Fabrica } from '@/dados/tradutor';
-import { ordenarTarefas, traduzirTarefa } from '@/dados/tradutor';
-import { consumoEmPartes, plural, tempoDecorrido } from '@/formato';
-import { LinhaDoTempo, usarLinhaDoTempo } from './LinhaDoTempo';
+import { ChatComCoordenador, PalcoDoTime, RodapeDaFabrica, SemFabrica, usarTimeDaFabrica } from './FabricaViva';
 import { TituloEditavel } from './renomear';
-import {
-  Confirmacao,
-  ErroDeEscrita,
-  EsperandoNascer,
-  Falha,
-  MarcaDeOrigem,
-  Panel,
-  PRAZO_PARA_NASCER_MS,
-  Vazio
-} from './pecas';
+import { Confirmacao, ErroDeEscrita, EsperandoNascer, MarcaDeOrigem, Panel, PRAZO_PARA_NASCER_MS, Vazio } from './pecas';
 import { type EstadoDaResposta } from './pedido';
 import { AVISOS, CONFIRMAR_ENCERRAR, motivoDaCaixaDeComando, motivoDasAcoesDaFabrica } from './textos';
 import { usarOrdem, type Ordem } from './usarOrdem';
 
-const TAREFAS_NO_COMPUTADOR = 6;
 
 /* As ordens de ciclo de vida da fabrica, no computador e no celular. Uma
    mecanica, dois desenhos. */
@@ -154,20 +133,13 @@ export function FabricaTela({
   /** Quando a ordem de abrir ESTA fabrica foi aceita, se foi nesta visita. §A.22. */
   pedidaEm?: Date | null;
 }) {
-  const [aba, setAba] = useState('atividade');
   const fabrica = estado.fabricas.find((f) => f.id === fabricaId) ?? null;
   const pedidos = estado.porFabrica.get(fabricaId) ?? [];
   const pedido = pedidos[0];
 
-  const linhaDoTempo = usarLinhaDoTempo(base, fabricaId);
-  const tarefas = usarTarefas(base, fabricaId);
+  const vivo = usarTimeDaFabrica(base, fabrica);
   const acoes = usarAcoesDaFabrica(escrita, fabrica, avisar);
   const caixa = usarCaixaDeComando(escrita, fabrica, avisar);
-
-  const listaDeTarefas = useMemo(
-    () => ordenarTarefas(tarefas.itens.map((t) => traduzirTarefa(t, estado.agora))),
-    [tarefas.itens, estado.agora]
-  );
 
   if (!fabrica) {
     // §A.22: "ainda nao nasceu" e "nao esta mais aqui" sao coisas diferentes e
@@ -195,60 +167,13 @@ export function FabricaTela({
     );
   }
 
-  const uso = consumoEmPartes(fabrica.tokens);
-  const concluidas = listaDeTarefas.filter((t) => t.state === 'done').length;
-
-  let corpo: React.ReactNode;
-  if (aba === 'atividade') {
-    corpo = (
-      <div className="gf-panel-body">
-        <LinhaDoTempo
-          dados={linhaDoTempo}
-          agentePrincipal={`agente ${fabrica.agent}`}
-          viva={fabrica.state === 'running' || fabrica.state === 'approval'}
-          agora={estado.agora}
-        />
-      </div>
-    );
-  } else {
-    corpo = (
-      <div className="gf-panel-body">
-        {tarefas.erro ? (
-          <Falha mensagem={tarefas.erro} />
-        ) : listaDeTarefas.length === 0 ? (
-          <Vazio
-            titulo={tarefas.carregando ? 'Lendo as tarefas' : 'Nenhuma tarefa delegada'}
-            detalhe={
-              tarefas.carregando
-                ? 'O painel está abrindo o ouvinte ao vivo das tarefas desta fábrica.'
-                : 'Quando a fábrica delegar uma tarefa, ela aparece aqui com a situação dela.'
-            }
-          />
-        ) : (
-          <>
-            <div className="gf-card gf-glass">
-              {listaDeTarefas.slice(0, TAREFAS_NO_COMPUTADOR).map((t) => (
-                <TaskRow key={t.id} state={t.state} title={t.title} elapsed={t.elapsed} />
-              ))}
-            </div>
-            {listaDeTarefas.length > TAREFAS_NO_COMPUTADOR ? (
-              <span className="caption gf-faint pl-3">
-                {`Mostrando ${TAREFAS_NO_COMPUTADOR} de ${listaDeTarefas.length} tarefas, as que pedem atenção primeiro.`}
-              </span>
-            ) : null}
-          </>
-        )}
-      </div>
-    );
-  }
-
   return (
-    <div className="gf-body" style={{ gridTemplateColumns: 'minmax(0,1fr) 340px' }}>
-      <section className="gf-panel gf-glass">
+    <div className="gf-body" style={{ gridTemplateColumns: 'minmax(0,1fr)' }}>
+      <section className="gf-panel gf-glass gf-fv">
         <FactoryHeader
           project={fabrica.project}
           titleNode={<TituloEditavel fabrica={fabrica} escrita={escrita} avisar={avisar} />}
-          agent={[fabrica.projeto, fabrica.agent, fabrica.model].filter(Boolean).join(' · ')}
+          agent={[fabrica.projeto, fabrica.model].filter(Boolean).join(' · ')}
           state={fabrica.state}
           elapsed={fabrica.elapsed}
           usage={fabrica.usage}
@@ -265,118 +190,41 @@ export function FabricaTela({
         {fabrica.erro ? (
           <div className="caption gf-muted">{`A ponte registrou uma falha nesta fábrica: ${fabrica.erro}`}</div>
         ) : null}
-        <div>
-          <Tabs
-            value={aba}
-            onChange={setAba}
-            tabs={[
-              { id: 'atividade', label: 'Atividade', count: linhaDoTempo.total ?? (linhaDoTempo.carregados || undefined) },
-              { id: 'tarefas', label: 'Tarefas', count: listaDeTarefas.length || undefined }
-            ]}
-          />
-        </div>
-        {corpo}
-        <div className="flex flex-col gap-2">
-          <span className="caption gf-faint">
-            Relatórios desta fábrica entram na Onda 3. A aba Alterações entra quando a ponte passar a registrar
-            arquivos tocados.
-          </span>
-          <CommandBox
-            disabledReason={caixa.motivo}
-            error={caixa.ordem.erro}
-            onDismissError={caixa.ordem.limparErro}
-            onSend={caixa.enviar}
-          />
-        </div>
-      </section>
-
-      <div className="flex min-h-0 flex-col gap-3">
         {pedido ? (
-          /* Aviso curto, do jeito do pacote do designer: aqui cabe a decisao
-             rapida de aprovar, e o pacote inteiro, com a marcacao de fato e de
-             leitura da ponte, mora na fila de aprovacoes, que tem a tela
-             inteira. Espremer o pacote nesta coluna seria o diretor decidir sem
-             conseguir ler, e isso nao se faz num botao que libera risco. */
-          <section
-            className="gf-panel gf-glass"
-            style={{ gap: 'var(--space-2)', padding: 'var(--space-4)', borderColor: 'var(--state-approval)' }}
-          >
-            <div
-              className="caption flex items-center gap-2"
-              style={{ color: 'var(--state-approval)', fontWeight: 700 }}
-            >
+          /* Ação acima de informação: o pedido parado desta fábrica fica acima do
+             chat. O pacote inteiro mora na fila de aprovações, que tem a tela
+             toda para o diretor ler antes de liberar risco. */
+          <div className="gf-fv-pedido gf-glass">
+            <span className="caption flex items-center gap-2" style={{ color: 'var(--state-approval)', fontWeight: 700 }}>
               <StateIcon state="approval" size={10} />
               {`Esta fábrica espera você há ${pedido.waiting}`}
-            </div>
-            <div className="flex items-center gap-2">
-              <RiskTag level={pedido.risk} />
-              <MarcaDeOrigem marca={pedido.origens.risk} />
-            </div>
-            <div className="title-sm">{pedido.title}</div>
+            </span>
+            <RiskTag level={pedido.risk} />
+            <MarcaDeOrigem marca={pedido.origens.risk} />
+            <span className="body-strong gf-fv-pedido-titulo">{pedido.title}</span>
             {resposta.respondendo === pedido.id && resposta.ordem.erro ? (
               <ErroDeEscrita mensagem={resposta.ordem.erro} aoFechar={resposta.ordem.limparErro} />
             ) : null}
-            <div className="flex gap-2">
-              <Button
-                variant="primary"
-                disabled={Boolean(resposta.motivo) || resposta.ordem.ocupado}
-                onClick={() => resposta.aprovar(pedido)}
-              >
-                {resposta.ordem.ocupado ? 'Registrando...' : 'Aprovar'}
-              </Button>
-              <Button variant="secondary" onClick={verPedido}>
-                Ver o pedido inteiro
-              </Button>
-            </div>
-            <span className="caption gf-faint gf-motivo">
-              {resposta.motivo ??
-                'Recusar e aprovar com observação ficam na fila, junto do pacote completo do pedido.'}
-            </span>
-          </section>
-        ) : null}
-
-        <div className="grid grid-cols-2 gap-3">
-          <KpiTile
-            label="Tarefa"
-            value={fabrica.taskMs === null ? 'não medida' : tempoDecorrido(fabrica.taskMs)}
-            hint={fabrica.taskMs === null ? 'sem relógio gravado' : fabrica.tarefaAndando ? 'em execução' : 'a última que rodou'}
-          />
-          <KpiTile label="Consumo" value={uso.valor} unit={uso.unidade} hint="acumulado" />
-          <KpiTile
-            label="Tarefas"
-            value={String(concluidas)}
-            unit={`de ${listaDeTarefas.length}`}
-            hint="concluídas"
-          />
-          <KpiTile
-            label="Passos"
-            value={linhaDoTempo.total === null ? '...' : String(linhaDoTempo.total)}
-            unit="registrados"
-            hint={plural(pedidos.length, 'pedido parado', 'pedidos parados')}
-          />
-        </div>
-
-        <Panel title="Máquina">
-          <div className="flex flex-col gap-2">
-            <div className="gf-stat-row body">
-              <span className="gf-muted">Ponte</span>
-              <span className="mono">{estado.ponte.online ? 'conectada' : 'offline'}</span>
-            </div>
-            <div className="gf-stat-row body">
-              <span className="gf-muted">Máquina</span>
-              <span className="mono">{estado.ponte.maquina ?? 'nenhuma pareada'}</span>
-            </div>
-            <div className="gf-stat-row body">
-              <span className="gf-muted">Versão da ponte</span>
-              <span className="mono">{estado.ponte.versao ?? 'não informada'}</span>
-            </div>
-            <div className="gf-stat-row body">
-              <span className="gf-muted">Nasceu</span>
-              <span className="mono">{fabrica.nasceuNoPainel ? 'pelo painel' : 'na mão'}</span>
-            </div>
+            <Button
+              variant="primary"
+              disabled={Boolean(resposta.motivo) || resposta.ordem.ocupado}
+              onClick={() => resposta.aprovar(pedido)}
+            >
+              {resposta.ordem.ocupado ? 'Registrando...' : 'Aprovar'}
+            </Button>
+            <Button variant="secondary" onClick={verPedido}>
+              Ver o pedido inteiro
+            </Button>
           </div>
-        </Panel>
-      </div>
+        ) : null}
+        <ChatComCoordenador dados={vivo} coordenador="Coordenador" caixa={caixa} />
+        {vivo.time ? (
+          <PalcoDoTime time={vivo.time} agora={vivo.agora} semRegistro={vivo.time.semRegistro} />
+        ) : (
+          <SemFabrica carregando={vivo.dados.carregando} />
+        )}
+        <RodapeDaFabrica fabrica={fabrica} estado={estado} time={vivo.time} />
+      </section>
 
       {acoes.confirmando ? (
         <Confirmacao

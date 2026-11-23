@@ -36,6 +36,7 @@ import { iniciarPublicadorDeGanchos } from './ganchos.js';
 import { mascararCampo } from './mascara.js';
 import { despachar, type MundoDaPonte } from './acoes.js';
 import { RegistroDeFabricas } from './vivas.js';
+import { SAIDA_OUTRA_PONTE, registrarEmArquivo, tomarTravaDeInstancia } from './servico.js';
 import type { NivelRisco, PacoteAprovacao } from './tipos.js';
 import type { Firestore } from 'firebase/firestore';
 import type { PermissionResult } from '@anthropic-ai/claude-agent-sdk';
@@ -324,6 +325,10 @@ export async function main(opcoes: OpcoesServico = {}): Promise<void> {
   };
   process.on('SIGINT', () => void encerrar());
   process.on('SIGTERM', () => void encerrar());
+  // OST 11: fechar a janela do console chega ao node como SIGHUP, e o Windows da
+  // poucos segundos antes de matar. Sem este tratador, a queda das 16:43 nao fez
+  // parada limpa e a base ficou dizendo online.
+  process.on('SIGHUP', () => void encerrar());
   // Parada limpa tambem por linha na entrada de texto. No Windows, sinal enviado
   // a um processo filho encerra sem passar pelo tratador, e a parada limpa tem de
   // existir de verdade para a base nao ficar mentindo. Ler a propria entrada de
@@ -340,6 +345,15 @@ export async function main(opcoes: OpcoesServico = {}): Promise<void> {
 
 const executadoDireto = process.argv[1] !== undefined && /ponte\.(js|ts)$/.test(process.argv[1]);
 if (executadoDireto) {
+  const registroEm = registrarEmArquivo();
+  const trava = tomarTravaDeInstancia();
+  if (!trava.ok) {
+    console.log(
+      `outra ponte ja esta no ar (processo ${trava.pidDaOutra}, desde ${trava.desde}), esta nao sobe. Nao e falha.`
+    );
+    process.exit(SAIDA_OUTRA_PONTE);
+  }
+  console.log(`ponte subindo, processo ${process.pid}, registro em ${registroEm}`);
   main({ emulador: process.env.PONTE_EMULADOR === '1' }).catch((e: unknown) => {
     console.error('a ponte nao subiu.');
     console.error(e instanceof Error ? e.message : String(e));

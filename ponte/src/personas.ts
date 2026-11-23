@@ -47,7 +47,7 @@
 // persona veio por instrucao e nao por definicao de agente. Honestidade acima de
 // aparencia.
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { AgentDefinition } from '@anthropic-ai/claude-agent-sdk';
@@ -217,5 +217,109 @@ export function aplicarPersona(
     agents: { [nome]: definicao },
     prompt: pedido,
     nota: `persona aplicada pelo kit, opcao agent, definicao lida de ${p.caminho}`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// OST 11, Onda 2: OS AGENTES DO PROJETO, todos, lidos de cada projeto.
+// ---------------------------------------------------------------------------
+//
+// Regra do diretor: a sessao principal e o COORDENADOR, porta de entrada da
+// fabrica, e os outros agentes sao os que ele despacha. Cada projeto tem a sua
+// fabrica no mesmo modelo, mas os nomes mudam (aqui existe "ponte", em outro
+// existe "ia"). Por isso nada de nome fixo no codigo: a ponte le a pasta
+// .claude/agents do projeto, arquivo por arquivo.
+//
+// Isto serve a duas coisas:
+// 1. A fabrica aberta pelo painel roda com `settingSources: []`, e por isso o
+//    kit nao descobre sozinho os agentes do projeto. Sem isto, o coordenador de
+//    uma fabrica do painel nao tinha quem despachar. Agora todos vao pela opcao
+//    `agents`, com as mesmas decisoes conscientes do cabecalho: sem `tools`, sem
+//    `permissionMode`; o portao continua parando toda chamada de risco, tambem
+//    a de subagente.
+// 2. O painel precisa saber quais agentes a fabrica tem, para desenhar um
+//    cartao por agente. A ponte publica so o nome e a descricao.
+//
+// Leitura, nunca escrita, §A.9.
+
+export const NOME_DO_COORDENADOR = 'coordenador';
+
+/** Teto de agentes por projeto, para um projeto torto nao inundar a base. */
+const TETO_DE_AGENTES = 40;
+
+export interface AgenteDoProjeto {
+  nome: string;
+  descricao: string;
+  prompt: string;
+  /** Modelo que o arquivo pede, quando e um dos que o kit aceita. */
+  modelo: 'sonnet' | 'opus' | 'haiku' | 'inherit' | null;
+}
+
+/** Agentes da pasta .claude/agents do projeto. Pasta ausente devolve lista vazia. */
+export function lerAgentesDoProjeto(cwd: string): AgenteDoProjeto[] {
+  const pasta = join(cwd, '.claude', 'agents');
+  let nomes: string[] = [];
+  try {
+    nomes = readdirSync(pasta).filter((n) => n.toLowerCase().endsWith('.md'));
+  } catch {
+    return [];
+  }
+  const saida: AgenteDoProjeto[] = [];
+  for (const arquivo of nomes.sort()) {
+    if (saida.length >= TETO_DE_AGENTES) break;
+    let bruto = '';
+    try {
+      bruto = readFileSync(join(pasta, arquivo), 'utf8');
+    } catch {
+      continue;
+    }
+    const { cabecalho, corpo } = separar(bruto);
+    const nome = (cabecalho['name'] ?? arquivo.slice(0, -3)).trim();
+    if (!nomeDeAgenteAceito(nome) || corpo.length === 0) continue;
+    if (saida.some((a) => a.nome === nome)) continue;
+    const m = (cabecalho['model'] ?? '').trim().toLowerCase();
+    saida.push({
+      nome,
+      descricao: (cabecalho['description'] ?? `agente ${nome} do projeto`).slice(0, 600),
+      prompt: corpo,
+      modelo: m === 'sonnet' || m === 'opus' || m === 'haiku' || m === 'inherit' ? m : null,
+    });
+  }
+  return saida;
+}
+
+/** O que vai para a base: nome e descricao, nada do corpo do arquivo. */
+export function agentesParaABase(agentes: AgenteDoProjeto[]): Array<{ nome: string; descricao: string }> {
+  return agentes.map((a) => ({ nome: a.nome, descricao: a.descricao.slice(0, 300) }));
+}
+
+/**
+ * A persona do comando MAIS todos os agentes do projeto, para o coordenador ter
+ * quem despachar. Sem agente pedido (ou com o nome do motor) e com coordenador
+ * no projeto, a sessao principal roda como o coordenador, regra do diretor.
+ */
+export function aplicarPersonaComTime(
+  agente: string | null,
+  cwd: string,
+  modelo: string,
+  pedido: string
+): PersonaAplicada & { time: AgenteDoProjeto[] } {
+  const time = lerAgentesDoProjeto(cwd);
+  const semPedido =
+    agente === null || agente.trim().length === 0 || agente.trim().toLowerCase() === NOME_DO_MOTOR;
+  const temCoordenador = time.some((a) => a.nome === NOME_DO_COORDENADOR);
+  const base = aplicarPersona(semPedido && temCoordenador ? NOME_DO_COORDENADOR : agente, cwd, modelo, pedido);
+  if (time.length === 0) return { ...base, time };
+  const agents: Record<string, AgentDefinition> = {};
+  for (const a of time) {
+    agents[a.nome] = { description: a.descricao, prompt: a.prompt, model: a.modelo ?? 'inherit' };
+  }
+  // A persona principal manda no proprio nome: ela leva o modelo do comando.
+  if (base.agents) Object.assign(agents, base.agents);
+  return {
+    ...base,
+    agents,
+    nota: `${base.nota}; time do projeto entregue ao kit: ${time.map((a) => a.nome).join(', ')}`,
+    time,
   };
 }

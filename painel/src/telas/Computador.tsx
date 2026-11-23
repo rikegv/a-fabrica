@@ -18,6 +18,7 @@ import type { EstadoDoPainel } from '@/dados/painel';
 import { desdeQuando, diaPorExtenso, plural } from '@/formato';
 import { Aprovacoes } from './Aprovacoes';
 import { FabricaTela } from './FabricaTela';
+import { FabricasFechadas } from './FabricasFechadas';
 import { Inerte } from './Inerte';
 import { NovaFabrica } from './NovaFabrica';
 import { Aviso, Topbar } from './pecas';
@@ -29,6 +30,8 @@ const ITENS = [
   { id: 'overview', label: 'Visão geral' },
   { id: 'approvals', label: 'Aprovações' },
   { id: 'factories', label: 'Fábricas' },
+  /* OST 11: concluídas e sem conexão há mais de 24 horas. */
+  { id: 'closed', label: 'Fábricas fechadas' },
   { id: 'reports', label: 'Relatórios' },
   { id: 'metrics', label: 'Indicadores' },
   { id: 'settings', label: 'Configurações' }
@@ -108,10 +111,12 @@ export function Computador({
     : tela === 'new'
       ? 'Dê um nome, escolha o projeto, o agente, o modelo e diga o que fazer primeiro'
       : tela === 'overview'
-        ? `${diaPorExtenso(estado.agora)} · ${plural(estado.contagem.total, 'fábrica no painel', 'fábricas no painel')}`
+        ? `${diaPorExtenso(estado.agora)} · ${plural(estado.contagem.total, 'fábrica aberta', 'fábricas abertas')}`
         : tela === 'approvals'
           ? 'Mais antiga primeiro'
-          : undefined;
+          : tela === 'closed'
+            ? 'Nada é apagado. A fábrica só muda de lugar, e abre igual.'
+            : undefined;
 
   const motivoDeAbrir = motivoDeAbrirFabrica(impedimentoDaEscrita(escrita));
   const direita =
@@ -156,6 +161,16 @@ export function Computador({
       <VisaoGeral
         estado={estado}
         resposta={resposta}
+        abrirFabrica={(id) => {
+          setFabricaId(id);
+          setTela('factory');
+        }}
+      />
+    );
+  } else if (tela === 'closed') {
+    corpo = (
+      <FabricasFechadas
+        estado={estado}
         abrirFabrica={(id) => {
           setFabricaId(id);
           setTela('factory');
@@ -217,9 +232,11 @@ export function Computador({
             ? { ...item, count: estado.contagem.aguardandoAprovacao || null, alert: true }
             : item.id === 'factories'
               ? { ...item, count: estado.contagem.total || null }
-              : item
+              : item.id === 'closed'
+                ? { ...item, count: estado.contagem.fechadas || null }
+                : item
         )}
-        projects={projetosDoMenu(estado.fabricasDeTrabalho)}
+        projects={projetosDoMenu(estado.fabricasAbertas)}
         bridge={{
           online: ponte.online,
           detail: ponte.online

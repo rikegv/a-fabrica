@@ -59,6 +59,8 @@ export interface Fabrica {
   origem?: OrigemFabrica;
   /** Onda 2: true enquanto a fabrica esta pausada. O estado segue aguardando comando, §A.4. */
   pausada?: boolean;
+  /** OST 11: os agentes do projeto, lidos de .claude/agents, so nome e descricao. */
+  agentesDoProjeto?: Array<{ nome: string; descricao: string }>;
   /** Onda 2: hora do servidor do encerramento pedido pelo painel. */
   encerradaEm?: Momento;
   /** Onda 2: texto do motivo do encerramento, quando houver. */

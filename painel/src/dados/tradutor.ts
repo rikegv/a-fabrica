@@ -265,6 +265,14 @@ export interface Fabrica {
   erro: string | null;
   /* Rodada de teste da própria fábrica. A grade esconde por padrão. */
   teste: boolean;
+  /* OST 11: o time do projeto, lido pela ponte. Lista vazia quando a ponte ainda
+     não publicou. */
+  agentesDoProjeto: Array<{ nome: string; descricao: string }>;
+  /* OST 11: quando perdeu a conexão, só para a que está offline. */
+  perdeuConexaoEm: Date | null;
+  /* OST 11: vai para Fábricas fechadas. Concluída; sem conexão há mais de 24
+     horas; ou com falha há mais de 24 horas. O resto fica na Visão geral. */
+  fechada: boolean;
 }
 
 /* O contrato nao tem campo para a frase do que a fabrica faz agora. Em vez de
@@ -307,14 +315,45 @@ export function somarTokens(consumo: ConsumoBase | undefined | null): number | n
   return soma > 0 ? soma : null;
 }
 
+/* OST 11: fábrica que perdeu a conexão há mais que isto sai da Visão geral e vai
+   para Fábricas fechadas. Nada é apagado, §A.17: só muda de lugar. */
+export const LIMITE_FECHADA_MS = 24 * 60 * 60_000;
+
+/* Estado que acabou não muda porque a ponte caiu. */
+function estadoFinal(estado: FactoryState): boolean {
+  return estado === 'done' || estado === 'failed';
+}
+
 export function traduzirFabrica(
   doc: FabricaBase,
-  opcoes: { pontePerdida: boolean; pedidoParado?: number | null; agora?: Date }
+  opcoes: { pontePerdida: boolean; pedidoParado?: number | null; agora?: Date; ponteVistaEm?: Date | null }
 ): Fabrica {
   const agora = opcoes.agora ?? new Date();
   const inicio = paraData(doc.inicio);
   const estadoGravado = traduzirEstado(doc.estado);
-  const state: FactoryState = opcoes.pontePerdida ? 'offline' : estadoGravado;
+  /*
+   * OST 11, DEFEITO: com a ponte caída, TODO cartão virava "Ponte offline",
+   * inclusive fábricas concluídas em 14/10 e 18/10, que às 15:41 diziam
+   * "Concluída". A regra do §A.10 é não dizer que a fábrica está trabalhando com
+   * a ponte muda, e ela só alcança quem ainda estava viva. Fábrica que terminou,
+   * concluída ou com falha, continua do jeito que terminou, com ou sem ponte.
+   */
+  const state: FactoryState = opcoes.pontePerdida && !estadoFinal(estadoGravado) ? 'offline' : estadoGravado;
+  /* Quando perdeu a conexão: a que a ponte já gravou como offline, pela hora da
+     gravação; a que só está offline porque a ponte caiu agora, pelo último sinal
+     da ponte. */
+  const perdeuConexaoEm =
+    state !== 'offline'
+      ? null
+      : estadoGravado === 'offline'
+        ? (paraData(doc.atualizadoEm) ?? opcoes.ponteVistaEm ?? null)
+        : (opcoes.ponteVistaEm ?? null);
+  const fechada =
+    state === 'done' ||
+    (state === 'offline' &&
+      (perdeuConexaoEm === null || agora.getTime() - perdeuConexaoEm.getTime() > LIMITE_FECHADA_MS)) ||
+    (state === 'failed' &&
+      agora.getTime() - (paraData(doc.atualizadoEm) ?? inicio ?? agora).getTime() > LIMITE_FECHADA_MS);
   /*
    * TEMPO DECORRIDO, e o que ele mede de verdade.
    *
@@ -412,7 +451,12 @@ export function traduzirFabrica(
     pausada,
     nasceuNoPainel: semAcento(doc.origem ?? '') === 'painel' || doc.id.startsWith('painel-'),
     erro: doc.erro?.trim() || null,
-    teste: doc.teste === true
+    teste: doc.teste === true,
+    agentesDoProjeto: (Array.isArray(doc.agentesDoProjeto) ? doc.agentesDoProjeto : [])
+      .map((a) => ({ nome: String(a?.nome ?? '').trim(), descricao: String(a?.descricao ?? '').trim() }))
+      .filter((a) => a.nome.length > 0),
+    perdeuConexaoEm,
+    fechada
   };
 }
 
@@ -657,6 +701,13 @@ export interface LinhaDaAtividade {
   texto: string | null;
   /* Subagente que agiu. Nulo é o agente principal da fábrica. */
   agente: string | null;
+  /* OST 11: passo gravado antes de a ponte registrar o agente. Nulo em `agente`
+     aqui NÃO quer dizer o principal: quer dizer que não se sabe. */
+  semRegistroDeAgente: boolean;
+  /* OST 11: para quem a ferramenta de delegar mandou trabalho. */
+  agenteChamado: string | null;
+  /* OST 11: nome cru da ferramenta, para a frase em português do cartão. */
+  ferramenta: string | null;
   erro: boolean;
   /* Ordem que o DIRETOR mandou, destacada das ações da fábrica. */
   doDiretor: boolean;
@@ -745,6 +796,9 @@ export function traduzirPasso(doc: AtividadeBase): LinhaDaAtividade {
     detalhe: null,
     texto: null,
     agente,
+    semRegistroDeAgente: !Object.prototype.hasOwnProperty.call(doc, 'agente'),
+    agenteChamado: textoOuNulo(doc.agenteChamado),
+    ferramenta: textoOuNulo(doc.ferramenta) ?? textoOuNulo(doc.toolInfo?.name),
     erro,
     doDiretor: false,
     situacao: null
@@ -906,6 +960,9 @@ export function traduzirComando(doc: ComandoBase): LinhaDaAtividade {
     detalhe: null,
     texto: comTexto ? textoOuNulo(doc.texto) : null,
     agente: null,
+    semRegistroDeAgente: false,
+    agenteChamado: null,
+    ferramenta: null,
     erro: false,
     doDiretor: true,
     situacao: situacao === 'entregue' ? 'entregue à ponte' : situacao === 'pendente' ? 'ainda não entregue à ponte' : null

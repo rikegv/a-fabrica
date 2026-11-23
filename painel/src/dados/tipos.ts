@@ -97,6 +97,8 @@ export interface FabricaBase {
      que a tarefa está andando. */
   tarefaInicio?: HoraDaBase;
   tarefaFim?: HoraDaBase | null;
+  /* OST 11: os agentes do projeto, que a ponte lê de .claude/agents. */
+  agentesDoProjeto?: Array<{ nome?: string; descricao?: string }>;
 }
 
 export interface TarefaBase {
