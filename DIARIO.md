@@ -339,4 +339,41 @@ o conserto que a trava impediu. Evidências em
 `painel/testes/rodada-2026-10-15-a22-sem-silencio`, com print de cada tela. Nada
 sobrescrito, nada apagado, §A.17.
 
+## 2026-11-23, OST 9: noite de retomada no PC novo, sem a mão do diretor
+
+Agentes, §A.15:
+- **coordenador:** travas, portão, consumo, nome, telas, provas, ensaios e fechamento.
+- **ponte:** investigação da ponte na VM, só leitura.
+
+Relatório inteiro, com a lista da manhã em ordem, em `docs/ost9-noite.md`. Evidência em
+`C:\Users\Henrique\a-fabrica-lab\rodadas\2026-11-22T2330-ost9-noite`.
+
+### O que andou
+- **Travas aplicadas no `settings.json`**, com barra e sem as regras `Write` que nunca casavam. O aviso de abertura sumiu.
+- **O laboratório corrigiu o meu diagnóstico da véspera.** A regra antiga já pegava a sessão que entra em `ponte/` pelo terminal. O furo real é outro: sessão **aberta** numa subpasta não carrega o `settings.json` da raiz, nem o gancho do gate, e nenhuma regra de projeto alcança esse caso.
+- **Consumo consertado na raiz.**
+  - A ponte só gravava consumo no fim do comando, e substituía em vez de somar. Agora soma ao vivo, mensagem por mensagem, e fecha com o total oficial.
+  - A fábrica aberta na mão passou a ter consumo e modelo, lidos só como números da transcrição do próprio Claude Code.
+  - Provado com fábrica de verdade: a soma ao vivo bateu campo por campo com o total do kit.
+- **Nome de fábrica, "Fábrica externa", caminho fora das telas, tempo da tarefa no lugar do tempo somado, cartões compactos e menu que abre ao passar o mouse.**
+  - Provados com os componentes reais e dados montados: lógica 28 de 28, e fotos de cada tela.
+  - Nenhuma regra do Firestore mudou.
+- **Ponte na VM:** documento em `docs/ponte-na-vm.md`. A base e as regras aceitam duas pontes; o painel ainda não.
+
+### O que não andou, e por quê
+- **O conserto do portão continua fora do gate real.** O classificador do modo automático recusou a escrita da fábrica no gate, por ser mexer na supervisão. Não foi contornado.
+  - O conserto ficou pronto em `scripts/aplicar-conserto-do-portao.mjs`, com duas correções ao texto original.
+  - Ensaiado numa cópia: 50 de 50. No gate real, hoje: 46 de 50, com a causa escrita.
+- **Nada rodou contra a base real.** A ponte não está instalada neste PC e o login é do diretor.
+
+### Ponto de retomada
+`docs/ost9-noite.md`, seção 7, passo 1, na ordem:
+1. remover o acesso antigo;
+2. aplicar o conserto do portão;
+3. instalar a ponte e os ganchos;
+4. rodar as provas;
+5. fazer os testes de amanhã;
+6. validação visual em `localhost`;
+7. só então autorizar e publicar o painel, e depois a main.
+
 <!-- Nova entrada acima desta linha. Formato: ## AAAA-MM-DD, título curto -->
