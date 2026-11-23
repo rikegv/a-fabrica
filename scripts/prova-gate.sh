@@ -202,6 +202,14 @@ conferirFalso "autorizacao de producao VENCIDA nao libera a main" "git push orig
 rm -f "$FALSO/.claude/state/PROD_exemplo"
 git -C "$FALSO" checkout -q -b main 2>/dev/null || git -C "$FALSO" checkout -q main 2>/dev/null || true
 conferirFalso "push sem nomear ramo, em cima da main, conta como producao" "git push" 2
+# 5.7 OST 9: nomear so o remoto, ou HEAD, tambem empurra o ramo de agora.
+conferirFalso "push nomeando so o remoto, em cima da main, conta como producao" "git push origin" 2
+conferirFalso "push de HEAD, em cima da main, conta como producao" "git push -u origin HEAD" 2
+conferirFalso "push pelado em cima da main, com outro comando na linha" "git status && git push" 2
+# 5.8 E o conserto nao pode travar o ramo de feature, que e o peso leve, §A.21.
+git -C "$FALSO" checkout -q -b feature/exemplo 2>/dev/null || true
+conferirFalso "push pelado em ramo de feature, com flag leve, continua liberado" "git push" 0
+conferirFalso "push nomeando so o remoto em ramo de feature, com flag leve, liberado" "git push origin" 0
 
 # Limpeza, caminho completo e nomeado, §A.18.
 rm -f "$FALSO/.claude/state/READY_leve"

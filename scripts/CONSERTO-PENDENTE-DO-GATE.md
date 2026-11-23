@@ -2,6 +2,32 @@
 
 Agente: coordenador, §A.15.
 
+## Atualização da OST 9, 2026-11-23: continua pendente, agora pronto em um comando
+
+A OST 9 mandou a fábrica aplicar este conserto com autonomia. A fábrica tentou, pelo caminho declarado no §A.7, um script que confere o trecho antigo e grava. O **classificador do modo automático do Claude Code recusou**, por ser mexer na supervisão. A fábrica não contornou: o gate real ficou intacto, byte a byte.
+
+O que ficou pronto:
+
+1. `scripts/aplicar-conserto-do-portao.mjs`, com o conserto. O alvo é fixo lá dentro, para a sua linha não precisar citar o gate.
+2. Duas correções ao texto abaixo, achadas ao ler o conserto contra a prova. As duas estão no script:
+   - Numa main sem commit, como a da pasta falsa da prova, `rev-parse --abbrev-ref HEAD` não devolve `main`, e o conserto deste documento falharia na própria prova. O script usa `symbolic-ref`, que responde também nesse caso.
+   - `git push origin` e `git push origin HEAD`, parados na main, também empurram a main. Pelo texto abaixo, contariam como "nomeou destino". O script conta só o remoto como "não nomeou ramo".
+3. Cinco casos novos em `scripts/prova-gate.sh`: três provam os furos acima e dois provam que o ramo de feature continua livre.
+4. Ensaio numa cópia do gate, duas vezes, inclusive com o arquivo exato do repositório: **50 de 50**. Evidência em `C:\Users\Henrique\a-fabrica-lab\rodadas\2026-11-22T2330-ost9-noite\evidencia\`.
+
+Hoje, com o gate real ainda sem conserto, a prova fecha **46 de 50**. Os 4 casos vermelhos são exatamente os do push que não nomeia ramo em cima da main, com a causa escrita.
+
+Para aplicar, na sua sessão:
+
+```
+! node scripts/aplicar-conserto-do-portao.mjs
+! bash scripts/prova-gate.sh
+```
+
+Tem de fechar em 50 de 50. Se rodar o primeiro comando duas vezes, a segunda recusa sem gravar nada.
+
+O texto abaixo é o original da OST 7, preservado.
+
 ## O que aconteceu
 
 A decisão do diretor na OST 7 tirou o gate do alcance da fábrica: `.claude/settings.json`
