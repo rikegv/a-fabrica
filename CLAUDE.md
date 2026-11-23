@@ -185,3 +185,14 @@ Quem decide é o gancho, dentro do projeto, e o que não está liberado não che
 REVERSÃO CONSCIENTE, decisão do diretor em 23/11/2026, OST 10: a lista de projetos liberados para conteúdo ACABA. O diretor quer ver TUDO no painel, de TODOS os projetos, sem ocultar nada. Antes de decidir, ele foi avisado por extenso do que isso significa: o conteúdo sai da máquina dele e fica gravado na base na nuvem, a trilha não se apaga, e isso inclui conversa de projeto com nome de pessoa, salário, CPF e dado de cliente. Ele respondeu "libera tudo" sabendo disso, e só ele usa o painel. Não foi descuido nem dedução da fábrica. Na prática: a configuração dos ganchos grava `conteudoDeTodos: true`, e com isso o comando do diretor, o alvo da ferramenta, a descrição, o aviso, o motivo e a resposta da fábrica (o que o Claude Code entrega ao gancho no fim da rodada) sobem de todo projeto. A máscara de credencial continua valendo antes de publicar. Projeto IGNORADO continua sem nada, nem metadado, porque essa lista é o interruptor do próprio diretor para deixar uma frente de fora. A chave só vale com o valor exato `true`; faltando ou com qualquer outro valor, volta a regra antiga abaixo, falha fechada. As regras escritas acima e abaixo ficam como registro e como o que vale se ele voltar atrás (`ligar.ps1 -SoLiberados`).
 
 TRANSCRIÇÃO DE PROJETO NÃO LIBERADO, decisão do diretor em 23/11/2026: a ponte PODE abrir a transcrição que o Claude Code grava da sessão, também de projeto não liberado, para tirar de lá somente os números de consumo (tokens) e o nome do modelo. Nenhum texto sai dali: não é guardado, devolvido, registrado nem publicado, nem em mensagem de erro. Número de token e nome de modelo são metadado. Projeto ignorado continua sem nada: o gancho dele não escreve na fila, e a ponte nem conhece o caminho da transcrição.
+
+## A.24 A fábrica executa, o diretor não digita comando (regra permanente)
+Regra do diretor, 23/11/2026: ele não quer ficar executando comando. A fábrica roda ela mesma tudo o que estiver ao alcance dela: ligar e desligar coisas, reiniciar a ponte, subir o painel na tela local e deixar no ar, rodar provas, limpar autorização usada. Relatório não termina com lista de comandos para ele digitar quando a própria fábrica pode rodá-los.
+
+Só volta para a mão dele o que o desenho exige:
+1. a frase de autorização de produção, §A.7;
+2. login no navegador;
+3. a validação visual dele, §A.13;
+4. decisão de negócio ou de escopo.
+
+Esta regra não afrouxa nenhuma outra. Antes de reiniciar ou desligar algo que pode estar trabalhando, a fábrica confere que não derruba trabalho dele; se derrubaria, espera ou avisa. Se um comando que ela deveria rodar for barrado (pelo gate, pela configuração ou pelo próprio ambiente), ela NÃO contorna: anota o que foi barrado, por quê, e avisa o diretor no relatório.

@@ -173,7 +173,24 @@ A liberação de conteúdo não tem relação com o defeito da tela. A fábrica 
   - `painel/app/globals.css`
 - **Regra:** `CLAUDE.md`, §A.23.
 
-## Depende da mão do diretor, na ordem
+## Executado pela própria fábrica, regra nova §A.24, 23/11/2026
+- **Passo 1, conteúdo de todos os projetos.** `ligar.ps1` rodou às 16:24:59. A saída diz "CONTEUDO DE TODOS OS PROJETOS ligado", com 0 projeto ignorado e 0 evento acrescentado (os 8 já estavam lá). Conferido que:
+  - o gancho instalado é idêntico ao do repositório;
+  - `ganchos.json` tem `conteudoDeTodos: true`.
+
+  A cópia do `settings.json` ficou em `~\.a-fabrica-ponte\copias-settings\settings-2026-11-23T162459.json`.
+- **Passo 2, ponte reiniciada.**
+  - Antes do reinício, nenhuma fábrica aberta pela ponte estava trabalhando. As duas vivas eram sessões abertas na mão: esta, do a-fabrica, e a de soulan-central-indicadores. Elas não rodam dentro da ponte, e os passos delas esperaram na fila.
+  - A tarefa voltou às 16:25:25, processo 7524. A batida ficou em dia, 12 s depois.
+  - O primeiro passo publicado depois disso já traz o campo `agente`, que o código velho não gravava.
+- **Passo 3, painel na tela local.** O servidor de desenvolvimento que o diretor tinha subido às 15:31 respondia 500 (`Cannot find module './819.js'`). Causa minha: os dois `next build` desta OST, rodados na mesma pasta, sobrescreveram o `.next` que ele usava.
+  - Foi parado e subido de novo, sem janela, às 16:26.
+  - Responde 200 em http://localhost:3000, com registro em `a-fabrica-lab\rodadas\2026-11-23T162639-ost10-painel-local\painel-dev.log`.
+  - Daqui para a frente, a fábrica não roda `next build` com o servidor de desenvolvimento no ar.
+
+Fica com o diretor só o que o §A.24 manda: o login no navegador, a validação visual e, se aprovar, a frase de autorização de produção abaixo.
+
+## Como estava antes da regra nova (passos 1 a 3 já executados acima)
 ### 1. Ligar o conteúdo de todos os projetos
 Numa janela do **PowerShell normal**, sem ser administrador, de preferência sem sessão do Claude Code trabalhando:
 ```
