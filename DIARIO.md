@@ -376,4 +376,19 @@ Relatório inteiro, com a lista da manhã em ordem, em `docs/ost9-noite.md`. Evi
 6. validação visual em `localhost`;
 7. só então autorizar e publicar o painel, e depois a main.
 
+### Fechamento da sessão, 2026-11-23
+O diretor encerrou a sessão depois do relatório final. Estado em que tudo ficou:
+
+- **Ramo:** `feature/ost5-madrugada`, igual ao GitHub. Commits da OST 9: `e38dfab` (travas e conserto pronto), `9e01bb0` (consumo, nome, tempo da tarefa e telas), `a91c0a6` (ponte na VM, relatório e diário), `73b15d2` (identidade do Git na lista da manhã), mais o commit deste registro.
+- **Autorizações:** a flag leve do push foi removida depois do uso. `.claude/state` só tem o `README.md`. Nenhuma autorização de produção foi criada. A main e a produção não foram tocadas.
+- **Fora do commit, de propósito:** `painel/app/componentes.gerado.css`, `painel/app/tokens.gerado.css` e `painel/src/tema/tokens.gerado.ts` aparecem como alterados, mas a diferença é só o fim de linha deste PC. O conteúdo é o mesmo.
+- **Gate real:** intacto, 46 de 50. O conserto espera o comando do diretor, passo 2 da lista.
+- **Identidade do Git:** este PC não tem. Os commits da noite levaram a autoria do diretor só dentro do próprio comando, sem mexer na configuração. O passo de uma vez para configurar está em `docs/ost9-noite.md`, seção 7.
+
+Decisões que esperam o diretor, além da lista da manhã:
+1. Proteger o caso C, sessão aberta numa subpasta, na configuração geral `~/.claude/settings.json`, com caminho absoluto. Proposta em `docs/conserto-das-travas.md`.
+2. Se a ponte pode abrir a transcrição de projeto não liberado só para ler os números de consumo. Se não puder, a fábrica externa desses projetos volta a "consumo não medido".
+3. As perguntas da ponte na VM, em `docs/ponte-na-vm.md`.
+4. As pendências antigas: prova dos dois fatores, cobrança e publicação fora desta máquina.
+
 <!-- Nova entrada acima desta linha. Formato: ## AAAA-MM-DD, título curto -->
