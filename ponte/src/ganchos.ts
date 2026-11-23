@@ -345,7 +345,22 @@ interface Marcas {
   versao: 1;
   /** Nome do arquivo de fila, para bytes ja publicados e proxima sequencia. */
   arquivos: Record<string, MarcaDoArquivo>;
+  /**
+   * OST 9 bloco C: ate onde a transcricao de cada fabrica ja foi lida, por
+   * fabrica, e SOBREVIVE ao arquivamento do arquivo de fila.
+   *
+   * O defeito que isto fecha, medido na base real em 23/11/2026: a sessao aberta
+   * na mao encerra, a ponte arquiva o arquivo de fila e apagava junto a marca da
+   * transcricao. A mesma sessao retomada (claude --resume, -c, ou cada claude -p)
+   * nasce num arquivo de fila novo, sem marca, e a ponte relia a transcricao do
+   * comeco, contando de novo o consumo que ja tinha somado. Na prova, 73.482
+   * tokens reais viraram 110.202 na base.
+   */
+  transcricoes?: Record<string, MarcaDaTranscricao>;
 }
+
+/** Teto de fabricas lembradas, para o arquivo de marcas nao crescer sem fim. */
+const TETO_TRANSCRICOES_LEMBRADAS = 500;
 
 /** O que a ponte lembra de cada arquivo de fila entre uma passada e outra. */
 interface MarcaDoArquivo {
@@ -365,12 +380,26 @@ function lerMarcas(): Marcas {
     const j: unknown = JSON.parse(readFileSync(CAMINHO_MARCAS, 'utf8'));
     const a = typeof j === 'object' && j !== null ? (j as Record<string, unknown>)['arquivos'] : null;
     if (typeof a === 'object' && a !== null) {
-      return { versao: 1, arquivos: a as Record<string, MarcaDoArquivo> };
+      const t = (j as Record<string, unknown>)['transcricoes'];
+      return {
+        versao: 1,
+        arquivos: a as Record<string, MarcaDoArquivo>,
+        transcricoes: typeof t === 'object' && t !== null ? (t as Record<string, MarcaDaTranscricao>) : {},
+      };
     }
   } catch {
     // Marca ilegivel vale como marca ausente. Pior caso: republica o que ja subiu.
   }
   return { versao: 1, arquivos: {} };
+}
+
+function lembrarTranscricao(m: Marcas, fabricaId: string, marca: MarcaDaTranscricao): void {
+  const t = m.transcricoes ?? {};
+  delete t[fabricaId]; // reinsere no fim: a ordem de insercao e a idade
+  t[fabricaId] = marca;
+  const chaves = Object.keys(t);
+  for (const velha of chaves.slice(0, Math.max(0, chaves.length - TETO_TRANSCRICOES_LEMBRADAS))) delete t[velha];
+  m.transcricoes = t;
 }
 
 function gravarMarcas(m: Marcas): void {
@@ -547,7 +576,10 @@ export async function varrerFila(
     let modeloGravado = marca.modelo;
     if (!falhouNesteArquivo && caminhoDaTranscricao !== null && fabricaDaSessao !== null) {
       const fabricaDoArquivo = fabricaDaSessao;
-      const leitura = lerTranscricao(caminhoDaTranscricao, marca.transcricao ?? null);
+      // A marca do arquivo vale primeiro; sem ela, a da fabrica, que sobrevive ao
+      // arquivamento. Sem nenhuma das duas, e sessao nova de verdade.
+      const anterior = marca.transcricao ?? marcas.transcricoes?.[fabricaDoArquivo] ?? null;
+      const leitura = lerTranscricao(caminhoDaTranscricao, anterior);
       try {
         if (leitura.acrescimo !== null) {
           await somarConsumoDaFabrica(db, fabricaDoArquivo, leitura.acrescimo);
@@ -560,6 +592,7 @@ export async function varrerFila(
         // A marca da transcricao so anda depois de o consumo subir. Queda no meio
         // faz ler de novo; as ultimas mensagens seguram a repeticao.
         marcaDaTranscricao = leitura.marca;
+        lembrarTranscricao(marcas, fabricaDoArquivo, leitura.marca);
       } catch (e) {
         r.erros.push(`fabrica ${fabricaDoArquivo}, consumo: ${e instanceof Error ? e.message : String(e)}`);
       }
@@ -604,7 +637,12 @@ export async function varrerFila(
   return r;
 }
 
-const CAMINHO_TRAVA = join(PASTA_LOCAL, 'fila-ganchos.lock');
+// A trava mora junto da FILA que ela protege. Em producao e a mesma pasta de
+// sempre (PASTA_BASE_DA_FILA cai em PASTA_LOCAL). Numa rodada de teste com a fila
+// desviada para dentro da rodada, a trava vai junto, e a ponte de teste deixa de
+// ser barrada pela ponte de verdade do diretor, que cuida de OUTRA fila. Duas
+// pontes na MESMA fila continuam disputando a mesma trava. OST 9 bloco C.
+const CAMINHO_TRAVA = join(PASTA_BASE_DA_FILA, 'fila-ganchos.lock');
 
 /**
  * Dono da fila DENTRO deste processo.
