@@ -42,6 +42,14 @@
 //   R5 Lista de projetos a ignorar, para o diretor deixar uma frente de fora.
 //   R6 METADADO DE TODOS, CONTEUDO SO DE PROJETO LIBERADO. Decisao do diretor na
 //      retomada da OST 7, e ela INVERTEU a logica anterior. Veja abaixo.
+//   R7 OST 10, 23/11/2026, REVERSAO CONSCIENTE DO R6, decisao do diretor: ele
+//      quer ver TUDO no painel, de TODOS os projetos. Com conteudoDeTodos: true
+//      em ganchos.json, todo projeto que nao esta em projetosIgnorados sobe com
+//      conteudo, inclusive os que lidam com dado de cliente. Ele foi avisado, por
+//      extenso, de que o texto sai da maquina, fica gravado na base e a trilha nao
+//      se apaga, e respondeu "libera tudo". O R6 continua escrito abaixo porque e
+//      o que vale se a chave faltar ou nao for exatamente true: falha fechada.
+//      Registro da decisao: CLAUDE.md, secao A.23.
 //
 // R6, A LOGICA INVERTIDA, e por que ela existe
 // --------------------------------------------
@@ -85,6 +93,8 @@ const { appendFileSync, mkdirSync, readFileSync, readdirSync, statSync } = requi
 const TETO_ALVO = 2000;
 /** Teto de tamanho do texto de pedido do diretor. */
 const TETO_PROMPT = 2000;
+/** Teto da resposta da fabrica ao fim da rodada. */
+const TETO_RESPOSTA = 4000;
 
 function pedacoDeTexto(valor, teto) {
   if (typeof valor !== 'string' || valor.length === 0) return null;
@@ -136,8 +146,9 @@ function principal() {
   // fora de tudo.
   if (dentroDe(projeto, config.projetosIgnorados)) return;
 
-  // R6, a liberacao de CONTEUDO. Ausente, vazia ou corrompida: nao libera nada.
-  const liberado = dentroDe(projeto, config.projetosLiberados);
+  // R7, OST 10: conteudo de todos, decisao do diretor. So vale com true exato.
+  // R6, sem o R7: a liberacao por lista. Ausente, vazia ou corrompida: nada.
+  const liberado = config.conteudoDeTodos === true || dentroDe(projeto, config.projetosLiberados);
 
   const fila = pasta + '\\fila-ganchos';
   const arquivo = fila + '\\' + String(sessao).replace(/[^A-Za-z0-9_-]/g, '_') + '.jsonl';
@@ -175,7 +186,10 @@ function principal() {
     ferramenta: typeof payload.tool_name === 'string' ? payload.tool_name : null,
     // R3: da resposta da ferramenta sai SO se deu erro. O conteudo nao entra.
     erro: resposta && typeof resposta === 'object' ? resposta.is_error === true || typeof resposta.error === 'string' : false,
-    subagente: pedacoDeTexto(payload.subagent_type || payload.agent_type || null, 120),
+    // Qual agente agiu. O Claude Code manda agent_type em TODO evento que nasce
+    // dentro de um subagente, e no inicio e no fim dele. Ausente: o principal.
+    // Conferido no despejo real da OST 10 (a-fabrica-lab, ost10-campos-do-gancho).
+    subagente: pedacoDeTexto(payload.agent_type || payload.subagent_type || null, 120),
     permissao: pedacoDeTexto(payload.permission_mode || null, 60),
     fonte: pedacoDeTexto(payload.source || null, 60),
     // A CLASSIFICACAO do fim, sem o texto do fim. A ponte precisa saber se a
@@ -213,6 +227,13 @@ function principal() {
     linha.pedidoDoDiretor = pedacoDeTexto(payload.prompt || null, TETO_PROMPT);
     linha.motivo = pedacoDeTexto(motivoBruto, 200);
     linha.aviso = pedacoDeTexto(payload.message || null, 500);
+    // OST 10: o que a fabrica respondeu ao fim da rodada (Stop) e o que o
+    // subagente devolveu (SubagentStop). O Claude Code manda isso pronto em
+    // last_assistant_message; a ponte nao abre a transcricao para tirar texto.
+    linha.resposta = pedacoDeTexto(payload.last_assistant_message || null, TETO_RESPOSTA);
+    // Ferramenta que chama subagente (Agent, ou Task nas versoes antigas): qual
+    // subagente foi chamado.
+    linha.agenteChamado = pedacoDeTexto(entrada.subagent_type || null, 120);
   }
 
   appendFileSync(arquivo, JSON.stringify(linha) + '\n', 'utf8');

@@ -17,7 +17,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Firestore } from 'firebase/firestore';
 import {
-  ActivityTimeline,
   AlertBanner,
   ApprovalDeck,
   ApprovalItem,
@@ -38,9 +37,10 @@ import {
 import type { Entrada } from '@/dados/autenticacao';
 import { impedimentoDaEscrita, type ContextoDeEscrita } from '@/dados/escritas';
 import { TituloEditavel } from './renomear';
-import { usarAtividade, usarTarefas } from '@/dados/ouvintes';
+import { usarTarefas } from '@/dados/ouvintes';
 import type { EstadoDoPainel } from '@/dados/painel';
-import { ordenarTarefas, traduzirAtividade, traduzirTarefa } from '@/dados/tradutor';
+import { ordenarTarefas, traduzirTarefa } from '@/dados/tradutor';
+import { LinhaDoTempo, usarLinhaDoTempo } from './LinhaDoTempo';
 import { desdeQuando, plural } from '@/formato';
 import { usarAcoesDaFabrica, usarCaixaDeComando, type AcoesDaFabrica } from './FabricaTela';
 import { NovaFabricaCelular } from './NovaFabrica';
@@ -66,7 +66,6 @@ import { CONFIRMAR_ENCERRAR, DESTINOS_INERTES, motivoDeAbrirFabrica } from './te
    que a fabrica faz, que e a unica com recorte, some. */
 const FABRICAS_POR_PAGINA = 3;
 const VAO_ENTRE_CARTOES = 8;
-const PASSOS_NO_CELULAR = 4;
 const TAREFAS_NO_CELULAR = 4;
 
 /* chave: o que muda o desenho acima da lista, como a faixa da ponte e a faixa de
@@ -308,7 +307,7 @@ export function Celular({
                     que repetia o selo; fica o projeto, sem caminho, e o modelo. */}
                 <span className="caption gf-faint truncate text-left">{`${f.projeto} · ${f.model}`}</span>
                 {f.pending ? <span className="caption gf-fcard-pending text-left">{f.pending}</span> : null}
-                <span className="mono gf-faint text-left">{`${f.elapsed} · ${f.usage}`}</span>
+                <span className="mono gf-faint text-left">{`${f.abertaEm} · ${f.elapsed} · ${f.usage}`}</span>
               </button>
             ))
           )}
@@ -456,12 +455,11 @@ function CelularFabrica({
   const [folha, setFolha] = useState<'acoes' | null>(null);
   const fabrica = estado.fabricas.find((f) => f.id === fabricaId) ?? null;
   const pedido = (estado.porFabrica.get(fabricaId) ?? [])[0];
-  const atividade = usarAtividade(base, fabricaId, PASSOS_NO_CELULAR);
+  const linhaDoTempo = usarLinhaDoTempo(base, fabricaId);
   const tarefas = usarTarefas(base, fabricaId);
   const acoes = usarAcoesDaFabrica(escrita, fabrica, avisar);
   const caixa = usarCaixaDeComando(escrita, fabrica, avisar);
 
-  const passos = useMemo(() => atividade.itens.map(traduzirAtividade), [atividade.itens]);
   const listaDeTarefas = useMemo(
     () => ordenarTarefas(tarefas.itens.map((t) => traduzirTarefa(t, estado.agora))),
     [tarefas.itens, estado.agora]
@@ -471,15 +469,13 @@ function CelularFabrica({
 
   let miolo: React.ReactNode;
   if (aba === 'atividade') {
-    miolo = atividade.erro ? (
-      <Falha mensagem={atividade.erro} />
-    ) : passos.length === 0 ? (
-      <Vazio
-        titulo={atividade.carregando ? 'Lendo a atividade' : 'Nenhum passo registrado'}
-        detalhe="Cada passo que a fábrica der aparece aqui, do mais recente para o mais antigo."
+    miolo = (
+      <LinhaDoTempo
+        dados={linhaDoTempo}
+        agentePrincipal={`agente ${fabrica.agent}`}
+        viva={fabrica.state === 'running' || fabrica.state === 'approval'}
+        agora={estado.agora}
       />
-    ) : (
-      <ActivityTimeline live={fabrica.state === 'running' || fabrica.state === 'approval'} items={passos} />
     );
   } else {
     miolo = tarefas.erro ? (

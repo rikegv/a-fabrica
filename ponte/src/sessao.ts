@@ -21,6 +21,38 @@ import { PASTA_TRAVAS, garantirPastaLocal } from './config.js';
 import { PortaoNaoConfirmado, abrirFabrica, type EventoFabrica, type Portao } from './claudeCode.js';
 import type { RegistroDeFabricas } from './vivas.js';
 import type { Fabrica, Momento, PassoAtividade } from './tipos.js';
+import { mascarar } from './mascara.js';
+
+/**
+ * OST 10: o texto do passo, mascarado e com teto, para a tela dizer o que
+ * aconteceu. Antes a ponte publicava so o tipo e o nome da ferramenta, e o painel
+ * escrevia "Deu um passo" em toda linha.
+ */
+function campoDoPasso(valor: unknown, teto: number): string | null {
+  if (typeof valor !== 'string' || valor.trim().length === 0) return null;
+  const limpo = mascarar(valor).texto;
+  return limpo.length > teto ? `${limpo.slice(0, teto)}[...cortado]` : limpo;
+}
+
+function detalhesDoPasso(ev: EventoFabrica): Pick<PassoAtividade, 'alvo' | 'descricao' | 'agente' | 'agenteChamado'> {
+  const e = ev.entrada ?? {};
+  const alvo =
+    ev.tipo === 'ferramenta'
+      ? campoDoPasso(e['command'] ?? e['file_path'] ?? e['path'] ?? e['pattern'] ?? e['url'] ?? e['notebook_path'] ?? null, 2000)
+      : null;
+  let descricao: string | null = null;
+  if (ev.tipo === 'ferramenta') descricao = campoDoPasso(e['description'] ?? null, 300);
+  else if (ev.tipo === 'texto') descricao = campoDoPasso(ev.texto ?? null, 4000);
+  else if (ev.tipo === 'init') descricao = campoDoPasso(ev.modelo ? `modelo ${ev.modelo}` : null, 120);
+  else if (ev.tipo === 'fim') descricao = campoDoPasso(ev.estado ?? null, 120);
+  const chamado = ev.tipo === 'ferramenta' ? campoDoPasso(e['subagent_type'] ?? null, 120) : null;
+  return {
+    alvo,
+    descricao,
+    agente: ev.agente ?? null,
+    agenteChamado: chamado ?? (ev.inicioSubagente === true ? 'general-purpose' : null),
+  };
+}
 
 /** Trava de processo unico por fabrica. Trava de processo morto nao prende a fabrica. */
 export function tentarTrava(fabricaId: string): (() => void) | null {
@@ -261,6 +293,7 @@ export async function rodarSessao(portas: PortasDaSessao, pedido: PedidoDeSessao
           ferramenta: ev.ferramenta ?? null,
           subagente: ev.sub === true,
           inicioSubagente: ev.inicioSubagente === true,
+          ...detalhesDoPasso(ev),
         });
         if (ev.tipo === 'fim') {
           viva.recebeuFim = true;

@@ -261,3 +261,35 @@ body {
   min-width: 0;
   flex: 1;
 }
+
+/* OST 10, linha do tempo da fábrica. Do mais antigo, em cima, para o mais
+   novo, embaixo. A ordem do diretor em destaque, o que a fábrica fez embaixo
+   dela, e o subagente marcado com a cor de execução. */
+.gf-lt { flex: 1; min-height: 0; height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: var(--space-3); padding-right: 4px; }
+.gf-lt-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding: 0 var(--space-3); }
+.gf-lt-bloco { display: flex; flex-direction: column; gap: var(--space-2); }
+.gf-lt-dia { color: var(--ink-faint); font-weight: 600; text-transform: none; padding: var(--space-2) var(--space-3) 0; border-top: 1px solid var(--line-100); }
+.gf-lt-dia-item { list-style: none; }
+.gf-lt-ordem { border: 1px solid var(--state-approval); background: var(--state-approval-bg); border-radius: var(--radius-md); padding: var(--space-3); display: flex; flex-direction: column; gap: 4px; color: var(--ink); }
+.gf-lt-ordem .gf-lt-evento { color: var(--state-approval); font-weight: 700; }
+.gf-lt-passos { list-style: none; margin: 0; padding: 0 0 0 var(--space-3); border-left: 2px solid var(--line-100); margin-left: var(--space-3); display: flex; flex-direction: column; gap: 2px; }
+.gf-lt-passo { display: grid; grid-template-columns: 64px 1fr; gap: var(--space-3); padding: 8px var(--space-2); border-radius: var(--radius-md); color: var(--ink-muted); }
+.gf-lt-hora { color: var(--ink-faint); padding-top: 1px; }
+.gf-lt-corpo { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gf-lt-cabeca { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.gf-lt-evento { color: var(--ink-faint); font-weight: 600; }
+.gf-lt-chip { font-size: 11px; line-height: 16px; padding: 0 6px; border-radius: 999px; border: 1px solid var(--line-100); color: var(--ink-faint); }
+.gf-lt-chip-sub { border-color: var(--state-running); color: var(--state-running); background: var(--state-running-bg); font-weight: 600; }
+.gf-lt-do-sub { background: var(--glass); }
+.gf-lt-detalhe { overflow-wrap: anywhere; }
+.gf-lt-texto { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
+.gf-lt-mais { margin-left: var(--space-2); color: var(--focus); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+.gf-lt-resposta { color: var(--ink); background: var(--state-done-bg); }
+.gf-lt-resposta .gf-lt-evento { color: var(--state-done); }
+.gf-lt-erro, .gf-lt-erro .gf-lt-evento { color: var(--state-failed); }
+.gf-lt-atual { box-shadow: 0 0 0 1px var(--state-running) inset; color: var(--ink); }
+.gf-lt-sem-passo { padding-left: var(--space-6); }
+@media (max-width: 560px) {
+  .gf-lt-passo { grid-template-columns: 1fr; gap: 2px; }
+  .gf-lt-passos { margin-left: var(--space-1); padding-left: var(--space-2); }
+}

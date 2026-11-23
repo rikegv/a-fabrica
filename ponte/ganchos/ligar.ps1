@@ -26,9 +26,18 @@
 param(
   # Projeto que nao gera NEM metadado: sai do painel por inteiro.
   [string[]]$Ignorar = @(),
-  # Projeto liberado para CONTEUDO. Sem isto, so metadado.
-  [string[]]$Liberar = @()
+  # Projeto liberado para CONTEUDO. So vale com -SoLiberados, veja OST 10 abaixo.
+  [string[]]$Liberar = @(),
+  # Volta a regra antiga da OST 7: conteudo so da lista de liberados.
+  [switch]$SoLiberados
 )
+
+# OST 10, 23/11/2026, REVERSAO CONSCIENTE, decisao do diretor: conteudo de TODOS
+# os projetos, inclusive os de dado de cliente. Ele foi avisado de que o texto sai
+# da maquina, fica gravado na base e a trilha nao se apaga, e respondeu "libera
+# tudo". Por isso o padrao deste script agora grava conteudoDeTodos = true. A
+# lista de liberados deixa de decidir; fica guardada so para o caso de ele voltar
+# atras com -SoLiberados. Registro: CLAUDE.md, secao A.23.
 
 $ErrorActionPreference = 'Stop'
 $raiz = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -83,16 +92,21 @@ $listaLiberar = @($liberadosAtuais + $Liberar | Where-Object { $_ } | Select-Obj
 
 $cfg = [ordered]@{
   ligado             = $true
+  conteudoDeTodos    = (-not $SoLiberados)
   projetosLiberados  = $listaLiberar
   projetosIgnorados  = $listaIgnorar
   tetoBytesPorSessao = 4194304
   tetoArquivosNaFila = 2000
-  nota               = 'ligado=false desliga os ganchos na hora, sem mexer no Claude Code. projetosLiberados libera CONTEUDO (texto do comando, alvo, descricao, aviso, motivo) daquele projeto; fora dela sobe so METADADO. projetosIgnorados tira o projeto por inteiro, nem metadado. As duas comparam por fronteira de caminho: igual, ou seguido de separador, entao a-fabrica nao alcanca a-fabrica-lab.'
+  nota               = 'ligado=false desliga os ganchos na hora, sem mexer no Claude Code. conteudoDeTodos=true, decisao do diretor na OST 10, sobe CONTEUDO de todo projeto que nao esta em projetosIgnorados; so com conteudoDeTodos diferente de true vale a lista: projetosLiberados libera CONTEUDO (texto do comando, alvo, descricao, aviso, motivo) daquele projeto; fora dela sobe so METADADO. projetosIgnorados tira o projeto por inteiro, nem metadado. As duas comparam por fronteira de caminho: igual, ou seguido de separador, entao a-fabrica nao alcanca a-fabrica-lab.'
 }
 [System.IO.File]::WriteAllText($configGanchos, ($cfg | ConvertTo-Json), (New-Object System.Text.UTF8Encoding($false)))
 Write-Host "3. Configuracao em $configGanchos"
-Write-Host "   $($listaLiberar.Count) projeto(s) liberado(s) para conteudo, $($listaIgnorar.Count) projeto(s) ignorado(s) por inteiro"
-if ($listaLiberar.Count -eq 0) {
+if (-not $SoLiberados) {
+  Write-Host "   CONTEUDO DE TODOS OS PROJETOS ligado, decisao do diretor na OST 10. $($listaIgnorar.Count) projeto(s) ignorado(s) por inteiro"
+} else {
+  Write-Host "   So lista: $($listaLiberar.Count) projeto(s) liberado(s) para conteudo, $($listaIgnorar.Count) projeto(s) ignorado(s) por inteiro"
+}
+if ($SoLiberados -and $listaLiberar.Count -eq 0) {
   Write-Host '   Nenhum projeto liberado para conteudo: o painel vai mostrar as fabricas, sem o texto.'
 }
 

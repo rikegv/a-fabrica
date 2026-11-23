@@ -119,6 +119,33 @@ export interface AtividadeBase {
   toolInfo?: { name?: string; parameters?: unknown; output?: unknown; error?: unknown } | null;
   consumoParcial?: ConsumoBase | null;
   em?: HoraDaBase;
+  /* OST 10. Os campos que a ponte grava e que o painel antes ignorava. Fábrica
+     aberta na mão (fila de ganchos) grava `evento` e `anotadoEm`; fábrica aberta
+     pelo painel não grava `evento`. */
+  evento?: string;
+  anotadoEm?: string | null;
+  alvo?: string | null;
+  descricao?: string | null;
+  /* Qual subagente agiu; nulo é o agente principal. */
+  agente?: string | null;
+  agenteChamado?: string | null;
+  resposta?: string | null;
+  subagente?: boolean;
+  inicioSubagente?: boolean;
+  erro?: boolean;
+  conteudoPublicado?: boolean;
+}
+
+/* OST 10: a ordem que o diretor mandou pelo painel, como está na fila. */
+export interface ComandoBase {
+  id: string;
+  fabricaId?: string;
+  texto?: string;
+  acao?: string;
+  situacao?: 'pendente' | 'entregue' | string;
+  criadoEm?: HoraDaBase;
+  entregueEm?: HoraDaBase;
+  origem?: string;
 }
 
 /* Origem de cada campo do pacote, como a OST 2 aprovou: o painel mostra o que e

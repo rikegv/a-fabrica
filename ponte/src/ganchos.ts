@@ -162,6 +162,10 @@ export interface LinhaDeGancho {
   falhouNoFim?: unknown;
   aviso?: unknown;
   custoMs?: unknown;
+  /** OST 10: o que a fabrica respondeu ao fim da rodada, ou o subagente ao fim dele. */
+  resposta?: unknown;
+  /** OST 10: subagente chamado pela ferramenta Agent (ou Task). */
+  agenteChamado?: unknown;
   /**
    * OST 9: caminho da transcricao que o proprio Claude Code grava da sessao. E
    * METADADO, um caminho local, e nunca sai da maquina: a ponte le dali SO os
@@ -183,6 +187,15 @@ export interface PassoPublicado {
   subagente: boolean;
   inicioSubagente: boolean;
   erro: boolean;
+  /**
+   * OST 10: QUAL agente agiu neste passo. Nome do subagente quando o passo nasceu
+   * dentro de um; nulo quando foi o agente principal da sessao. §A.15 na tela.
+   */
+  agente: string | null;
+  /** OST 10: subagente que a ferramenta Agent chamou, quando a ferramenta e essa. */
+  agenteChamado: string | null;
+  /** OST 10: o que a fabrica respondeu ao fim da rodada, ou o subagente ao terminar. */
+  resposta: string | null;
   origem: 'mao';
   /**
    * Este passo trouxe CONTEUDO, ou so metadado?
@@ -326,6 +339,9 @@ export function traduzir(linha: LinhaDeGancho, seq: number): { passo: PassoPubli
       subagente: evento === 'SubagentStart' || evento === 'SubagentStop',
       inicioSubagente: evento === 'SubagentStart',
       erro: linha.erro === true,
+      agente: subagente,
+      agenteChamado: soSeLiberado(linha.agenteChamado),
+      resposta: evento === 'Stop' || evento === 'SubagentStop' ? soSeLiberado(linha.resposta) : null,
       origem: 'mao',
       // Fica gravado na base se este passo trouxe conteudo ou so metadado. Serve
       // para o diretor conferir a regra pela propria trilha, em vez de confiar na
@@ -357,6 +373,12 @@ interface Marcas {
    * tokens reais viraram 110.202 na base.
    */
   transcricoes?: Record<string, MarcaDaTranscricao>;
+  /**
+   * OST 10: proxima sequencia de passo de cada fabrica, que SOBREVIVE ao
+   * arquivamento. Antes, a sessao retomada nascia num arquivo de fila novo e o
+   * seq voltava a zero, e a tela, que ordenava por seq, misturava as rodadas.
+   */
+  seqs?: Record<string, number>;
 }
 
 /** Teto de fabricas lembradas, para o arquivo de marcas nao crescer sem fim. */
@@ -381,10 +403,12 @@ function lerMarcas(): Marcas {
     const a = typeof j === 'object' && j !== null ? (j as Record<string, unknown>)['arquivos'] : null;
     if (typeof a === 'object' && a !== null) {
       const t = (j as Record<string, unknown>)['transcricoes'];
+      const s = (j as Record<string, unknown>)['seqs'];
       return {
         versao: 1,
         arquivos: a as Record<string, MarcaDoArquivo>,
         transcricoes: typeof t === 'object' && t !== null ? (t as Record<string, MarcaDaTranscricao>) : {},
+        seqs: typeof s === 'object' && s !== null ? (s as Record<string, number>) : {},
       };
     }
   } catch {
@@ -400,6 +424,15 @@ function lembrarTranscricao(m: Marcas, fabricaId: string, marca: MarcaDaTranscri
   const chaves = Object.keys(t);
   for (const velha of chaves.slice(0, Math.max(0, chaves.length - TETO_TRANSCRICOES_LEMBRADAS))) delete t[velha];
   m.transcricoes = t;
+}
+
+function lembrarSeq(m: Marcas, fabricaId: string, seq: number): void {
+  const s = m.seqs ?? {};
+  delete s[fabricaId];
+  s[fabricaId] = seq;
+  const chaves = Object.keys(s);
+  for (const velha of chaves.slice(0, Math.max(0, chaves.length - TETO_TRANSCRICOES_LEMBRADAS))) delete s[velha];
+  m.seqs = s;
 }
 
 function gravarMarcas(m: Marcas): void {
@@ -467,7 +500,13 @@ export async function varrerFila(
 
     let bruto = '';
     try {
-      bruto = readFileSync(caminho, 'utf8').slice(marca.bytes);
+      // OST 10, DEFEITO ACHADO NA PROVA: a marca conta BYTES, e o corte era feito
+      // no texto ja decodificado, que conta CARACTERES. Basta um acento antes da
+      // marca ("esta" com acento, numa resposta) para o corte cair adiante, no
+      // meio de uma linha, e os passos seguintes se perderem como ilegiveis. O
+      // corte agora e feito nos bytes, e so depois o pedaco vira texto. A marca
+      // sempre cai em fim de linha, entao nunca corta um caractere ao meio.
+      bruto = readFileSync(caminho).subarray(marca.bytes).toString('utf8');
     } catch (e) {
       r.erros.push(`nao deu para ler ${nome}: ${e instanceof Error ? e.message : String(e)}`);
       continue;
@@ -480,6 +519,9 @@ export async function varrerFila(
     const linhas = completo.split('\n').filter((l) => l.trim().length > 0);
 
     let seq = marca.seq;
+    // Arquivo novo de sessao ja conhecida (retomada): continua a sequencia da
+    // fabrica em vez de recomecar do zero. OST 10.
+    let seqContinuado = marcas.arquivos[nome] !== undefined;
     let tarefaAberta = marca.tarefaAberta === true;
     let caminhoDaTranscricao: string | null = marca.transcricao?.caminho ?? null;
     let fabricaDaSessao: string | null = null;
@@ -507,6 +549,10 @@ export async function varrerFila(
         continue;
       }
       const fabricaId = `${PREFIXO_MAO}${sid}`;
+      if (!seqContinuado) {
+        seq = Math.max(seq, marcas.seqs?.[fabricaId] ?? 0);
+        seqContinuado = true;
+      }
       const { passo, estado, encerra } = traduzir(linha, seq);
       if (passo.mascarou.length > 0) r.mascaradas++;
 
@@ -598,6 +644,7 @@ export async function varrerFila(
       }
     }
 
+    if (fabricaDaSessao !== null) lembrarSeq(marcas, fabricaDaSessao, seq);
     // A marca so avanca pelo que de fato subiu.
     marcas.arquivos[nome] = {
       bytes: bytesOk,

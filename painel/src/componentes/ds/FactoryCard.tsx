@@ -19,6 +19,8 @@ export interface FactoryCardProps {
   elapsed: string;
   usage: string;
   pending?: string;
+  /* OST 10: quando abriu. Hoje, só a hora; de outro dia, com a data. */
+  opened?: string;
   onOpen?: () => void;
   compact?: boolean;
 }
@@ -31,9 +33,11 @@ export function FactoryCard({
   elapsed,
   usage,
   pending,
+  opened,
   onOpen,
   compact
 }: FactoryCardProps) {
+  const quando = opened ? <div className="caption gf-faint gf-fcard-agent">{opened}</div> : null;
   const pedido = pending ? (
     <div className="caption gf-fcard-pending">
       <StateIcon state="approval" size={10} />
@@ -64,6 +68,7 @@ export function FactoryCard({
         <div className="caption gf-faint gf-fcard-agent" title={agent}>
           {agent}
         </div>
+        {quando}
       </div>
       {pedido}
       {pe}
@@ -81,6 +86,7 @@ export function FactoryCard({
       <div>
         <div className="title-sm gf-fcard-project">{project}</div>
         <div className="caption gf-faint gf-fcard-agent">{agent}</div>
+        {quando}
       </div>
       <div className="body gf-fcard-doing">{doing}</div>
       {pedido}

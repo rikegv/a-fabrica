@@ -129,6 +129,7 @@ export function VisaoGeral({
                 elapsed={f.elapsed}
                 usage={f.usage}
                 pending={f.pending ?? undefined}
+                opened={f.abertaEm}
                 onOpen={() => abrirFabrica(f.id)}
               />
             ))}

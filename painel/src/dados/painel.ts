@@ -119,7 +119,8 @@ export function montarEstadoDoPainel(
           const parado = porFabrica.get(doc.id)?.[0]?.waitingMs ?? null;
           return traduzirFabrica(doc, { pontePerdida, pedidoParado: parado, agora });
         })
-      )
+      ),
+      agora
     );
 
     const deTrabalho = lista.filter((f) => !f.teste);

@@ -37,23 +37,23 @@
  * MAPA DE SITUACAO DE TAREFA: "em andamento" vira running, "concluida" vira
  * done, "falhou" vira failed, desconhecida vira idle.
  *
- * MAPA DE TIPO DE ATIVIDADE: estado "ERROR" vira error; tipo "checkpoint" vira
- * done; tipo "tool" com ferramenta de aprovacao fica step, porque o pedido de
- * aprovacao real vive na colecao aprovacoes; o resto vira step.
+ * ATIVIDADE: veja traduzirPasso, na secao de atividade. OST 10: o mapa antigo
+ * esperava tipos que a ponte nunca gravou e escrevia "Deu um passo" em tudo.
  */
 
-import type { ActivityTimelineItem, FactoryState, RiskLevel } from '@/componentes/ds';
+import type { FactoryState, RiskLevel } from '@/componentes/ds';
 import {
   consumo as formatarConsumo,
   dataAmigavel,
   horaComSegundos,
-  horaCurta,
+  quandoCurto,
   tempoDecorrido,
   tempoParado as formatarTempoParado
 } from '@/formato';
 import type {
   AprovacaoBase,
   AtividadeBase,
+  ComandoBase,
   ConsumoBase,
   FabricaBase,
   HoraDaBase,
@@ -191,15 +191,25 @@ export const NOME_EXTERNA = 'Fábrica externa';
  * caminho, pedido do diretor. Só as que ainda não ganharam nome entram na conta.
  * Uma sozinha fica "Fábrica externa". Duas ou mais ganham a hora em que abriram;
  * se até a hora bater, ganham o número, na ordem em que abriram.
+ *
+ * OST 10: a hora sozinha era ambígua entre dias. Na tela de 23/11 apareciam
+ * "das 18:30" e "das 21:57" que eram de outro dia. Agora a de hoje leva só a
+ * hora, e a de outro dia leva a data junto: "Fábrica externa de 22/11 às 18:30".
  */
-export function distinguirExternas(lista: Fabrica[]): Fabrica[] {
+export function nomeDaExternaPelaHora(inicio: Date | null, agora: Date = new Date()): string {
+  if (!inicio) return NOME_EXTERNA;
+  const quando = quandoCurto(inicio, agora);
+  return quando.includes(' às ') ? `${NOME_EXTERNA} de ${quando}` : `${NOME_EXTERNA} das ${quando}`;
+}
+
+export function distinguirExternas(lista: Fabrica[], agora: Date = new Date()): Fabrica[] {
   const semNome = lista.filter((f) => f.externa && f.nomeDado === null);
   if (semNome.length < 2) return lista;
   const ordem = [...semNome].sort((a, b) => (a.startedAt?.getTime() ?? 0) - (b.startedAt?.getTime() ?? 0));
   const rotulo = new Map<string, string>();
   const vezes = new Map<string, number>();
   for (const f of ordem) {
-    const base = f.startedAt ? `${NOME_EXTERNA} das ${horaCurta(f.startedAt)}` : NOME_EXTERNA;
+    const base = nomeDaExternaPelaHora(f.startedAt, agora);
     const n = (vezes.get(base) ?? 0) + 1;
     vezes.set(base, n);
     rotulo.set(f.id, n === 1 ? base : `${base}, nº ${n}`);
@@ -235,6 +245,8 @@ export interface Fabrica {
   state: FactoryState;
   doing: string;
   startedAt: Date | null;
+  /* OST 10: quando abriu, para o cartão. Hoje, só a hora; outro dia, com a data. */
+  abertaEm: string;
   /* OST 9: tempo da TAREFA, não da abertura. Nulo quando não foi medido. */
   taskMs: number | null;
   /* A tarefa está andando agora: o relógio conta até agora. */
@@ -384,6 +396,11 @@ export function traduzirFabrica(
     state,
     doing: frasePeloEstado(state, temPedido, pausada),
     startedAt: inicio,
+    abertaEm: inicio
+      ? quandoCurto(inicio, agora).includes(' às ')
+        ? `aberta em ${quandoCurto(inicio, agora)}`
+        : `aberta às ${quandoCurto(inicio, agora)}`
+      : 'abertura sem hora',
     taskMs,
     tarefaAndando,
     tokens,
@@ -598,40 +615,78 @@ export function aprovacaoPendente(doc: AprovacaoBase): boolean {
 
 /* ---------- atividade ---------- */
 
-/* Relato da ferramenta do Claude Code, em portugues. O nome cru da ferramenta e
-   fato; a frase e so a traducao dele. Ferramenta desconhecida mantem o nome. */
-const RELATO_DA_FERRAMENTA: Record<string, string> = {
-  bash: 'Rodou um comando no terminal.',
-  read: 'Leu um arquivo.',
-  write: 'Escreveu um arquivo.',
-  edit: 'Alterou um arquivo.',
-  multiedit: 'Alterou um arquivo em vários pontos.',
-  glob: 'Procurou arquivos no projeto.',
-  grep: 'Procurou um trecho no projeto.',
-  task: 'Delegou uma tarefa a um subagente.',
-  todowrite: 'Atualizou a lista de tarefas.',
-  webfetch: 'Buscou uma página na internet.',
-  websearch: 'Pesquisou na internet.',
-  notebookedit: 'Alterou um caderno de notas.'
-};
+/*
+ * OST 10, A TELA PASSA A DIZER O QUE ACONTECEU.
+ *
+ * DEFEITO QUE ISTO CONSERTA, visto na tela do diretor: as seis linhas diziam
+ * "Deu um passo". O tradutor antigo esperava os tipos do kit de outra versão
+ * (user_input, agent_response, tool, checkpoint), e a ponte nunca gravou esses
+ * nomes: ela grava init, texto, pensamento, ferramenta, resultado e fim (fábrica
+ * aberta pelo painel) e init, comando do diretor, ferramenta, subagente, fim de
+ * rodada, fim e aviso (aberta na mão). Nenhum casava, tudo caía no "Deu um
+ * passo". Isso valia para TODA fábrica, liberada ou não.
+ *
+ * Agora cada passo vira uma linha com: qual evento, o que aconteceu, qual
+ * ferramenta, qual arquivo ou comando, e qual agente agiu.
+ */
 
-function resumoDaFerramenta(doc: AtividadeBase): string {
-  const nome = doc.ferramenta ?? doc.toolInfo?.name ?? 'ferramenta';
-  return RELATO_DA_FERRAMENTA[nome.toLowerCase()] ?? `Usou ${nome}.`;
+export type TipoDaLinha =
+  | 'ordem'
+  | 'resposta'
+  | 'ferramenta'
+  | 'subagente'
+  | 'inicio'
+  | 'fim'
+  | 'aviso'
+  | 'pensamento'
+  | 'resultado'
+  | 'passo';
+
+export interface LinhaDaAtividade {
+  id: string;
+  quando: Date | null;
+  seq: number;
+  tipo: TipoDaLinha;
+  /* Nome legível do evento, curto: "Ferramenta Read", "Sua ordem", "Resposta". */
+  evento: string;
+  /* O que aconteceu, numa frase. */
+  titulo: string;
+  /* Arquivo, comando ou padrão, em fonte de código. */
+  detalhe: string | null;
+  /* Texto longo: a ordem do diretor, a resposta da fábrica, a descrição. */
+  texto: string | null;
+  /* Subagente que agiu. Nulo é o agente principal da fábrica. */
+  agente: string | null;
+  erro: boolean;
+  /* Ordem que o DIRETOR mandou, destacada das ações da fábrica. */
+  doDiretor: boolean;
+  /* Só para ordem do painel: entregue à ponte ou ainda pendente. */
+  situacao: string | null;
 }
 
-/* Detalhe da linha do tempo: o log cru que o manual pede em mono. Comando,
-   caminho ou trecho procurado, nunca o objeto inteiro. */
-function detalheDaFerramenta(doc: AtividadeBase): string | null {
-  const parametros = doc.toolInfo?.parameters as Record<string, unknown> | undefined;
-  if (!parametros || typeof parametros !== 'object') return null;
-  for (const chave of ['command', 'file_path', 'path', 'pattern', 'url', 'prompt', 'description']) {
-    const valor = parametros[chave];
-    if (typeof valor === 'string' && valor.trim()) return primeiraLinha(valor, 120);
-  }
-  const erro = doc.toolInfo?.error;
-  if (typeof erro === 'string' && erro.trim()) return primeiraLinha(erro, 120);
-  return null;
+/* Relato da ferramenta do Claude Code, em português. O nome cru da ferramenta é
+   fato e aparece junto, no evento; a frase é só a tradução dele. */
+const RELATO_DA_FERRAMENTA: Record<string, string> = {
+  bash: 'Rodou um comando no terminal',
+  powershell: 'Rodou um comando no PowerShell',
+  read: 'Leu um arquivo',
+  write: 'Escreveu um arquivo',
+  edit: 'Alterou um arquivo',
+  multiedit: 'Alterou um arquivo em vários pontos',
+  glob: 'Procurou arquivos pelo nome',
+  grep: 'Procurou um trecho nos arquivos',
+  task: 'Delegou uma tarefa a um subagente',
+  agent: 'Delegou uma tarefa a um subagente',
+  todowrite: 'Atualizou a lista de tarefas',
+  webfetch: 'Buscou uma página na internet',
+  websearch: 'Pesquisou na internet',
+  notebookedit: 'Alterou um caderno de notas',
+  skill: 'Carregou uma habilidade',
+  toolsearch: 'Procurou uma ferramenta'
+};
+
+function textoOuNulo(valor: unknown): string | null {
+  return typeof valor === 'string' && valor.trim().length > 0 ? valor.trim() : null;
 }
 
 function primeiraLinha(texto: string, limite = 160): string {
@@ -639,25 +694,284 @@ function primeiraLinha(texto: string, limite = 160): string {
   return limpo.length > limite ? limpo.slice(0, limite - 1) + '…' : limpo;
 }
 
-export function traduzirAtividade(doc: AtividadeBase): ActivityTimelineItem {
-  const em = paraData(doc.em);
-  const erro = String(doc.estado ?? '').toUpperCase() === 'ERROR';
-  const tipo = String(doc.tipo ?? '');
-  let texto: string;
-  if (tipo === 'user_input') texto = primeiraLinha(doc.textoDelta ?? 'Recebeu uma ordem do diretor.');
-  else if (tipo === 'agent_response') texto = primeiraLinha(doc.textoDelta ?? 'Respondeu.');
-  else if (tipo === 'tool') texto = resumoDaFerramenta(doc);
-  else if (tipo === 'checkpoint') texto = 'Fechou um passo.';
-  else texto = primeiraLinha(doc.textoDelta ?? 'Deu um passo.');
+/* Texto que a ponte grava quando o projeto não estava liberado para conteúdo. */
+function semConteudo(valor: string | null): boolean {
+  return valor !== null && /^conteudo nao publicado/i.test(valor);
+}
 
-  const detalhe = tipo === 'tool' ? detalheDaFerramenta(doc) : null;
+const AVISO_SEM_CONTEUDO =
+  'O texto não foi gravado: quando este passo aconteceu, o projeto não estava liberado para conteúdo.';
 
+type BaseDaLinha = Omit<LinhaDaAtividade, 'tipo' | 'evento' | 'titulo'>;
+
+function linhaDeFerramenta(doc: AtividadeBase, base: BaseDaLinha): LinhaDaAtividade {
+  const nome = textoOuNulo(doc.ferramenta) ?? textoOuNulo(doc.toolInfo?.name) ?? 'ferramenta';
+  const chave = nome.toLowerCase();
+  const chamado = textoOuNulo(doc.agenteChamado);
+  let titulo =
+    RELATO_DA_FERRAMENTA[chave] ??
+    (nome.startsWith('mcp__') ? `Usou a ferramenta externa ${nome.split('__').slice(1).join(' ')}` : `Usou ${nome}`);
+  if ((chave === 'agent' || chave === 'task') && chamado) titulo = `Delegou uma tarefa ao subagente ${chamado}`;
+  const parametros = doc.toolInfo?.parameters as Record<string, unknown> | undefined;
+  let detalhe = textoOuNulo(doc.alvo);
+  if (!detalhe && parametros && typeof parametros === 'object') {
+    for (const chaveP of ['command', 'file_path', 'path', 'pattern', 'url']) {
+      const v = textoOuNulo(parametros[chaveP]);
+      if (v) {
+        detalhe = v;
+        break;
+      }
+    }
+  }
   return {
-    time: horaComSegundos(em),
-    text: erro ? `Erro: ${texto}` : texto,
-    detail: detalhe ?? undefined,
-    kind: erro ? 'error' : tipo === 'checkpoint' ? 'done' : 'step'
+    ...base,
+    tipo: 'ferramenta',
+    evento: `Ferramenta ${nome}`,
+    titulo: base.erro ? `${titulo}, e a ferramenta devolveu erro` : titulo,
+    detalhe: detalhe ? primeiraLinha(detalhe, 400) : null,
+    texto: textoOuNulo(doc.descricao)
   };
+}
+
+export function traduzirPasso(doc: AtividadeBase): LinhaDaAtividade {
+  const quando = paraData(doc.anotadoEm ?? null) ?? paraData(doc.em);
+  const erro = doc.erro === true || String(doc.estado ?? '').toUpperCase() === 'ERROR';
+  const agente = textoOuNulo(doc.agente);
+  const descricao = textoOuNulo(doc.descricao);
+  const base: BaseDaLinha = {
+    id: doc.id,
+    quando,
+    seq: typeof doc.seq === 'number' ? doc.seq : 0,
+    detalhe: null,
+    texto: null,
+    agente,
+    erro,
+    doDiretor: false,
+    situacao: null
+  };
+  const evento = textoOuNulo(doc.evento);
+  const tipo = String(doc.tipo ?? '');
+
+  /* Fábrica aberta na MÃO: a fila de ganchos grava o evento do Claude Code. */
+  if (evento) {
+    switch (evento) {
+      case 'SessionStart':
+        return {
+          ...base,
+          tipo: 'inicio',
+          evento: 'Início',
+          titulo: /origem resume/i.test(descricao ?? '') ? 'Sessão retomada na mão pelo diretor' : 'Sessão aberta na mão pelo diretor',
+          detalhe: descricao
+        };
+      case 'UserPromptSubmit':
+        /* Achado da prova da OST 10: quando um subagente roda em segundo plano,
+           o próprio Claude Code entrega o aviso de "terminou" como se fosse um
+           prompt. Isso NÃO é ordem do diretor e não pode aparecer como "Você
+           mandou". */
+        if (descricao !== null && /^\s*<(task-notification|system-reminder)>/i.test(descricao)) {
+          return {
+            ...base,
+            tipo: 'aviso',
+            evento: 'Aviso automático',
+            titulo: /task-notification/i.test(descricao)
+              ? 'O Claude Code avisou a fábrica que uma tarefa em segundo plano terminou. Não foi você quem mandou.'
+              : 'O Claude Code mandou um lembrete automático à fábrica. Não foi você quem mandou.',
+            texto: descricao
+          };
+        }
+        return {
+          ...base,
+          tipo: 'ordem',
+          evento: 'Sua ordem',
+          titulo: 'Você mandou',
+          texto: semConteudo(descricao) ? AVISO_SEM_CONTEUDO : descricao,
+          doDiretor: true
+        };
+      case 'PostToolUse':
+        return linhaDeFerramenta(doc, base);
+      case 'SubagentStart':
+        return { ...base, tipo: 'subagente', evento: 'Subagente', titulo: `O subagente ${agente ?? 'sem nome'} começou` };
+      case 'SubagentStop':
+        return {
+          ...base,
+          tipo: 'subagente',
+          evento: 'Subagente',
+          titulo: `O subagente ${agente ?? 'sem nome'} terminou`,
+          texto: textoOuNulo(doc.resposta)
+        };
+      case 'Stop': {
+        const resposta = textoOuNulo(doc.resposta);
+        return {
+          ...base,
+          tipo: 'resposta',
+          evento: 'Resposta',
+          titulo: resposta
+            ? 'A fábrica respondeu e parou, esperando a próxima ordem'
+            : 'A fábrica terminou a rodada e espera a próxima ordem. O texto da resposta não foi gravado neste passo.',
+          texto: resposta
+        };
+      }
+      case 'SessionEnd':
+        return {
+          ...base,
+          tipo: 'fim',
+          evento: 'Fim',
+          titulo: 'Sessão encerrada',
+          detalhe: descricao && descricao !== 'sessao encerrada' ? descricao : null
+        };
+      case 'Notification':
+        return {
+          ...base,
+          tipo: 'aviso',
+          evento: 'Aviso',
+          titulo: 'O Claude Code avisou',
+          texto: semConteudo(descricao) ? AVISO_SEM_CONTEUDO : descricao
+        };
+      default:
+        return { ...base, tipo: 'passo', evento, titulo: `Evento ${evento}`, texto: descricao };
+    }
+  }
+
+  /* Fábrica aberta pelo PAINEL: a ponte grava o que o kit do Claude Code entrega. */
+  switch (tipo) {
+    case 'init':
+      return { ...base, tipo: 'inicio', evento: 'Início', titulo: 'A ponte abriu a sessão no Claude Code', detalhe: descricao };
+    case 'texto':
+    case 'agent_response': {
+      const t = descricao ?? textoOuNulo(doc.textoDelta);
+      return {
+        ...base,
+        tipo: 'resposta',
+        evento: 'Resposta',
+        titulo: t ? 'A fábrica escreveu' : 'A fábrica escreveu uma resposta. O texto não era gravado antes da OST 10.',
+        texto: t
+      };
+    }
+    case 'pensamento':
+      return { ...base, tipo: 'pensamento', evento: 'Raciocínio', titulo: 'Pensou antes de agir. O raciocínio não é gravado.' };
+    case 'ferramenta':
+    case 'tool':
+      return linhaDeFerramenta(doc, base);
+    case 'resultado':
+      return { ...base, tipo: 'resultado', evento: 'Resultado', titulo: 'Recebeu o resultado da ferramenta' };
+    case 'fim':
+    case 'checkpoint': {
+      const falhou = descricao !== null && descricao !== 'success';
+      return {
+        ...base,
+        tipo: 'fim',
+        evento: 'Fim da rodada',
+        titulo:
+          descricao === null
+            ? 'Terminou a rodada'
+            : falhou
+              ? `Terminou a rodada com falha (${descricao})`
+              : 'Terminou a rodada com sucesso',
+        erro: base.erro || falhou
+      };
+    }
+    case 'user_input':
+      return { ...base, tipo: 'ordem', evento: 'Sua ordem', titulo: 'Você mandou', texto: textoOuNulo(doc.textoDelta), doDiretor: true };
+    default:
+      return {
+        ...base,
+        tipo: 'passo',
+        evento: tipo || 'Passo',
+        titulo: `Passo do tipo ${tipo || 'não informado'}`,
+        texto: descricao
+      };
+  }
+}
+
+const ORDEM_POR_ACAO: Record<string, string> = {
+  abrir: 'Você abriu a fábrica com esta ordem',
+  comando: 'Você mandou',
+  pausar: 'Você pausou a fábrica',
+  reiniciar: 'Você mandou reiniciar a fábrica',
+  encerrar: 'Você encerrou a fábrica'
+};
+
+/* A ordem do diretor pelo painel, lida da própria fila de comandos. */
+export function traduzirComando(doc: ComandoBase): LinhaDaAtividade {
+  const acao = semAcento(doc.acao ?? 'comando');
+  const situacao = semAcento(doc.situacao ?? '');
+  const comTexto = acao === 'abrir' || acao === 'comando';
+  return {
+    id: `comando-${doc.id}`,
+    quando: paraData(doc.criadoEm),
+    seq: -1,
+    tipo: 'ordem',
+    evento: 'Sua ordem',
+    titulo: ORDEM_POR_ACAO[acao] ?? `Você mandou a ordem ${doc.acao ?? ''}`.trim(),
+    detalhe: null,
+    texto: comTexto ? textoOuNulo(doc.texto) : null,
+    agente: null,
+    erro: false,
+    doDiretor: true,
+    situacao: situacao === 'entregue' ? 'entregue à ponte' : situacao === 'pendente' ? 'ainda não entregue à ponte' : null
+  };
+}
+
+export interface BlocoDaAtividade {
+  /* A ordem do diretor que abre o bloco. Nula no bloco do começo, antes de
+     qualquer ordem gravada. */
+  ordem: LinhaDaAtividade | null;
+  /* O que a fábrica fez em seguida, em ordem de tempo. */
+  passos: LinhaDaAtividade[];
+}
+
+/*
+ * A ordem de execução, do mais ANTIGO para o mais NOVO, e o sentido é este em
+ * toda a tela. Cada ordem do diretor abre um bloco com o que veio em resposta a
+ * ela, até a próxima ordem.
+ *
+ * `completo` diz se o histórico inteiro da atividade está carregado. Quando não
+ * está, as ordens mais antigas que o passo mais antigo carregado ficam de fora,
+ * para não aparecer ordem sem o que veio depois dela.
+ */
+export function montarAtividade(
+  passos: AtividadeBase[],
+  comandos: ComandoBase[],
+  completo: boolean
+): { linhas: LinhaDaAtividade[]; blocos: BlocoDaAtividade[] } {
+  const traduzidos = passos.map(traduzirPasso);
+  let maisAntigo: number | null = null;
+  for (const l of traduzidos) {
+    const t = l.quando?.getTime();
+    if (t !== undefined && (maisAntigo === null || t < maisAntigo)) maisAntigo = t;
+  }
+  const ordens = comandos
+    .map(traduzirComando)
+    .filter((o) => completo || maisAntigo === null || (o.quando !== null && o.quando.getTime() >= maisAntigo));
+  /* Fábrica aberta pelo painel: cada comando retoma a mesma conversa e grava um
+     novo início. Do segundo em diante, a frase certa é "retomou". */
+  const inicios = traduzidos
+    .filter((l) => l.tipo === 'inicio' && l.titulo === 'A ponte abriu a sessão no Claude Code')
+    .sort((a, b) => (a.quando?.getTime() ?? 0) - (b.quando?.getTime() ?? 0));
+  for (const l of inicios.slice(1)) l.titulo = 'A ponte retomou a sessão no Claude Code';
+  const linhas = [...traduzidos, ...ordens].sort((a, b) => {
+    const ta = a.quando?.getTime() ?? 0;
+    const tb = b.quando?.getTime() ?? 0;
+    if (ta !== tb) return ta - tb;
+    if (a.doDiretor !== b.doDiretor) return a.doDiretor ? -1 : 1;
+    return a.seq - b.seq;
+  });
+  const blocos: BlocoDaAtividade[] = [];
+  for (const l of linhas) {
+    if (l.doDiretor) blocos.push({ ordem: l, passos: [] });
+    else if (blocos.length === 0) blocos.push({ ordem: null, passos: [l] });
+    else blocos[blocos.length - 1].passos.push(l);
+  }
+  return { linhas, blocos };
+}
+
+/* Frase curta: o que a linha diz, com o começo do texto quando há texto. */
+export function resumoDaLinha(l: LinhaDaAtividade): string {
+  return l.texto && l.tipo !== 'ferramenta' ? `${l.titulo}: ${primeiraLinha(l.texto, 120)}` : l.titulo;
+}
+
+export function horaDaLinha(l: LinhaDaAtividade): string {
+  return horaComSegundos(l.quando);
 }
 
 /* ---------- tarefa ---------- */

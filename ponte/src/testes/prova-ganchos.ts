@@ -439,6 +439,76 @@ async function principal(): Promise<void> {
     );
   }
 
+  // R7, OST 10: a reversao consciente do diretor, conteudo de TODOS os projetos.
+  {
+    reg('');
+    reg('R7, OST 10: conteudoDeTodos, decisao do diretor de ver tudo de todos os projetos');
+    const base = join(RODADA, 'r7-todos');
+    mkdirSync(base, { recursive: true });
+    writeFileSync(
+      join(base, 'ganchos.json'),
+      JSON.stringify({ ligado: true, conteudoDeTodos: true, projetosLiberados: [], projetosIgnorados: ['C:\\Users\\Henrique\\fora'] }),
+      'utf8'
+    );
+    const ler = (pasta: string, sessao: string): Record<string, unknown> | null => {
+      const caminho = join(pasta, 'fila-ganchos', `${sessao}.jsonl`);
+      if (!existsSync(caminho)) return null;
+      const linhas = readFileSync(caminho, 'utf8').trim().split('\n');
+      return JSON.parse(linhas[linhas.length - 1] ?? '{}') as Record<string, unknown>;
+    };
+    const carga = (pasta: string, sessao: string, extra: Record<string, unknown> = {}): string =>
+      JSON.stringify({
+        hook_event_name: 'PostToolUse',
+        session_id: sessao,
+        cwd: pasta,
+        tool_name: 'Read',
+        tool_input: { file_path: `${pasta}\\cadastro.ts`, description: 'ler cadastro' },
+        tool_response: { is_error: false },
+        ...extra,
+      });
+    await rodarGancho(carga('C:\\Users\\Henrique\\Desktop\\centrafin-app', 'r7-cliente'), base);
+    const l = ler(base, 'r7-cliente');
+    conferir(
+      l !== null && l['conteudo'] === true && l['alvo'] === 'C:\\Users\\Henrique\\Desktop\\centrafin-app\\cadastro.ts',
+      'R7: com conteudoDeTodos true, projeto FORA da lista sobe com conteudo',
+      l === null ? 'nao escreveu linha' : `conteudo ${String(l['conteudo'])}, alvo ${String(l['alvo'])}`
+    );
+    await rodarGancho(carga('C:\\Users\\Henrique\\fora\\x', 'r7-ignorado'), base);
+    conferir(ler(base, 'r7-ignorado') === null, 'R7: projeto IGNORADO continua sem nada, nem metadado', 'nenhuma linha escrita');
+
+    const quase = join(RODADA, 'r7-quase');
+    mkdirSync(quase, { recursive: true });
+    writeFileSync(join(quase, 'ganchos.json'), JSON.stringify({ ligado: true, conteudoDeTodos: 'true' }), 'utf8');
+    await rodarGancho(carga('C:\\Users\\Henrique\\Desktop\\centrafin-app', 'r7-quase'), quase);
+    const lq = ler(quase, 'r7-quase');
+    conferir(
+      lq !== null && lq['conteudo'] === false && lq['alvo'] === undefined,
+      'R7: conteudoDeTodos so vale com true exato; texto "true" nao libera, falha fechada',
+      lq === null ? 'nao escreveu linha' : `conteudo ${String(lq['conteudo'])}`
+    );
+
+    // Agente e resposta, os campos novos da OST 10, com os nomes que o Claude Code
+    // manda de verdade (conferidos no despejo real da rodada ost10-campos-do-gancho).
+    await rodarGancho(carga('C:\\Users\\Henrique\\a-fabrica', 'r7-sub', { agent_type: 'tester' }), base);
+    const ls = ler(base, 'r7-sub');
+    conferir(ls !== null && ls['subagente'] === 'tester', 'OST 10: passo dentro de subagente sai com o nome do agente', `subagente ${String(ls?.['subagente'])}`);
+    await rodarGancho(
+      JSON.stringify({ hook_event_name: 'Stop', session_id: 'r7-fim', cwd: 'C:\\Users\\Henrique\\a-fabrica', last_assistant_message: 'Pronto, li o arquivo.' }),
+      base,
+      'Stop'
+    );
+    const lf = ler(base, 'r7-fim');
+    conferir(lf !== null && lf['resposta'] === 'Pronto, li o arquivo.', 'OST 10: o fim da rodada traz a resposta da fabrica', `resposta ${String(lf?.['resposta'])}`);
+    const tf = traduzir({ ev: 'Stop', sid: 's', conteudo: true, resposta: 'Pronto, li o arquivo.' }, 7);
+    conferir(
+      tf.passo.resposta === 'Pronto, li o arquivo.' && tf.passo.agente === null,
+      'OST 10: a ponte publica a resposta do fim da rodada, e agente nulo e o principal',
+      `resposta ${String(tf.passo.resposta)}, agente ${String(tf.passo.agente)}`
+    );
+    const tn = traduzir({ ev: 'Stop', sid: 's', conteudo: false, resposta: 'texto que nao pode subir' }, 7);
+    conferir(tn.passo.resposta === null, 'OST 10: linha sem a marca de conteudo continua sem a resposta, falha fechada', `resposta ${String(tn.passo.resposta)}`);
+  }
+
   // ---- PARTE 3 ------------------------------------------------------------
   reg('');
   reg('PARTE 3, o gancho NAO atrapalhando a sessao do diretor, caso por caso');

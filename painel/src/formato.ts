@@ -77,6 +77,37 @@ export function horaComSegundos(data: Date | null): string {
   return `${DOIS(data.getHours())}:${DOIS(data.getMinutes())}:${DOIS(data.getSeconds())}`;
 }
 
+function mesmoDia(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+/*
+ * OST 10, pedido do diretor: hora SÓ quando é de hoje; de outro dia, a data
+ * junto. "15:41" hoje, "22/11 às 18:30" em outro dia do ano, "22/11/2025 às
+ * 18:30" em outro ano. Antes a tela de 23/11 mostrava 18:30 de um dia anterior
+ * como se fosse do mesmo dia.
+ */
+export function quandoCurto(data: Date | null, agora: Date = new Date()): string {
+  if (!data) return '';
+  if (mesmoDia(data, agora)) return horaCurta(data);
+  const dia = `${DOIS(data.getDate())}/${DOIS(data.getMonth() + 1)}`;
+  const ano = data.getFullYear() === agora.getFullYear() ? '' : `/${data.getFullYear()}`;
+  return `${dia}${ano} às ${horaCurta(data)}`;
+}
+
+/* Rótulo do dia na linha do tempo: "Hoje", "Ontem", "Sexta, 21 de novembro". */
+export function rotuloDoDia(data: Date, agora: Date = new Date()): string {
+  if (mesmoDia(data, agora)) return 'Hoje';
+  const ontem = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() - 1);
+  if (mesmoDia(data, ontem)) return 'Ontem';
+  const ano = data.getFullYear() === agora.getFullYear() ? '' : ` de ${data.getFullYear()}`;
+  return `${diaPorExtenso(data)}${ano}`;
+}
+
+export function chaveDoDia(data: Date | null): string {
+  return data ? `${data.getFullYear()}-${data.getMonth()}-${data.getDate()}` : 'sem-dia';
+}
+
 /* "hoje, 10:42", "ontem, 17:15", "11/10, 08:03". */
 export function dataAmigavel(data: Date | null, agora: Date = new Date()): string {
   if (!data) return 'sem data';

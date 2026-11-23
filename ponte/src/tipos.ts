@@ -100,6 +100,19 @@ export interface PassoAtividade {
   ferramenta: string | null;
   subagente: boolean;
   inicioSubagente: boolean;
+  /**
+   * OST 10, o que a tela precisa para dizer o que aconteceu. Todos passam pela
+   * mascara de credencial antes de subir e tem teto de tamanho.
+   *   alvo       comando, arquivo, padrao ou endereco da ferramenta
+   *   descricao  descricao da ferramenta, texto da resposta, modelo do init,
+   *              resultado do fim
+   *   agente     subagente que agiu; nulo e o agente principal da fabrica
+   *   agenteChamado  subagente que a ferramenta Agent (ou Task) chamou
+   */
+  alvo?: string | null;
+  descricao?: string | null;
+  agente?: string | null;
+  agenteChamado?: string | null;
   em?: Momento;
 }
 

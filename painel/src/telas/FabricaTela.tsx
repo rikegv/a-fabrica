@@ -22,7 +22,6 @@
 import { useMemo, useState } from 'react';
 import type { Firestore } from 'firebase/firestore';
 import {
-  ActivityTimeline,
   Button,
   CommandBox,
   FactoryHeader,
@@ -40,11 +39,12 @@ import {
   reiniciarFabrica,
   type ContextoDeEscrita
 } from '@/dados/escritas';
-import { usarAtividade, usarTarefas } from '@/dados/ouvintes';
+import { usarTarefas } from '@/dados/ouvintes';
 import type { EstadoDoPainel } from '@/dados/painel';
 import type { Fabrica } from '@/dados/tradutor';
-import { ordenarTarefas, traduzirAtividade, traduzirTarefa } from '@/dados/tradutor';
+import { ordenarTarefas, traduzirTarefa } from '@/dados/tradutor';
 import { consumoEmPartes, plural, tempoDecorrido } from '@/formato';
+import { LinhaDoTempo, usarLinhaDoTempo } from './LinhaDoTempo';
 import { TituloEditavel } from './renomear';
 import {
   Confirmacao,
@@ -60,7 +60,6 @@ import { type EstadoDaResposta } from './pedido';
 import { AVISOS, CONFIRMAR_ENCERRAR, motivoDaCaixaDeComando, motivoDasAcoesDaFabrica } from './textos';
 import { usarOrdem, type Ordem } from './usarOrdem';
 
-const PASSOS_NO_COMPUTADOR = 6;
 const TAREFAS_NO_COMPUTADOR = 6;
 
 /* As ordens de ciclo de vida da fabrica, no computador e no celular. Uma
@@ -160,12 +159,11 @@ export function FabricaTela({
   const pedidos = estado.porFabrica.get(fabricaId) ?? [];
   const pedido = pedidos[0];
 
-  const atividade = usarAtividade(base, fabricaId, PASSOS_NO_COMPUTADOR);
+  const linhaDoTempo = usarLinhaDoTempo(base, fabricaId);
   const tarefas = usarTarefas(base, fabricaId);
   const acoes = usarAcoesDaFabrica(escrita, fabrica, avisar);
   const caixa = usarCaixaDeComando(escrita, fabrica, avisar);
 
-  const passos = useMemo(() => atividade.itens.map(traduzirAtividade), [atividade.itens]);
   const listaDeTarefas = useMemo(
     () => ordenarTarefas(tarefas.itens.map((t) => traduzirTarefa(t, estado.agora))),
     [tarefas.itens, estado.agora]
@@ -204,25 +202,12 @@ export function FabricaTela({
   if (aba === 'atividade') {
     corpo = (
       <div className="gf-panel-body">
-        {atividade.erro ? (
-          <Falha mensagem={atividade.erro} />
-        ) : passos.length === 0 ? (
-          <Vazio
-            titulo={atividade.carregando ? 'Lendo a atividade' : 'Nenhum passo registrado'}
-            detalhe={
-              atividade.carregando
-                ? 'O painel está abrindo o ouvinte ao vivo desta fábrica.'
-                : 'Esta fábrica ainda não registrou passos na base. Cada passo que ela der aparece aqui, do mais recente para o mais antigo.'
-            }
-          />
-        ) : (
-          <>
-            <ActivityTimeline live={fabrica.state === 'running' || fabrica.state === 'approval'} items={passos} />
-            <span className="caption gf-faint pl-3">
-              {`Mostrando os ${passos.length} passos mais recentes. O histórico completo entra numa onda seguinte.`}
-            </span>
-          </>
-        )}
+        <LinhaDoTempo
+          dados={linhaDoTempo}
+          agentePrincipal={`agente ${fabrica.agent}`}
+          viva={fabrica.state === 'running' || fabrica.state === 'approval'}
+          agora={estado.agora}
+        />
       </div>
     );
   } else {
@@ -285,7 +270,7 @@ export function FabricaTela({
             value={aba}
             onChange={setAba}
             tabs={[
-              { id: 'atividade', label: 'Atividade', count: passos.length || undefined },
+              { id: 'atividade', label: 'Atividade', count: linhaDoTempo.total ?? (linhaDoTempo.carregados || undefined) },
               { id: 'tarefas', label: 'Tarefas', count: listaDeTarefas.length || undefined }
             ]}
           />
@@ -365,7 +350,7 @@ export function FabricaTela({
           />
           <KpiTile
             label="Passos"
-            value={String(atividade.itens[0]?.seq ?? passos.length)}
+            value={linhaDoTempo.total === null ? '...' : String(linhaDoTempo.total)}
             unit="registrados"
             hint={plural(pedidos.length, 'pedido parado', 'pedidos parados')}
           />

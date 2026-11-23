@@ -161,6 +161,8 @@ export interface EventoFabrica {
   ferramenta?: string;
   entrada?: Record<string, unknown>;
   inicioSubagente?: boolean;
+  /** OST 10: subagente que agiu, nulo quando foi o agente principal. */
+  agente?: string | null;
   estado?: string;
   usage?: Consumo;
   custo?: number;
@@ -336,6 +338,12 @@ export async function abrirFabrica(opcoes: OpcoesAbertura): Promise<EstadoAbertu
   if (opcoes.resumeId) options.resume = opcoes.resumeId;
 
   const medidor = new MedidorDeConsumo();
+  // OST 10: qual subagente cada chamada de Agent (ou Task) abriu, pelo id da
+  // chamada. Mensagem de subagente traz parent_tool_use_id, e e assim que a tela
+  // sabe QUEM agiu, §A.15.
+  const chamados = new Map<string, string>();
+  const quemAgiu = (pai: string | null): string | null =>
+    pai === null ? null : (chamados.get(pai) ?? 'subagente');
   for await (const m of query({ prompt, options })) {
     if (m.type === 'system' && m.subtype === 'init') {
       estado.sessionId = m.session_id;
@@ -362,19 +370,27 @@ export async function abrirFabrica(opcoes: OpcoesAbertura): Promise<EstadoAbertu
       const idDaMensagem = typeof msg.id === 'string' && msg.id.length > 0 ? msg.id : `sem-id-${m.uuid}`;
       const acrescimo = medidor.mensagem(idDaMensagem, msg.usage);
       if (acrescimo !== null) await opcoes.onConsumo?.(acrescimo);
+      const agente = quemAgiu(m.parent_tool_use_id);
       for (const b of m.message.content) {
         if (b.type === 'text') {
           estado.textoAoVivo += b.text;
-          await onEvento?.({ tipo: 'texto', sub, texto: b.text });
+          await onEvento?.({ tipo: 'texto', sub, texto: b.text, agente });
         } else if (b.type === 'thinking') {
-          await onEvento?.({ tipo: 'pensamento', sub });
+          await onEvento?.({ tipo: 'pensamento', sub, agente });
         } else if (b.type === 'tool_use') {
+          const entrada = (b.input ?? {}) as Record<string, unknown>;
+          const chamaSubagente = b.name === 'Task' || b.name === 'Agent';
+          if (chamaSubagente) {
+            const tipoDoSub = entrada['subagent_type'];
+            chamados.set(b.id, typeof tipoDoSub === 'string' && tipoDoSub.length > 0 ? tipoDoSub : 'general-purpose');
+          }
           await onEvento?.({
             tipo: 'ferramenta',
             sub,
             ferramenta: b.name,
-            entrada: (b.input ?? {}) as Record<string, unknown>,
-            inicioSubagente: b.name === 'Task',
+            entrada,
+            inicioSubagente: chamaSubagente,
+            agente,
           });
         }
       }
@@ -385,7 +401,7 @@ export async function abrirFabrica(opcoes: OpcoesAbertura): Promise<EstadoAbertu
       if (Array.isArray(conteudo)) {
         for (const b of conteudo) {
           if (typeof b === 'object' && b !== null && 'type' in b && b.type === 'tool_result') {
-            await onEvento?.({ tipo: 'resultado', sub: m.parent_tool_use_id !== null });
+            await onEvento?.({ tipo: 'resultado', sub: m.parent_tool_use_id !== null, agente: quemAgiu(m.parent_tool_use_id) });
           }
         }
       }

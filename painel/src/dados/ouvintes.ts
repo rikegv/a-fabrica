@@ -16,7 +16,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   collection,
+  getCountFromServer,
   limit as limitar,
+  where,
   onSnapshot,
   orderBy,
   query,
@@ -24,7 +26,7 @@ import {
   type FirestoreError,
   type Query
 } from 'firebase/firestore';
-import type { AprovacaoBase, AtividadeBase, FabricaBase, MaquinaBase, TarefaBase } from './tipos';
+import type { AprovacaoBase, AtividadeBase, ComandoBase, FabricaBase, MaquinaBase, TarefaBase } from './tipos';
 
 export interface Colecao<T> {
   itens: T[];
@@ -96,15 +98,74 @@ export function usarAprovacoes(base: Firestore | null): Colecao<AprovacaoBase> {
   return usarConsulta<AprovacaoBase>(consulta);
 }
 
+/*
+ * Atividade da fábrica, do mais NOVO para o mais antigo na consulta, os
+ * `quantos` mais recentes. A tela inverte para a ordem de leitura.
+ *
+ * OST 10, DEFEITO QUE ISTO CONSERTA, visto na tela do diretor: a consulta
+ * ordenava por `seq`, e o `seq` recomeça do zero a cada comando (fábrica aberta
+ * pelo painel) e a cada retomada da sessão (fábrica aberta na mão). Com dois
+ * comandos, os dois passos de seq 3 vinham juntos no topo, um das 15:39 e outro
+ * das 15:34, e a lista saía fora de ordem. Agora a ordem é a HORA DO SERVIDOR
+ * em que o passo foi gravado (`em`), que é única e só cresce. Consulta de um
+ * campo só, sem índice composto.
+ */
 export function usarAtividade(base: Firestore | null, fabricaId: string | null, quantos: number): Colecao<AtividadeBase> {
   const consulta = useMemo(
     () =>
       base && fabricaId
-        ? query(collection(base, 'fabricas', fabricaId, 'atividade'), orderBy('seq', 'desc'), limitar(quantos))
+        ? query(collection(base, 'fabricas', fabricaId, 'atividade'), orderBy('em', 'desc'), limitar(quantos))
         : null,
     [base, fabricaId, quantos]
   );
   return usarConsulta<AtividadeBase>(consulta);
+}
+
+/*
+ * OST 10: QUANTOS passos a fábrica tem na base, contados pelo servidor.
+ *
+ * O quadro "Passos registrados" lia o `seq` do passo do topo, e o `seq`
+ * recomeça a cada comando: a tela dizia 3 com 8 passos gravados. Agora é a
+ * contagem de verdade, refeita sempre que chega passo novo (`gatilho`).
+ */
+export function usarTotalDeAtividade(
+  base: Firestore | null,
+  fabricaId: string | null,
+  gatilho: string | null
+): number | null {
+  const [total, setTotal] = useState<number | null>(null);
+  useEffect(() => {
+    if (!base || !fabricaId) {
+      setTotal(null);
+      return;
+    }
+    let vivo = true;
+    getCountFromServer(collection(base, 'fabricas', fabricaId, 'atividade'))
+      .then((r) => {
+        if (vivo) setTotal(r.data().count);
+      })
+      .catch(() => {
+        if (vivo) setTotal(null);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [base, fabricaId, gatilho]);
+  return total;
+}
+
+/*
+ * OST 10: as ordens que o diretor mandou para ESTA fábrica pelo painel. É a
+ * própria fila de comandos, que a trilha guarda para sempre, com a situação
+ * (pendente ou entregue). Filtro de um campo só, sem índice composto; a ordem é
+ * feita na tela.
+ */
+export function usarComandosDaFabrica(base: Firestore | null, fabricaId: string | null): Colecao<ComandoBase> {
+  const consulta = useMemo(
+    () => (base && fabricaId ? query(collection(base, 'comandos'), where('fabricaId', '==', fabricaId)) : null),
+    [base, fabricaId]
+  );
+  return usarConsulta<ComandoBase>(consulta);
 }
 
 export function usarTarefas(base: Firestore | null, fabricaId: string | null): Colecao<TarefaBase> {
