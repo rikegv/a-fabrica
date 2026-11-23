@@ -224,6 +224,13 @@ Depois diga à fábrica: **"suba para a main"**. Ela faz o avanço da main até 
 ! rm -f .claude/state/PROD_subir-main-ost9
 ```
 
+### Achado do commit: o Git deste PC não tem identidade
+Os commits desta noite levaram a sua autoria pelas variáveis de ambiente do próprio comando, sem gravar configuração nenhuma na máquina, §A.9. Para você commitar na mão, uma vez:
+```
+git config --global user.name "Henrique Vieira"
+git config --global user.email "<o seu e-mail>"
+```
+
 ### Decisões que ficam com você
 1. **Configuração geral do Claude Code.** Proteger o gate também para sessão aberta em subpasta, com regra de caminho absoluto em `~/.claude/settings.json`. É só acrescentar, §A.9.
 2. **Transcrição de projeto não liberado:** ler só os números, como está, ou não abrir.
