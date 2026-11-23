@@ -92,7 +92,13 @@ async function principal(): Promise<void> {
 
     // E conferir que trancou, em vez de afirmar que trancou. Afirmacao de
     // protecao sem conferencia foi exatamente o que a seguranca vetou antes.
-    const vereditos = [conferirProtecao(PASTA_LOCAL), conferirProtecao(CAMINHO_CONFIG), conferirProtecao(caminhoSessao)];
+    // Pasta com a mesma exigencia que o servico faz ao subir (ponte.ts): herança
+    // quebrada. Antes a instalacao conferia a pasta mais frouxo que o servico.
+    const vereditos = [
+      conferirProtecao(PASTA_LOCAL, { exigirHerancaQuebrada: true }),
+      conferirProtecao(CAMINHO_CONFIG),
+      conferirProtecao(caminhoSessao),
+    ];
     for (const v of vereditos) console.log(`  ${v.protegido ? 'TRANCADO' : 'ABERTO'}: ${v.motivo}`);
     if (arquivoRelato) {
       appendFileSync(

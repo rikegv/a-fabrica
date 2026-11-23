@@ -22,6 +22,11 @@
 // Projeto IGNORADO nem chega aqui: o gancho dele nao escreve na fila, entao a
 // ponte nem conhece o caminho da transcricao.
 //
+// DECISAO DO DIRETOR, 23/11/2026, registrada no §A.23 do CLAUDE.md: a ponte PODE
+// abrir a transcricao de projeto NAO LIBERADO para tirar so o consumo e o nome do
+// modelo. Nenhum texto sai dali. Isto fecha a decisao 2 pendente em
+// docs/ost9-noite.md.
+//
 // O QUE NAO COBRE, dito para nao parecer mais do que e
 // ----------------------------------------------------
 // Se uma versao do Claude Code gravar o subagente num arquivo separado, o consumo

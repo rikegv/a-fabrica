@@ -8,8 +8,9 @@
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir, userInfo } from 'node:os';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { aplicarProtecao } from './protecaoSessao.js';
 
 export const DIRETOR = 'henrique.vieira@soulan.com.br';
 export const PROJETO_NUVEM = 'a-fabrica-soulan';
@@ -141,18 +142,14 @@ export function garantirPastaLocal(): void {
  */
 export function protegerPastaLocal(): string {
   garantirPastaLocal();
-  const usuario = `${userInfo().username}`;
-  const linhas: string[] = [];
-  const rodar = (args: string[]): void => {
-    try {
-      linhas.push(`icacls ${args.join(' ')}`);
-      linhas.push(execFileSync('icacls', args, { encoding: 'utf8' }).trim());
-    } catch (e) {
-      linhas.push(`falhou: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  };
-  rodar([PASTA_LOCAL, '/inheritance:r']);
-  rodar([PASTA_LOCAL, '/grant:r', `${usuario}:(OI)(CI)F`]);
-  rodar([PASTA_LOCAL]);
+  // A mesma tranca do arquivo de sessao, que nao confia no /inheritance:r
+  // sozinho. O porque esta em protecaoSessao.ts e em docs/tranca-da-ponte.md.
+  const linhas = [aplicarProtecao(PASTA_LOCAL)];
+  try {
+    linhas.push(`icacls ${PASTA_LOCAL}`);
+    linhas.push(execFileSync('icacls', [PASTA_LOCAL], { encoding: 'utf8' }).trim());
+  } catch (e) {
+    linhas.push(`falhou: ${e instanceof Error ? e.message : String(e)}`);
+  }
   return linhas.join('\n');
 }

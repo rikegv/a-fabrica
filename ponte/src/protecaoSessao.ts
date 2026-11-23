@@ -20,7 +20,7 @@
 // é a do dono, a resposta é NÃO PROTEGIDO. Nunca o contrário.
 
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { userInfo } from 'node:os';
 
 export interface EntradaDeAcesso {
@@ -185,9 +185,20 @@ export function conferirProtecao(
 /**
  * Tranca um caminho para o dono: quebra a herança e deixa só ele.
  * Devolve a saída crua dos comandos, para evidência.
+ *
+ * NÃO CONFIAR NO /inheritance:r SOZINHO. Ele só remove as entradas herdadas
+ * quando a lista de acesso traz a marca de herança automática (AI). Sem a marca,
+ * ele as COPIA como entradas próprias e ainda diz "processado com sucesso". Foi o
+ * que aconteceu no PC novo do diretor, cujo perfil não tem a marca, e a pasta
+ * ficou com SISTEMA e Administradores. Investigação em docs/tranca-da-ponte.md.
+ *
+ * Por isso, depois de quebrar a herança e dar acesso ao dono, lê a lista e remove
+ * por nome toda identidade que não seja o dono. Quem decide se ficou trancado
+ * continua sendo conferirProtecao, nunca esta função.
  */
 export function aplicarProtecao(caminho: string): string {
   const usuario = userInfo().username;
+  const ehPasta = existsSync(caminho) && statSync(caminho).isDirectory();
   const linhas: string[] = [];
   const rodar = (args: string[]): void => {
     linhas.push(`icacls ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`);
@@ -198,7 +209,23 @@ export function aplicarProtecao(caminho: string): string {
     }
   };
   rodar([caminho, '/inheritance:r']);
-  rodar([caminho, '/grant:r', `${usuario}:F`]);
+  // Pasta passa o acesso adiante para o que nascer dentro dela, arquivo não.
+  rodar([caminho, '/grant:r', ehPasta ? `${usuario}:(OI)(CI)F` : `${usuario}:F`]);
+
+  let entradas: EntradaDeAcesso[] = [];
+  try {
+    entradas = lerAcesso(caminho).entradas;
+  } catch (e) {
+    // Não deu para ler: não remove nada, e a conferência depois responde "aberto".
+    linhas.push(`falhou ao ler a lista de acesso: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  const donos = nomesDoDono();
+  const estranhas = [...new Set(entradas.filter((e) => !donos.includes(e.identidade.toLowerCase())).map((e) => e.identidade))];
+  for (const identidade of estranhas) {
+    // SID sem nome resolvido vem cru no icacls e precisa do asterisco para ser aceito.
+    const alvo = /^S-1-\d/.test(identidade) ? `*${identidade}` : identidade;
+    rodar([caminho, '/remove', alvo]);
+  }
   return linhas.join('\n');
 }
 

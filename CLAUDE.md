@@ -181,3 +181,5 @@ CONTEÚDO somente de projeto liberado, um a um, numa lista explícita: texto do 
 A comparação é por fronteira de caminho, igual ou seguido de separador. Liberar a-fabrica não alcança a-fabrica-lab nem qualquer pasta de nome parecido.
 
 Quem decide é o gancho, dentro do projeto, e o que não está liberado não chega nem à fila em disco. Assim não existe conteúdo guardado esperando para vazar depois.
+
+TRANSCRIÇÃO DE PROJETO NÃO LIBERADO, decisão do diretor em 23/11/2026: a ponte PODE abrir a transcrição que o Claude Code grava da sessão, também de projeto não liberado, para tirar de lá somente os números de consumo (tokens) e o nome do modelo. Nenhum texto sai dali: não é guardado, devolvido, registrado nem publicado, nem em mensagem de erro. Número de token e nome de modelo são metadado. Projeto ignorado continua sem nada: o gancho dele não escreve na fila, e a ponte nem conhece o caminho da transcrição.

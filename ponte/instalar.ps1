@@ -45,8 +45,22 @@ Write-Host ''
 Write-Host '1. Preparando a pasta local da ponte'
 New-Item -ItemType Directory -Force -Path $configDir | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $configDir 'locks') | Out-Null
+# O /inheritance:r sozinho nao basta: quando o perfil nao tem a marca de heranca
+# automatica, ele COPIA Sistema e Administradores em vez de remover, e ainda diz
+# que deu certo. Por isso, depois dele, toda identidade que nao seja voce sai por
+# nome. A conferencia de verdade e a do passo 4. Ver docs\tranca-da-ponte.md.
+$meuSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 icacls $configDir /inheritance:r | Out-Null
-icacls $configDir /grant:r "$($env:USERNAME):(OI)(CI)F" | Out-Null
+if ($LASTEXITCODE -ne 0) { throw 'nao deu para quebrar a heranca da pasta local' }
+icacls $configDir /grant:r "*$($meuSid):(OI)(CI)F" | Out-Null
+if ($LASTEXITCODE -ne 0) { throw 'nao deu para dar acesso ao seu usuario na pasta local' }
+foreach ($regra in @((Get-Acl -LiteralPath $configDir).Access)) {
+  $sid = $regra.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value
+  if ($sid -ne $meuSid) {
+    icacls $configDir /remove "*$sid" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "nao deu para tirar $($regra.IdentityReference) da pasta local" }
+  }
+}
 Write-Host "   pasta $configDir, so o seu usuario le e escreve"
 
 # ---------------------------------------------------------------------------

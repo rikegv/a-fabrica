@@ -107,12 +107,34 @@ case "$MOTIVO" in
   'verbo de deploy ou push')
     if printf '%s' "$COMMAND" | grep -Eq '(^|[^a-z])(main|master)([^a-z]|$)'; then
       PESO='pesado'
-    elif printf '%s' "$COMMAND" | grep -Eq 'git[[:space:]]+push' &&
-      ! printf '%s' "$COMMAND" | grep -Eq 'git[[:space:]]+push[^|;&]*[[:space:]][^-][^[:space:]]*[[:space:]][^-]'; then
-      RAMO_DE_AGORA="$(git -C "$PROJECT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
-      case "$RAMO_DE_AGORA" in
-        main | master) PESO='pesado' ;;
-      esac
+    elif printf '%s' "$COMMAND" | grep -Eq 'git[[:space:]]+push'; then
+      # A linha NOMEIA o ramo de destino, ou empurra o ramo de agora? Conserto de
+      # scripts/CONSERTO-PENDENTE-DO-GATE.md, aplicado na OST 9.
+      #
+      # Conta as palavras depois de "git push" que nao sao opcao. Nenhuma: push
+      # pelado. Uma: so o remoto, e o ramo empurrado e o de agora. HEAD e @ tambem
+      # querem dizer "o ramo de agora", entao nao contam como nome. Em todos esses
+      # casos, parado em cima da main, e push para a main, e seria furo deixar
+      # passar so porque a palavra main nao esta escrita na linha.
+      RESTO="$(printf '%s' "$COMMAND" | sed -n 's/.*git[[:space:]]\{1,\}push[[:space:]]*//p' | sed 's/[;&|].*//')"
+      NOMES=0
+      set -f
+      for PEDACO in $RESTO; do
+        case "$PEDACO" in
+          -*) ;;
+          HEAD | @) ;;
+          *) NOMES=$((NOMES + 1)) ;;
+        esac
+      done
+      set +f
+      if [ "$NOMES" -le 1 ]; then
+        # symbolic-ref responde tambem num repositorio sem commit nenhum, onde
+        # rev-parse --abbrev-ref devolve so "HEAD".
+        RAMO_DE_AGORA="$(git -C "$PROJECT_DIR" symbolic-ref --short -q HEAD 2>/dev/null || git -C "$PROJECT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
+        case "$RAMO_DE_AGORA" in
+          main | master) PESO='pesado' ;;
+        esac
+      fi
     fi
     # Publicacao por outro verbo que nao e push e sempre producao.
     if printf '%s' "$COMMAND" | grep -Eiq 'deploy|docker[[:space:]]+push|kubectl[[:space:]]+apply'; then
