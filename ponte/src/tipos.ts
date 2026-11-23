@@ -76,6 +76,20 @@ export interface Fabrica {
    * deduzido do nome da maquina, que seria adivinhacao.
    */
   teste?: boolean;
+  /**
+   * OST 9: NOME dado pelo diretor. Quem escreve e o painel: na abertura, pela
+   * ordem de abrir, e depois por renomear. A ponte copia o nome da ordem de abrir
+   * UMA vez, no nascimento, e nunca mais escreve este campo. Fabrica aberta na
+   * mao nasce sem nome e o painel mostra "Fabrica externa".
+   */
+  nome?: string;
+  /**
+   * OST 9: relogio da TAREFA em execucao, no lugar do tempo de parede desde a
+   * abertura. Comeco e fim do comando que esta rodando, ou do ultimo que rodou.
+   * Fim nulo com comeco gravado quer dizer tarefa em andamento.
+   */
+  tarefaInicio?: Momento;
+  tarefaFim?: Momento;
 }
 
 export type TipoAtividade = 'init' | 'texto' | 'pensamento' | 'ferramenta' | 'resultado' | 'fim';
@@ -149,6 +163,8 @@ export interface ComandoTomado {
   acaoBruta: string | null;
   agente: string | null;
   modelo: string | null;
+  /** OST 9: nome digitado pelo diretor na ordem de abrir. So vale em `abrir`. */
+  nome: string | null;
 }
 
 export type Origem = 'fato' | 'ponte' | 'fato mais leitura da ponte';

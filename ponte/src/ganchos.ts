@@ -62,7 +62,8 @@ import {
 import { join } from 'node:path';
 import { addDoc, collection, doc, getDoc, serverTimestamp, type Firestore } from 'firebase/firestore';
 import { PASTA_LOCAL, ROTULO_DE_TESTE } from './config.js';
-import { atualizarFabrica } from './base.js';
+import { atualizarFabrica, somarConsumoDaFabrica } from './base.js';
+import { lerTranscricao, type MarcaDaTranscricao } from './transcricao.js';
 import { mascarar } from './mascara.js';
 import type { EstadoFabrica } from './tipos.js';
 
@@ -161,6 +162,12 @@ export interface LinhaDeGancho {
   falhouNoFim?: unknown;
   aviso?: unknown;
   custoMs?: unknown;
+  /**
+   * OST 9: caminho da transcricao que o proprio Claude Code grava da sessao. E
+   * METADADO, um caminho local, e nunca sai da maquina: a ponte le dali SO os
+   * numeros de token e o nome do modelo, veja transcricao.ts.
+   */
+  transcricao?: unknown;
 }
 
 function texto(v: unknown): string | null {
@@ -337,7 +344,19 @@ export function traduzir(linha: LinhaDeGancho, seq: number): { passo: PassoPubli
 interface Marcas {
   versao: 1;
   /** Nome do arquivo de fila, para bytes ja publicados e proxima sequencia. */
-  arquivos: Record<string, { bytes: number; seq: number }>;
+  arquivos: Record<string, MarcaDoArquivo>;
+}
+
+/** O que a ponte lembra de cada arquivo de fila entre uma passada e outra. */
+interface MarcaDoArquivo {
+  bytes: number;
+  seq: number;
+  /** OST 9: existe tarefa aberta, comecou com comando do diretor e nao parou. */
+  tarefaAberta?: boolean;
+  /** OST 9: ate onde a transcricao desta sessao ja foi lida para consumo. */
+  transcricao?: MarcaDaTranscricao;
+  /** OST 9: ultimo modelo gravado na base, para nao regravar a cada passada. */
+  modelo?: string;
 }
 
 function lerMarcas(): Marcas {
@@ -346,7 +365,7 @@ function lerMarcas(): Marcas {
     const j: unknown = JSON.parse(readFileSync(CAMINHO_MARCAS, 'utf8'));
     const a = typeof j === 'object' && j !== null ? (j as Record<string, unknown>)['arquivos'] : null;
     if (typeof a === 'object' && a !== null) {
-      return { versao: 1, arquivos: a as Record<string, { bytes: number; seq: number }> };
+      return { versao: 1, arquivos: a as Record<string, MarcaDoArquivo> };
     }
   } catch {
     // Marca ilegivel vale como marca ausente. Pior caso: republica o que ja subiu.
@@ -367,6 +386,8 @@ export interface ResultadoDaVarredura {
   sessoesEncerradas: number;
   linhasIlegiveis: number;
   mascaradas: number;
+  /** OST 9: quantas sessoes tiveram consumo somado nesta passada. */
+  consumoSomado: number;
   erros: string[];
 }
 
@@ -389,6 +410,7 @@ export async function varrerFila(
     sessoesEncerradas: 0,
     linhasIlegiveis: 0,
     mascaradas: 0,
+    consumoSomado: 0,
     erros: [],
   };
   if (!existsSync(PASTA_FILA)) return r;
@@ -429,6 +451,9 @@ export async function varrerFila(
     const linhas = completo.split('\n').filter((l) => l.trim().length > 0);
 
     let seq = marca.seq;
+    let tarefaAberta = marca.tarefaAberta === true;
+    let caminhoDaTranscricao: string | null = marca.transcricao?.caminho ?? null;
+    let fabricaDaSessao: string | null = null;
     let encerrou = false;
     let falhouNesteArquivo = false;
     // Bytes publicados com sucesso. Cresce linha por linha, DEPOIS da publicacao,
@@ -490,6 +515,19 @@ export async function varrerFila(
         }
         await addDoc(collection(db, 'fabricas', fabricaId, 'atividade'), { ...passo, em: serverTimestamp() });
         if (estado !== null) await atualizarFabrica(db, fabricaId, { estado });
+        // OST 9: relogio da TAREFA. Comeca no comando do diretor e para no fim da
+        // rodada. A hora e a que o gancho anotou, no instante do evento.
+        const quando = texto(linha.t) ?? new Date().toISOString();
+        if (passo.evento === 'UserPromptSubmit') {
+          await atualizarFabrica(db, fabricaId, { tarefaInicio: quando, tarefaFim: null });
+          tarefaAberta = true;
+        } else if ((passo.evento === 'Stop' || passo.evento === 'SessionEnd') && tarefaAberta) {
+          await atualizarFabrica(db, fabricaId, { tarefaFim: quando });
+          tarefaAberta = false;
+        }
+        fabricaDaSessao = fabricaId;
+        const caminhoNaLinha = texto(linha.transcricao);
+        if (caminhoNaLinha !== null) caminhoDaTranscricao = caminhoNaLinha;
         r.passosPublicados++;
         seq++;
         bytesOk += bytesDestaLinha;
@@ -503,8 +541,38 @@ export async function varrerFila(
       }
     }
 
+    // OST 9: consumo e modelo da sessao aberta na mao, lidos da transcricao. So
+    // depois dos passos, para a fabrica ja existir na base, e so se nada falhou.
+    let marcaDaTranscricao = marca.transcricao;
+    let modeloGravado = marca.modelo;
+    if (!falhouNesteArquivo && caminhoDaTranscricao !== null && fabricaDaSessao !== null) {
+      const fabricaDoArquivo = fabricaDaSessao;
+      const leitura = lerTranscricao(caminhoDaTranscricao, marca.transcricao ?? null);
+      try {
+        if (leitura.acrescimo !== null) {
+          await somarConsumoDaFabrica(db, fabricaDoArquivo, leitura.acrescimo);
+          r.consumoSomado++;
+        }
+        if (leitura.modelo !== null && leitura.modelo !== modeloGravado) {
+          await atualizarFabrica(db, fabricaDoArquivo, { modelo: leitura.modelo });
+          modeloGravado = leitura.modelo;
+        }
+        // A marca da transcricao so anda depois de o consumo subir. Queda no meio
+        // faz ler de novo; as ultimas mensagens seguram a repeticao.
+        marcaDaTranscricao = leitura.marca;
+      } catch (e) {
+        r.erros.push(`fabrica ${fabricaDoArquivo}, consumo: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+
     // A marca so avanca pelo que de fato subiu.
-    marcas.arquivos[nome] = { bytes: bytesOk, seq };
+    marcas.arquivos[nome] = {
+      bytes: bytesOk,
+      seq,
+      tarefaAberta,
+      ...(marcaDaTranscricao !== undefined ? { transcricao: marcaDaTranscricao } : {}),
+      ...(modeloGravado !== undefined ? { modelo: modeloGravado } : {}),
+    };
 
     if (encerrou && !falhouNesteArquivo) {
       // §A.17: movido com data e hora no nome, nunca apagado.
@@ -651,6 +719,7 @@ export function iniciarPublicadorDeGanchos(
     sessoesEncerradas: 0,
     linhasIlegiveis: 0,
     mascaradas: 0,
+    consumoSomado: 0,
     erros: [],
   };
   if (!soltarTrava) {

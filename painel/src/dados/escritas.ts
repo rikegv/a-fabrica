@@ -147,6 +147,8 @@ interface Ordem {
   agente?: string;
   modelo?: string;
   conversationId?: string;
+  /* OST 9: nome da fábrica, só na ordem de abrir. */
+  nome?: string;
 }
 
 async function escreverComando(ctx: ContextoDeEscrita, ordem: Ordem, oQue: string): Promise<Resultado> {
@@ -173,6 +175,7 @@ async function escreverComando(ctx: ContextoDeEscrita, ordem: Ordem, oQue: strin
   if (ordem.agente) documento.agente = ordem.agente;
   if (ordem.modelo) documento.modelo = ordem.modelo;
   if (ordem.conversationId) documento.conversationId = ordem.conversationId;
+  if (ordem.nome) documento.nome = ordem.nome;
 
   try {
     const criado = await addDoc(collection(pronto.base, 'comandos'), documento);
@@ -183,6 +186,8 @@ async function escreverComando(ctx: ContextoDeEscrita, ordem: Ordem, oQue: strin
 }
 
 export interface DadosDeAbertura {
+  /** OST 9: nome que o diretor dá à fábrica. Obrigatório. */
+  nome: string;
   /** Pasta do projeto na maquina do diretor. */
   cwd: string;
   agente: string;
@@ -203,6 +208,10 @@ export async function abrirFabrica(
   ctx: ContextoDeEscrita,
   dados: DadosDeAbertura
 ): Promise<AberturaRegistrada | { ok: false; erro: string }> {
+  const nome = limparNome(dados.nome);
+  if (!nome) {
+    return { ok: false, erro: 'Dê um nome à fábrica antes de abrir. É por ele que você vai achá-la no painel.' };
+  }
   const cwd = dados.cwd.trim();
   if (!cwd) {
     return { ok: false, erro: 'Escolha a pasta do projeto ou escreva o caminho dela antes de abrir a fábrica.' };
@@ -216,12 +225,61 @@ export async function abrirFabrica(
       acao: 'abrir',
       cwd,
       agente: dados.agente.trim() || 'claude code',
-      modelo: dados.modelo?.trim() || undefined
+      modelo: dados.modelo?.trim() || undefined,
+      nome
     },
     'a abertura da fábrica'
   );
   if (!resultado.ok) return resultado;
   return { ok: true, id: resultado.id, fabricaId };
+}
+
+/* ---------- nome da fabrica, OST 9 ---------- */
+
+/* O mesmo teto que a ponte aplica. */
+export const TETO_NOME = 80;
+
+export function limparNome(bruto: string): string {
+  return bruto.replace(/\s+/g, ' ').trim().slice(0, TETO_NOME);
+}
+
+/*
+ * Renomeia a fábrica, em QUALQUER estado, pedido do diretor.
+ *
+ * Diferente das ordens, isto não passa pela ponte: é o painel escrevendo um
+ * campo de exibição direto na fábrica, que a regra do Firestore já permite ao
+ * diretor com a hora do servidor em atualizadoEm. Por isso funciona com a ponte
+ * offline e com a fábrica concluída. updateDoc, e não setDoc: renomear nunca
+ * cria fábrica que não existe.
+ *
+ * A ponte nunca escreve este campo depois do nascimento, então o nome digitado
+ * não é desfeito.
+ */
+export async function renomearFabrica(
+  ctx: ContextoDeEscrita,
+  dados: { fabricaId: string; nome: string }
+): Promise<Resultado> {
+  if (!ctx.base) {
+    return {
+      ok: false,
+      erro: 'O painel não está ligado à base agora, então o nome não foi gravado. Recarregue o painel e tente de novo.'
+    };
+  }
+  const quem = ctx.usuario;
+  const email = (quem?.email ?? '').toLowerCase();
+  if (!quem || !email || email !== EMAIL_DO_DIRETOR || !quem.emailVerified) {
+    return { ok: false, erro: 'A sua sessão não está mais válida, então o nome não foi gravado. Entre de novo e repita.' };
+  }
+  const fabricaId = dados.fabricaId.trim();
+  if (!fabricaId) return { ok: false, erro: 'Esta fábrica não tem identificador na base, então o nome não foi gravado.' };
+  const nome = limparNome(dados.nome);
+  if (!nome) return { ok: false, erro: 'Escreva o nome antes de salvar. Nome vazio não é gravado.' };
+  try {
+    await updateDoc(doc(ctx.base, 'fabricas', fabricaId), { nome, atualizadoEm: serverTimestamp() });
+    return { ok: true, id: fabricaId };
+  } catch (erro) {
+    return { ok: false, erro: mensagemDoErro(erro, 'o nome novo') };
+  }
 }
 
 /* Manda comando para fabrica que ja existe. */

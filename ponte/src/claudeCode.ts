@@ -198,6 +198,94 @@ export interface OpcoesAbertura {
   agents?: Record<string, AgentDefinition> | null;
   /** Como a ponte interrompe esta sessao, para encerrar e pausar. */
   controle?: AbortController | null;
+  /**
+   * Consumo AO VIVO, OST 9. Recebe so o que cresceu desde a ultima chamada, campo
+   * por campo, nunca o total. Quem recebe soma na base. Veja MedidorDeConsumo.
+   */
+  onConsumo?: (acrescimo: Record<string, number>) => void | Promise<void>;
+}
+
+/** Os quatro campos do `usage` do kit que viram token na tela. */
+export const CAMPOS_DE_CONSUMO = [
+  'input_tokens',
+  'output_tokens',
+  'cache_read_input_tokens',
+  'cache_creation_input_tokens',
+] as const;
+type CampoDeConsumo = (typeof CAMPOS_DE_CONSUMO)[number];
+type Contagem = Record<CampoDeConsumo, number>;
+
+function zerada(): Contagem {
+  return { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 };
+}
+
+function numero(v: unknown): number {
+  return typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0;
+}
+
+/**
+ * MEDIDOR DE CONSUMO, o conserto da OST 9.
+ *
+ * O defeito, do Claude Code ate a tela: a ponte so gravava `consumo` quando
+ * chegava a mensagem de resultado, que e o FIM do comando. Enquanto a fabrica
+ * trabalhava, o campo nao existia, e o painel dizia "consumo nao medido" para
+ * justamente quem estava gastando; o indicador do dia somava so quem ja tinha
+ * terminado. E no fim de cada comando o valor era SUBSTITUIDO pelo do comando
+ * da vez, entao fabrica com tres comandos mostrava o consumo do ultimo.
+ *
+ * O que mede agora, sem estimar nada:
+ *   1. Cada mensagem do assistente traz o `usage` real dela. O kit entrega a
+ *      mesma mensagem mais de uma vez enquanto ela cresce (um bloco por vez, com
+ *      o mesmo identificador), entao o medidor guarda o maior valor visto por
+ *      mensagem e so repassa o que cresceu. Mensagem repetida nao conta duas vezes.
+ *   2. No resultado, o `usage` do kit e o total oficial do comando. Se ele for
+ *      maior que o que ja foi somado ao vivo, entra a diferenca; se for menor,
+ *      nada sai. O total do comando fica igual ao maior dos dois, que sao os dois
+ *      numeros medidos, nenhum inventado.
+ */
+export class MedidorDeConsumo {
+  private readonly porMensagem = new Map<string, Contagem>();
+  private readonly somado: Contagem = zerada();
+
+  /** Mensagem do assistente. Devolve o acrescimo, ou null se nada cresceu. */
+  mensagem(id: string, usage: unknown): Contagem | null {
+    if (typeof usage !== 'object' || usage === null) return null;
+    const u = usage as Record<string, unknown>;
+    const antes = this.porMensagem.get(id) ?? zerada();
+    const agora = zerada();
+    const acrescimo = zerada();
+    let cresceu = false;
+    for (const c of CAMPOS_DE_CONSUMO) {
+      agora[c] = Math.max(antes[c], numero(u[c]));
+      acrescimo[c] = agora[c] - antes[c];
+      if (acrescimo[c] > 0) cresceu = true;
+    }
+    this.porMensagem.set(id, agora);
+    if (!cresceu) return null;
+    for (const c of CAMPOS_DE_CONSUMO) this.somado[c] += acrescimo[c];
+    return acrescimo;
+  }
+
+  /** Resultado do comando. Devolve so a diferenca que faltou, ou null. */
+  resultado(usage: unknown): Contagem | null {
+    if (typeof usage !== 'object' || usage === null) return null;
+    const u = usage as Record<string, unknown>;
+    const falta = zerada();
+    let faltou = false;
+    for (const c of CAMPOS_DE_CONSUMO) {
+      const d = numero(u[c]) - this.somado[c];
+      if (d > 0) {
+        falta[c] = d;
+        this.somado[c] += d;
+        faltou = true;
+      }
+    }
+    return faltou ? falta : null;
+  }
+
+  total(): Contagem {
+    return { ...this.somado };
+  }
 }
 
 /**
@@ -247,6 +335,7 @@ export async function abrirFabrica(opcoes: OpcoesAbertura): Promise<EstadoAbertu
   };
   if (opcoes.resumeId) options.resume = opcoes.resumeId;
 
+  const medidor = new MedidorDeConsumo();
   for await (const m of query({ prompt, options })) {
     if (m.type === 'system' && m.subtype === 'init') {
       estado.sessionId = m.session_id;
@@ -267,6 +356,12 @@ export async function abrirFabrica(opcoes: OpcoesAbertura): Promise<EstadoAbertu
     }
     if (m.type === 'assistant') {
       const sub = m.parent_tool_use_id !== null;
+      // Consumo ao vivo, por mensagem, sem contar a mesma mensagem duas vezes.
+      // Mensagem de subagente tambem gasta, e entra igual.
+      const msg = m.message as { id?: unknown; usage?: unknown };
+      const idDaMensagem = typeof msg.id === 'string' && msg.id.length > 0 ? msg.id : `sem-id-${m.uuid}`;
+      const acrescimo = medidor.mensagem(idDaMensagem, msg.usage);
+      if (acrescimo !== null) await opcoes.onConsumo?.(acrescimo);
       for (const b of m.message.content) {
         if (b.type === 'text') {
           estado.textoAoVivo += b.text;
@@ -297,6 +392,9 @@ export async function abrirFabrica(opcoes: OpcoesAbertura): Promise<EstadoAbertu
       continue;
     }
     if (m.type === 'result') {
+      // O total oficial do comando fecha a conta do que o ao vivo nao viu.
+      const falta = medidor.resultado(m.usage);
+      if (falta !== null) await opcoes.onConsumo?.(falta);
       estado.usage = m.usage as unknown as Consumo;
       estado.resultado = m.subtype;
       estado.custo = m.total_cost_usd;

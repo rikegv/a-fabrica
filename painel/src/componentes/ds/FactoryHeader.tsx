@@ -10,6 +10,7 @@
      porque §A.4 fecha a lista de estados (ver seção 3 do contrato da Onda 2).
    - busy desabilita os tres enquanto a ordem anterior esta sendo registrada, e
      assim a mesma ordem nao entra duas vezes na fila. */
+import type { ReactNode } from 'react';
 import { Button } from './Button';
 import { StateBadge } from './StateBadge';
 import type { FactoryState } from './tipos';
@@ -26,6 +27,8 @@ export interface FactoryHeaderProps {
   actionsDisabledReason?: string | null;
   paused?: boolean;
   busy?: boolean;
+  /* OST 9: titulo no lugar do h1, para o nome editavel. */
+  titleNode?: ReactNode;
 }
 
 export function FactoryHeader({
@@ -39,7 +42,8 @@ export function FactoryHeader({
   onStop,
   actionsDisabledReason,
   paused,
-  busy
+  busy,
+  titleNode
 }: FactoryHeaderProps) {
   const pausada = paused ?? state === 'idle';
   const off = Boolean(actionsDisabledReason) || busy === true;
@@ -47,7 +51,7 @@ export function FactoryHeader({
     <header className="gf-fhead">
       <div className="gf-fhead-main">
         <div className="gf-fhead-title">
-          <h1 className="title-lg">{project}</h1>
+          {titleNode ?? <h1 className="title-lg">{project}</h1>}
           <StateBadge state={state} size="lg" />
           {paused ? <span className="caption gf-muted">pausada por você</span> : null}
         </div>

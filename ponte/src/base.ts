@@ -19,6 +19,7 @@ import {
   getDoc,
   getDocs,
   getFirestore,
+  increment,
   onSnapshot,
   query,
   runTransaction,
@@ -122,6 +123,28 @@ export function iniciarHeartbeat(
 
 export function atualizarFabrica(db: Firestore, fabricaId: string, dados: Partial<Fabrica>): Promise<void> {
   return setDoc(doc(db, 'fabricas', fabricaId), { fabricaId, atualizadoEm: serverTimestamp(), ...dados }, { merge: true });
+}
+
+/**
+ * OST 9: SOMA consumo na fabrica, campo por campo, com incremento do proprio
+ * Firestore. Nunca substitui: duas pontes, dois comandos ou uma reentrega somam
+ * certo, sem ler antes de escrever. Campo zerado nao vai.
+ */
+export function somarConsumoDaFabrica(
+  db: Firestore,
+  fabricaId: string,
+  acrescimo: Record<string, number>
+): Promise<void> {
+  const consumo: Record<string, ReturnType<typeof increment>> = {};
+  for (const [campo, valor] of Object.entries(acrescimo)) {
+    if (typeof valor === 'number' && Number.isFinite(valor) && valor > 0) consumo[campo] = increment(valor);
+  }
+  if (Object.keys(consumo).length === 0) return Promise.resolve();
+  return setDoc(
+    doc(db, 'fabricas', fabricaId),
+    { fabricaId, atualizadoEm: serverTimestamp(), consumo },
+    { merge: true }
+  );
 }
 
 export function publicarAtividade(
@@ -286,6 +309,7 @@ export async function tomarComando(db: Firestore, comandoId: string): Promise<Co
         acaoBruta: leitura.bruta,
         agente: textoDe(dado, 'agente'),
         modelo: textoDe(dado, 'modelo'),
+        nome: textoDe(dado, 'nome'),
       };
     });
   } catch {

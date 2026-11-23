@@ -20,7 +20,7 @@ import { join } from 'node:path';
 import { PASTA_TRAVAS, garantirPastaLocal } from './config.js';
 import { PortaoNaoConfirmado, abrirFabrica, type EventoFabrica, type Portao } from './claudeCode.js';
 import type { RegistroDeFabricas } from './vivas.js';
-import type { Fabrica, PassoAtividade } from './tipos.js';
+import type { Fabrica, Momento, PassoAtividade } from './tipos.js';
 
 /** Trava de processo unico por fabrica. Trava de processo morto nao prende a fabrica. */
 export function tentarTrava(fabricaId: string): (() => void) | null {
@@ -88,6 +88,68 @@ export interface PortasDaSessao {
   publicarPasso: (fabricaId: string, passo: Omit<PassoAtividade, 'em'>) => Promise<void>;
   fazerPortao: (ctx: ContextoDoPortao) => Portao;
   registrar?: (linha: string) => void;
+  /**
+   * OST 9: soma consumo na fabrica, nunca substitui. Ausente, o consumo nao sobe,
+   * e a tela diz "consumo nao medido", que e verdade.
+   */
+  somarConsumo?: (fabricaId: string, acrescimo: Record<string, number>) => Promise<void>;
+  /** OST 9: hora do servidor para o relogio da tarefa. Ausente, vale a hora local. */
+  horaDoServidor?: () => Momento;
+}
+
+/**
+ * De quanto em quanto tempo o consumo ao vivo sobe para a base. Cada mensagem do
+ * assistente gera um acrescimo; gravar um por mensagem seria uma escrita por
+ * segundo em sessao rapida. Junta em memoria e grava no maximo a cada intervalo,
+ * e SEMPRE no fim do comando, antes do estado final.
+ */
+export const INTERVALO_CONSUMO_MS = Number(process.env['PONTE_INTERVALO_CONSUMO_MS']) > 0
+  ? Number(process.env['PONTE_INTERVALO_CONSUMO_MS'])
+  : 5000;
+
+/** Junta acrescimos de consumo e grava em lote, sem perder nenhum. */
+export class LoteDeConsumo {
+  private pendente: Record<string, number> = {};
+  private relogio: ReturnType<typeof setTimeout> | null = null;
+  private gravando: Promise<void> = Promise.resolve();
+
+  constructor(
+    private readonly gravar: (acrescimo: Record<string, number>) => Promise<void>,
+    private readonly intervaloMs = INTERVALO_CONSUMO_MS,
+    private readonly aoFalhar: (erro: unknown) => void = () => undefined
+  ) {}
+
+  somar(acrescimo: Record<string, number>): void {
+    for (const [c, v] of Object.entries(acrescimo)) {
+      if (v > 0) this.pendente[c] = (this.pendente[c] ?? 0) + v;
+    }
+    if (this.relogio === null) {
+      this.relogio = setTimeout(() => {
+        this.relogio = null;
+        void this.esvaziar();
+      }, this.intervaloMs);
+    }
+  }
+
+  /** Grava o que estiver junto. Em falha, devolve o lote para a proxima vez. */
+  esvaziar(): Promise<void> {
+    if (this.relogio !== null) {
+      clearTimeout(this.relogio);
+      this.relogio = null;
+    }
+    this.gravando = this.gravando.then(async () => {
+      const lote = this.pendente;
+      this.pendente = {};
+      if (Object.keys(lote).length === 0) return;
+      try {
+        await this.gravar(lote);
+      } catch (e) {
+        for (const [c, v] of Object.entries(lote)) this.pendente[c] = (this.pendente[c] ?? 0) + v;
+        this.aoFalhar(e);
+      }
+    });
+    return this.gravando;
+  }
 }
 
 export interface PedidoDeSessao {
@@ -152,8 +214,21 @@ export async function rodarSessao(portas: PortasDaSessao, pedido: PedidoDeSessao
 
   let texto = '';
   let ultimoEventoEm = Date.now();
+  const hora = (): Momento => portas.horaDoServidor?.() ?? new Date().toISOString();
+  const somar = portas.somarConsumo;
+  const lote =
+    somar !== undefined
+      ? new LoteDeConsumo(
+          (acrescimo) => somar(fabricaId, acrescimo),
+          INTERVALO_CONSUMO_MS,
+          (e) => registrar(`fabrica ${fabricaId}: consumo nao subiu agora, fica para a proxima gravacao (${String(e).slice(0, 120)})`)
+        )
+      : null;
+  let tarefaFechada = false;
   try {
-    await portas.anotarFabrica(fabricaId, pedido.dadosIniciais);
+    // O relogio da TAREFA comeca aqui, a cada comando, OST 9. O fim fica nulo
+    // enquanto ela roda, para o painel contar ate agora.
+    await portas.anotarFabrica(fabricaId, { ...pedido.dadosIniciais, tarefaInicio: hora(), tarefaFim: null });
     let seq = 0;
     const estado = await abrirFabrica({
       cwd,
@@ -164,6 +239,7 @@ export async function rodarSessao(portas: PortasDaSessao, pedido: PedidoDeSessao
       agents: pedido.agents,
       controle: viva.controle,
       ...(pedido.maxTurns !== undefined ? { maxTurns: pedido.maxTurns } : {}),
+      ...(lote !== null ? { onConsumo: (acrescimo) => lote.somar(acrescimo) } : {}),
       portao: portas.fazerPortao({
         fabricaId,
         tarefa: pedido.tarefa,
@@ -188,15 +264,22 @@ export async function rodarSessao(portas: PortasDaSessao, pedido: PedidoDeSessao
         });
         if (ev.tipo === 'fim') {
           viva.recebeuFim = true;
+          // OST 9: o consumo ja foi SOMADO ao vivo, inclusive a diferenca do total
+          // oficial. Aqui so esvazia o lote, antes do estado final, para a tela
+          // nunca ver "concluida" com consumo atrasado. O consumo NAO e mais
+          // escrito por cima: escrever o usage do comando substituia a soma dos
+          // comandos anteriores.
+          await lote?.esvaziar();
+          tarefaFechada = true;
           // Interrompida por ordem do diretor nao vira concluida nem falhou por
           // aqui: quem mandou encerrar ou pausar ja gravou o estado verdadeiro.
           if (viva.interrupcao === null) {
             await portas.anotarFabrica(fabricaId, {
               estado: ev.estado === 'success' ? 'concluida' : 'falhou',
-              consumo: ev.usage ?? null,
+              tarefaFim: hora(),
             });
           } else {
-            await portas.anotarFabrica(fabricaId, { consumo: ev.usage ?? null });
+            await portas.anotarFabrica(fabricaId, { tarefaFim: hora() });
           }
         }
         ultimoEventoEm = Date.now();
@@ -229,6 +312,14 @@ export async function rodarSessao(portas: PortasDaSessao, pedido: PedidoDeSessao
     await portas.anotarFabrica(fabricaId, { estado: 'falhou', erro: motivo }).catch(() => undefined);
     return { fabricaId, sessionId: null, estado: `falhou: ${motivo}`, rodou: false };
   } finally {
+    // OST 9: sessao que terminou sem evento de fim (interrompida, falhou, caiu)
+    // tambem fecha o relogio da tarefa e o lote de consumo. Sem isto, a tela
+    // contaria a tarefa ate agora para sempre. NAO espera a rede: com a base fora
+    // do ar a gravacao fica pendente, e a trava abaixo nao pode ficar presa nela.
+    void lote?.esvaziar().catch(() => undefined);
+    if (!tarefaFechada) {
+      void portas.anotarFabrica(fabricaId, { tarefaFim: hora() }).catch(() => undefined);
+    }
     // A trava sai PRIMEIRO. Quem estiver esperando o fim desta sessao e avisado
     // depois, e encontra a trava livre de verdade, nao prestes a ficar livre.
     soltarTrava();

@@ -90,6 +90,13 @@ export interface FabricaBase {
      escreve quando a rodada pede. Decisão do diretor: rotular e filtrar no painel,
      nunca apagar, §A.17. */
   teste?: boolean;
+  /* OST 9: nome dado pelo diretor, na abertura ou renomeando. A ponte copia da
+     ordem de abrir uma vez e nunca mais escreve. */
+  nome?: string;
+  /* OST 9: relógio da tarefa em execução. Fim nulo com começo gravado quer dizer
+     que a tarefa está andando. */
+  tarefaInicio?: HoraDaBase;
+  tarefaFim?: HoraDaBase | null;
 }
 
 export interface TarefaBase {

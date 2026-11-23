@@ -34,6 +34,22 @@ const ITENS = [
   { id: 'settings', label: 'Configurações' }
 ];
 
+/*
+ * OST 9: a lista de PROJETOS do menu lateral mostrava o caminho C:Users de cada
+ * fábrica, uma linha por fábrica. Agora é um projeto por linha, pelo NOME da
+ * pasta, com quantas fábricas ele tem. O estado é o da fábrica mais urgente dele,
+ * porque a lista já chega ordenada por urgência.
+ */
+function projetosDoMenu(lista: EstadoDoPainel['fabricasDeTrabalho']) {
+  const porProjeto = new Map<string, { name: string; state: (typeof lista)[number]['state']; count: number }>();
+  for (const f of lista) {
+    const atual = porProjeto.get(f.projeto);
+    if (atual) atual.count += 1;
+    else porProjeto.set(f.projeto, { name: f.projeto, state: f.state, count: 1 });
+  }
+  return [...porProjeto.values()].map((p) => ({ ...p, count: p.count > 1 ? p.count : undefined }));
+}
+
 const TITULOS: Record<string, string> = {
   factory: 'Posto de comando',
   new: 'Nova fábrica'
@@ -90,7 +106,7 @@ export function Computador({
   const sub = naFabrica
     ? `Fábricas  ›  ${nomeDaFabrica ?? (esperandoNascer ? 'abrindo a fábrica' : 'fábrica fora do painel')}`
     : tela === 'new'
-      ? 'Escolha o projeto, o agente, o modelo e diga o que fazer primeiro'
+      ? 'Dê um nome, escolha o projeto, o agente, o modelo e diga o que fazer primeiro'
       : tela === 'overview'
         ? `${diaPorExtenso(estado.agora)} · ${plural(estado.contagem.total, 'fábrica no painel', 'fábricas no painel')}`
         : tela === 'approvals'
@@ -187,7 +203,10 @@ export function Computador({
       <Sidebar
         brand={MARCA}
         owner={DONO}
-        collapsed={menuRecolhido}
+        /* OST 9: recolhido sempre, abre ao passar o mouse, por cima da tela. A
+           tela estreita, que ja recolhia, segue igual, agora abrindo tambem. */
+        collapsed
+        expandOnHover
         value={naFabrica ? 'factories' : tela}
         onChange={(id) => {
           setTela(id);
@@ -200,7 +219,7 @@ export function Computador({
               ? { ...item, count: estado.contagem.total || null }
               : item
         )}
-        projects={estado.fabricasDeTrabalho.map((f) => ({ name: f.project, state: f.state }))}
+        projects={projetosDoMenu(estado.fabricasDeTrabalho)}
         bridge={{
           online: ponte.online,
           detail: ponte.online

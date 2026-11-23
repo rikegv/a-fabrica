@@ -12,6 +12,7 @@ import { serverTimestamp } from 'firebase/firestore';
 import type { Portao } from './claudeCode.js';
 import {
   atualizarFabrica,
+  somarConsumoDaFabrica,
   esperarResposta,
   initBase,
   iniciarHeartbeat,
@@ -224,6 +225,7 @@ export function mundoNaBase(db: Firestore, maquinaId: string, registrar: (l: str
     registrar,
     horaDoServidor: () => serverTimestamp(),
     anotarFabrica: (fabricaId, dados) => atualizarFabrica(db, fabricaId, dados),
+    somarConsumo: (fabricaId, acrescimo) => somarConsumoDaFabrica(db, fabricaId, acrescimo),
     publicarPasso: async (fabricaId, passo): Promise<void> => {
       await publicarAtividade(db, fabricaId, passo);
     },

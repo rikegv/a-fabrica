@@ -13,6 +13,7 @@ import type { Firestore } from 'firebase/firestore';
 import {
   aprovacaoPendente,
   avaliarPonte,
+  distinguirExternas,
   ordenarAprovacoes,
   ordenarDecisoes,
   ordenarFabricas,
@@ -25,6 +26,7 @@ import {
   type Ponte
 } from './tradutor';
 import { usarAprovacoes, usarFabricas, usarMaquinas, usarRelogio } from './ouvintes';
+import type { AprovacaoBase, FabricaBase, MaquinaBase } from './tipos';
 
 export interface EstadoDoPainel {
   ponte: Ponte;
@@ -54,7 +56,11 @@ export interface EstadoDoPainel {
     concluidas: number;
     /* Nulo quer dizer que nenhuma fábrica do dia tem medida de consumo. */
     tokens: number | null;
-    tempoMs: number;
+    /* OST 9: no lugar do tempo somado, a TAREFA EM EXECUÇÃO. Quantas tarefas
+       estão andando agora, e há quanto tempo anda a mais longa delas. Nulo
+       quando nenhuma está andando. */
+    tarefasAndando: number;
+    tarefaMaisLongaMs: number | null;
   };
 }
 
@@ -64,7 +70,20 @@ export function usarPainel(base: Firestore | null): EstadoDoPainel {
   const fabricas = usarFabricas(base);
   const aprovacoes = usarAprovacoes(base);
 
-  return useMemo(() => {
+  return useMemo(() => montarEstadoDoPainel(maquinas, fabricas, aprovacoes, agora), [maquinas, fabricas, aprovacoes, agora]);
+}
+
+type Ouvido<T> = { itens: T[]; carregando: boolean; erro: string | null };
+
+/* OST 9: o corpo do estado, puro, fora do React. É o mesmo cálculo de antes,
+   separado só para poder ser provado sem base e sem navegador. */
+export function montarEstadoDoPainel(
+  maquinas: Ouvido<MaquinaBase>,
+  fabricas: Ouvido<FabricaBase>,
+  aprovacoes: Ouvido<AprovacaoBase>,
+  agora: Date
+): EstadoDoPainel {
+  {
     /* Maquina de rodada de teste nao conta para o estado da ponte. Ela existe na
        base, rotulada, e fica offline para sempre por natureza; se entrasse na
        conta, a tela poderia dizer que a ponte caiu por causa de uma maquina que
@@ -94,14 +113,17 @@ export function usarPainel(base: Firestore | null): EstadoDoPainel {
       porFabrica.set(pedido.factoryId, lista);
     }
 
-    const lista = ordenarFabricas(
-      fabricas.itens.map((doc) => {
-        const parado = porFabrica.get(doc.id)?.[0]?.waitingMs ?? null;
-        return traduzirFabrica(doc, { pontePerdida, pedidoParado: parado, agora });
-      })
+    const lista = distinguirExternas(
+      ordenarFabricas(
+        fabricas.itens.map((doc) => {
+          const parado = porFabrica.get(doc.id)?.[0]?.waitingMs ?? null;
+          return traduzirFabrica(doc, { pontePerdida, pedidoParado: parado, agora });
+        })
+      )
     );
 
     const deTrabalho = lista.filter((f) => !f.teste);
+    const andando = deTrabalho.filter((f) => f.tarefaAndando && f.taskMs !== null);
 
     const contagem = {
       total: deTrabalho.length,
@@ -116,7 +138,8 @@ export function usarPainel(base: Firestore | null): EstadoDoPainel {
       tokens: deTrabalho.some((f) => f.tokens != null)
         ? deTrabalho.reduce((soma, f) => soma + (f.tokens ?? 0), 0)
         : null,
-      tempoMs: deTrabalho.reduce((soma, f) => soma + f.elapsedMs, 0)
+      tarefasAndando: andando.length,
+      tarefaMaisLongaMs: andando.length ? Math.max(...andando.map((f) => f.taskMs ?? 0)) : null
     };
 
     return {
@@ -131,5 +154,5 @@ export function usarPainel(base: Firestore | null): EstadoDoPainel {
       agora,
       contagem
     };
-  }, [maquinas, fabricas, aprovacoes, agora]);
+  }
 }

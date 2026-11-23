@@ -184,6 +184,10 @@ function principal() {
     falhouNoFim: motivoBruto !== null && /error|fail|crash|falh/i.test(motivoBruto),
     // Este projeto esta liberado para CONTEUDO? A ponte le isto e nao deduz.
     conteudo: liberado,
+    // OST 9: ONDE o proprio Claude Code grava a transcricao desta sessao. E um
+    // caminho local, metadado, e nao sai da maquina. A ponte le dali SO numero de
+    // token e nome do modelo, que o gancho nao recebe. Veja ponte/src/transcricao.ts.
+    transcricao: pedacoDeTexto(payload.transcript_path || null, 600),
     // Quanto este gancho custou por dentro, em milissegundos. Fica na propria
     // linha para a medicao nao depender de instrumento de fora.
     custoMs: Number(process.hrtime.bigint() - COMECOU) / 1e6,

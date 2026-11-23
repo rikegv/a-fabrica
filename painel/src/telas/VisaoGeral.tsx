@@ -17,11 +17,13 @@ import { consumoEmPartes, plural, tempoEmPartes } from '@/formato';
 import { Falha, Panel, Vazio } from './pecas';
 import { paraPedidoDeTela, type EstadoDaResposta } from './pedido';
 
-const POR_PAGINA = 6;
+/* OST 9: cartões compactos, cabem mais na mesma altura. Quatro colunas por três
+   linhas no computador largo, três por quatro no estreito. */
+const POR_PAGINA = 12;
 
 export function LinhaDeIndicadores({ estado }: { estado: EstadoDoPainel }) {
   const { contagem, aprovacoes } = estado;
-  const tempo = tempoEmPartes(contagem.tempoMs);
+  const tarefa = tempoEmPartes(contagem.tarefaMaisLongaMs);
   const uso = consumoEmPartes(contagem.tokens);
   const maisAntigo = aprovacoes[0];
 
@@ -40,7 +42,20 @@ export function LinhaDeIndicadores({ estado }: { estado: EstadoDoPainel }) {
         unit={contagem.aguardandoAprovacao === 1 ? 'pedido' : 'pedidos'}
         hint={maisAntigo ? `mais antigo há ${maisAntigo.waiting}` : 'nada parado'}
       />
-      <KpiTile label="Tempo somado" value={tempo.valor} unit={tempo.unidade} hint="desde a abertura de cada fábrica" />
+      {/* OST 9: o tempo somado saiu. No lugar, a tarefa em execução: quanto tempo
+          anda a tarefa que está rodando agora. Com mais de uma, a mais longa. */}
+      <KpiTile
+        label="Tarefa em execução"
+        value={contagem.tarefaMaisLongaMs === null ? 'nenhuma' : tarefa.valor}
+        unit={contagem.tarefaMaisLongaMs === null ? undefined : tarefa.unidade}
+        hint={
+          contagem.tarefasAndando > 1
+            ? `a mais longa de ${contagem.tarefasAndando} andando agora`
+            : contagem.tarefasAndando === 1
+              ? 'andando agora'
+              : 'nenhuma tarefa andando agora'
+        }
+      />
       <KpiTile label="Consumo somado" value={uso.valor} unit={uso.unidade} hint="todas as fábricas do painel" />
       <KpiTile
         label="Falhas"
@@ -102,12 +117,13 @@ export function VisaoGeral({
             }
           />
         ) : (
-          <div className="gf-fgrid">
+          <div className="gf-fgrid gf-fgrid-compact">
             {visiveis.map((f) => (
               <FactoryCard
                 key={f.id}
                 project={f.project}
-                agent={`${f.agent} · ${f.model}`}
+                agent={`${f.projeto} · ${f.model}`}
+                compact
                 state={f.state}
                 doing={f.doing}
                 elapsed={f.elapsed}

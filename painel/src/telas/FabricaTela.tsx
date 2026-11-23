@@ -44,7 +44,8 @@ import { usarAtividade, usarTarefas } from '@/dados/ouvintes';
 import type { EstadoDoPainel } from '@/dados/painel';
 import type { Fabrica } from '@/dados/tradutor';
 import { ordenarTarefas, traduzirAtividade, traduzirTarefa } from '@/dados/tradutor';
-import { consumoEmPartes, plural } from '@/formato';
+import { consumoEmPartes, plural, tempoDecorrido } from '@/formato';
+import { TituloEditavel } from './renomear';
 import {
   Confirmacao,
   ErroDeEscrita,
@@ -261,7 +262,8 @@ export function FabricaTela({
       <section className="gf-panel gf-glass">
         <FactoryHeader
           project={fabrica.project}
-          agent={[fabrica.agent, fabrica.model, fabrica.folder].filter(Boolean).join(' · ')}
+          titleNode={<TituloEditavel fabrica={fabrica} escrita={escrita} avisar={avisar} />}
+          agent={[fabrica.projeto, fabrica.agent, fabrica.model].filter(Boolean).join(' · ')}
           state={fabrica.state}
           elapsed={fabrica.elapsed}
           usage={fabrica.usage}
@@ -349,7 +351,11 @@ export function FabricaTela({
         ) : null}
 
         <div className="grid grid-cols-2 gap-3">
-          <KpiTile label="Tempo" value={fabrica.elapsed} hint="desde a abertura" />
+          <KpiTile
+            label="Tarefa"
+            value={fabrica.taskMs === null ? 'não medida' : tempoDecorrido(fabrica.taskMs)}
+            hint={fabrica.taskMs === null ? 'sem relógio gravado' : fabrica.tarefaAndando ? 'em execução' : 'a última que rodou'}
+          />
           <KpiTile label="Consumo" value={uso.valor} unit={uso.unidade} hint="acumulado" />
           <KpiTile
             label="Tarefas"

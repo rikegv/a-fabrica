@@ -108,6 +108,16 @@ function escolherModelo(pedido: string | null): { modelo: string; motivo: string
 }
 
 /** Caminho comum de abertura, usado por abrir, comando e reiniciar. */
+/** Teto do nome, o mesmo que o painel aplica na tela. */
+export const TETO_NOME = 80;
+
+/** Nome da ordem de abrir, limpo. Vazio ou ausente: sem nome, e o painel decide. */
+export function nomeDaOrdem(bruto: string | null): string | null {
+  if (bruto === null) return null;
+  const limpo = bruto.replace(/\s+/g, ' ').trim().slice(0, TETO_NOME);
+  return limpo.length > 0 ? limpo : null;
+}
+
 async function abrirSessao(
   mundo: MundoDaPonte,
   acao: AcaoComando,
@@ -195,7 +205,14 @@ export async function despachar(mundo: MundoDaPonte, comando: ComandoTomado): Pr
       if (mundo.registro.jaEncerrada(nova)) {
         return recusar(mundo, 'abrir', nova, 'fabrica encerrada por ordem do diretor, nao volta');
       }
-      return abrirSessao(mundo, 'abrir', comando, nova, comando.conversationId, { pausada: false });
+      // OST 9: o NOME que o diretor digitou viaja na ordem de abrir e entra UMA vez,
+      // no nascimento. So aqui: comando, reiniciar e pausar nunca escrevem nome,
+      // entao renomear pelo painel nunca e desfeito pela ponte.
+      const nome = nomeDaOrdem(comando.nome);
+      return abrirSessao(mundo, 'abrir', comando, nova, comando.conversationId, {
+        pausada: false,
+        ...(nome !== null ? { nome } : {}),
+      });
     }
 
     case 'comando': {

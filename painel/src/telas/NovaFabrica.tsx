@@ -3,8 +3,13 @@
 /*
  * Tela 4, nova fabrica. F4 do catalogo, §A.5.
  *
- * O que ela pede, na ordem em que o diretor decide: projeto, agente, modelo e o
- * comando inicial. Nada mais, §A.12.
+ * O que ela pede, na ordem em que o diretor decide: nome, projeto, agente,
+ * modelo e o comando inicial. Nada mais, §A.12.
+ *
+ * OST 9: o NOME vem primeiro e e obrigatorio, porque e por ele que o diretor
+ * acha a fabrica no painel. E o caminho da pasta saiu da tela: a escolha rapida
+ * mostra so o nome da pasta. A caixa de caminho continua, porque e o unico jeito
+ * de abrir projeto que ainda nao apareceu na base, mas sem exemplo de caminho.
  *
  * CADASTRO DE PROJETOS E F7, CONFIGURACOES, E ESTA FORA DESTA ONDA. Enquanto
  * ele nao existir, esta tela faz o honesto: oferece os caminhos de projeto que
@@ -23,7 +28,7 @@
 
 import { useMemo, useState } from 'react';
 import { Button, Segmented, cx } from '@/componentes/ds';
-import { abrirFabrica, impedimentoDaEscrita, type ContextoDeEscrita } from '@/dados/escritas';
+import { abrirFabrica, impedimentoDaEscrita, TETO_NOME, type ContextoDeEscrita } from '@/dados/escritas';
 import type { EstadoDoPainel } from '@/dados/painel';
 import { caminhosDeProjeto } from '@/dados/tradutor';
 import { Campo, ErroDeEscrita, Panel } from './pecas';
@@ -47,6 +52,7 @@ export interface NovaFabricaProps {
 
 function usarFormulario({ escrita, estado, aoAbrir }: Omit<NovaFabricaProps, 'aoCancelar' | 'celular'>) {
   const sugestoes = useMemo(() => caminhosDeProjeto(estado.fabricasDeTrabalho), [estado.fabricasDeTrabalho]);
+  const [nome, setNome] = useState('');
   const [caminho, setCaminho] = useState('');
   const [agente, setAgente] = useState(AGENTE_PADRAO);
   const [modoDoModelo, setModoDoModelo] = useState<'ponte' | 'mao'>('ponte');
@@ -58,16 +64,18 @@ function usarFormulario({ escrita, estado, aoAbrir }: Omit<NovaFabricaProps, 'ao
 
   const impedimento = impedimentoDaEscrita(escrita);
   const motivo = motivoDeAbrirFabrica(impedimento);
+  const faltaNome = !nome.trim();
   const faltaCaminho = !caminho.trim();
   const faltaComando = !comando.trim();
   const faltaModelo = modoDoModelo === 'mao' && !modelo.trim();
-  const travado = Boolean(motivo) || ordem.ocupado || faltaCaminho || faltaComando || faltaModelo;
+  const travado = Boolean(motivo) || ordem.ocupado || faltaNome || faltaCaminho || faltaComando || faltaModelo;
 
   async function abrir() {
     if (travado) return;
     let nascida: string | null = null;
     const deuCerto = await ordem.enviar(async () => {
       const r = await abrirFabrica(escrita, {
+        nome,
         cwd: caminho,
         agente,
         modelo: modoDoModelo === 'mao' ? modelo : undefined,
@@ -78,12 +86,16 @@ function usarFormulario({ escrita, estado, aoAbrir }: Omit<NovaFabricaProps, 'ao
     }, AVISOS.fabricaAberta);
     if (deuCerto && nascida) {
       setComando('');
+      setNome('');
       aoAbrir(nascida, AVISOS.fabricaAberta);
     }
   }
 
   return {
     sugestoes,
+    nome,
+    setNome,
+    faltaNome,
     caminho,
     setCaminho,
     agente,
@@ -111,12 +123,23 @@ export function NovaFabrica(props: NovaFabricaProps) {
   return (
     <div className="gf-body" style={{ gridTemplateColumns: 'minmax(0,1fr) 340px' }}>
       <Panel>
+        <Campo rotulo="1. Nome" ajuda="É por este nome que você acha a fábrica no painel. Dá para mudar depois, em qualquer estado.">
+          <input
+            className="gf-input body"
+            value={f.nome}
+            maxLength={TETO_NOME}
+            aria-label="Nome da fábrica"
+            placeholder="Ex.: envio de documentos"
+            onChange={(e) => f.setNome(e.target.value)}
+          />
+        </Campo>
+
         <Campo
-          rotulo="1. Projeto"
+          rotulo="2. Projeto"
           ajuda={
             f.sugestoes.length
-              ? 'Escolha uma pasta que já apareceu na base ou escreva o caminho completo. O cadastro de projetos entra em Configurações, numa onda seguinte.'
-              : 'Nenhuma pasta apareceu na base ainda. Escreva o caminho completo da pasta do projeto na sua máquina.'
+              ? 'Escolha uma pasta que já apareceu na base ou escreva o caminho da pasta. O cadastro de projetos entra em Configurações, numa onda seguinte.'
+              : 'Nenhuma pasta apareceu na base ainda. Escreva o caminho da pasta do projeto na sua máquina.'
           }
         >
           {f.sugestoes.length ? (
@@ -129,7 +152,7 @@ export function NovaFabrica(props: NovaFabricaProps) {
                   onClick={() => f.setCaminho(p.caminho)}
                 >
                   <span className="title-sm truncate">{p.nome}</span>
-                  <span className="mono gf-faint truncate">{p.caminho}</span>
+                  <span className="caption gf-faint truncate">{p.quantas === 1 ? '1 fábrica' : `${p.quantas} fábricas`}</span>
                 </button>
               ))}
             </div>
@@ -139,13 +162,13 @@ export function NovaFabrica(props: NovaFabricaProps) {
             value={f.caminho}
             spellCheck={false}
             aria-label="Caminho da pasta do projeto"
-            placeholder="Caminho da pasta do projeto, por exemplo C:\Users\Henrique\a-fabrica"
+            placeholder="Ou escreva o caminho da pasta do projeto"
             onChange={(e) => f.setCaminho(e.target.value)}
           />
         </Campo>
 
         <div className="grid gap-5" style={{ gridTemplateColumns: '1fr 1.4fr' }}>
-          <Campo rotulo="2. Agente" ajuda="A ponte executa pelo Claude Code. Mude o nome só se souber o que vai abrir.">
+          <Campo rotulo="3. Agente" ajuda="A ponte executa pelo Claude Code. Mude o nome só se souber o que vai abrir.">
             <input
               className="gf-input body"
               value={f.agente}
@@ -186,7 +209,7 @@ export function NovaFabrica(props: NovaFabricaProps) {
           </Campo>
         </div>
 
-        <Campo rotulo="3. Comando inicial" estica>
+        <Campo rotulo="4. Comando inicial" estica>
           <textarea
             className="gf-input body"
             style={{ flex: 1, minHeight: 120 }}
@@ -245,6 +268,17 @@ export function NovaFabricaCelular(props: NovaFabricaProps) {
 
   return (
     <>
+      <Campo rotulo="Nome">
+        <input
+          className="gf-input body"
+          value={f.nome}
+          maxLength={TETO_NOME}
+          aria-label="Nome da fábrica"
+          placeholder="Nome da fábrica"
+          onChange={(e) => f.setNome(e.target.value)}
+        />
+      </Campo>
+
       <Campo rotulo="Projeto">
         {f.sugestoes.length ? (
           <div className="gf-list">
@@ -257,7 +291,6 @@ export function NovaFabricaCelular(props: NovaFabricaProps) {
               >
                 <div className="gf-li-main">
                   <div className="body-strong">{p.nome}</div>
-                  <div className="mono gf-faint">{p.caminho}</div>
                 </div>
               </button>
             ))}

@@ -1,6 +1,10 @@
 /* Sidebar, portado de bundle.js. Menu lateral de vidro do computador.
-   Adicional do painel: rodape, que entra acima do indicador da ponte. */
-import type { ReactNode } from 'react';
+   Adicional do painel: rodape, que entra acima do indicador da ponte.
+
+   OST 9, pedido do diretor: o menu fica RECOLHIDO no trilho de icones e abre ao
+   passar o mouse, POR CIMA da tela, sem empurrar o conteudo. Abre tambem quando
+   o teclado entra nele, para quem navega com Tab, e fecha quando o foco sai. */
+import { useState, type FocusEvent, type ReactNode } from 'react';
 import { BridgeStatus, type BridgeStatusProps } from './BridgeStatus';
 import { Icon, type IconName } from './Icon';
 import { StateIcon } from './StateIcon';
@@ -15,6 +19,8 @@ export interface SidebarProps {
   brand?: string;
   owner?: string;
   collapsed?: boolean;
+  /* Recolhido, abre ao passar o mouse ou ao receber foco. */
+  expandOnHover?: boolean;
   footer?: ReactNode;
 }
 
@@ -27,11 +33,17 @@ export function Sidebar({
   brand,
   owner,
   collapsed,
+  expandOnHover,
   footer
 }: SidebarProps) {
-  const recolhido = Boolean(collapsed);
-  return (
-    <aside className={cx('gf-side', 'gf-glass', recolhido && 'gf-side-col')}>
+  const [aberto, setAberto] = useState(false);
+  const flutua = Boolean(collapsed && expandOnHover);
+  const recolhido = Boolean(collapsed) && !(flutua && aberto);
+  const aoSairDoFoco = (e: FocusEvent<HTMLDivElement>) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setAberto(false);
+  };
+  const menu = (
+    <aside className={cx('gf-side', 'gf-glass', recolhido && 'gf-side-col', flutua && aberto && 'gf-side-float')}>
       <div className="gf-side-brand">
         <span className="gf-side-mark" aria-hidden>
           <span />
@@ -95,5 +107,17 @@ export function Sidebar({
         ) : null}
       </div>
     </aside>
+  );
+  if (!flutua) return menu;
+  return (
+    <div
+      className="gf-side-wrap"
+      onMouseEnter={() => setAberto(true)}
+      onMouseLeave={() => setAberto(false)}
+      onFocus={() => setAberto(true)}
+      onBlur={aoSairDoFoco}
+    >
+      {menu}
+    </div>
   );
 }

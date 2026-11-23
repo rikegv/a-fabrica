@@ -37,6 +37,7 @@ import {
 } from '@/componentes/ds';
 import type { Entrada } from '@/dados/autenticacao';
 import { impedimentoDaEscrita, type ContextoDeEscrita } from '@/dados/escritas';
+import { TituloEditavel } from './renomear';
 import { usarAtividade, usarTarefas } from '@/dados/ouvintes';
 import type { EstadoDoPainel } from '@/dados/painel';
 import { ordenarTarefas, traduzirAtividade, traduzirTarefa } from '@/dados/tradutor';
@@ -303,17 +304,10 @@ export function Celular({
                   <span className="title-sm flex-1 truncate text-left">{f.project}</span>
                   <StateBadge state={f.state} label={rotuloCurto(f.state)} />
                 </span>
-                <span
-                  className="body gf-muted text-left"
-                  style={{
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
-                  }}
-                >
-                  {f.doing}
-                </span>
+                {/* OST 9: cartão compacto também no celular. Sai a frase do estado,
+                    que repetia o selo; fica o projeto, sem caminho, e o modelo. */}
+                <span className="caption gf-faint truncate text-left">{`${f.projeto} · ${f.model}`}</span>
+                {f.pending ? <span className="caption gf-fcard-pending text-left">{f.pending}</span> : null}
                 <span className="mono gf-faint text-left">{`${f.elapsed} · ${f.usage}`}</span>
               </button>
             ))
@@ -356,7 +350,7 @@ export function Celular({
     cabecalho = (
       <MHead
         title={fabrica?.project ?? 'Fábrica'}
-        sub={fabrica ? `${fabrica.agent} · ${fabrica.model} · ${fabrica.elapsed}` : undefined}
+        sub={fabrica ? `${fabrica.projeto} · ${fabrica.model}` : undefined}
         onBack={() => {
           setFabricaId(null);
           setTela('factories');
@@ -507,6 +501,7 @@ function CelularFabrica({
   return (
     <>
       {faixa}
+      <TituloEditavel fabrica={fabrica} escrita={escrita} avisar={avisar} celular />
       <div className="flex items-center gap-2">
         <StateBadge state={fabrica.state} label={rotuloCurto(fabrica.state)} />
         {fabrica.pausada ? <span className="caption gf-muted">pausada</span> : null}

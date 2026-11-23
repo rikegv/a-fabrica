@@ -47,6 +47,7 @@ import {
   consumo as formatarConsumo,
   dataAmigavel,
   horaComSegundos,
+  horaCurta,
   tempoDecorrido,
   tempoParado as formatarTempoParado
 } from '@/formato';
@@ -182,18 +183,62 @@ export function avaliarPonte(maquinas: MaquinaBase[], agora: Date = new Date()):
 
 /* ---------- fabrica ---------- */
 
+/* OST 9: como nasce, na tela, a fábrica aberta na mão. Pode ser renomeada. */
+export const NOME_EXTERNA = 'Fábrica externa';
+
+/*
+ * Duas fábricas externas ao mesmo tempo têm de ser distinguíveis SEM mostrar
+ * caminho, pedido do diretor. Só as que ainda não ganharam nome entram na conta.
+ * Uma sozinha fica "Fábrica externa". Duas ou mais ganham a hora em que abriram;
+ * se até a hora bater, ganham o número, na ordem em que abriram.
+ */
+export function distinguirExternas(lista: Fabrica[]): Fabrica[] {
+  const semNome = lista.filter((f) => f.externa && f.nomeDado === null);
+  if (semNome.length < 2) return lista;
+  const ordem = [...semNome].sort((a, b) => (a.startedAt?.getTime() ?? 0) - (b.startedAt?.getTime() ?? 0));
+  const rotulo = new Map<string, string>();
+  const vezes = new Map<string, number>();
+  for (const f of ordem) {
+    const base = f.startedAt ? `${NOME_EXTERNA} das ${horaCurta(f.startedAt)}` : NOME_EXTERNA;
+    const n = (vezes.get(base) ?? 0) + 1;
+    vezes.set(base, n);
+    rotulo.set(f.id, n === 1 ? base : `${base}, nº ${n}`);
+  }
+  /* Se a primeira de uma hora repetida ficou sem número, ela ganha o 1. */
+  for (const f of ordem) {
+    const r = rotulo.get(f.id) as string;
+    if (!r.includes(', nº ') && (vezes.get(r) ?? 0) > 1) rotulo.set(f.id, `${r}, nº 1`);
+  }
+  return lista.map((f) => (rotulo.has(f.id) ? { ...f, project: rotulo.get(f.id) as string } : f));
+}
+
 /* O mesmo formato que o pacote do designer espera (interface Factory), com os
    campos ja formatados em pt-BR para a tela, mais o que a tela do painel usa. */
 export interface Fabrica {
   id: string;
+  /* OST 9: o TITULO da fabrica na tela, que e o NOME. O nome dado pelo diretor;
+     sem ele, "Fábrica externa" para a aberta na mão, e o nome da pasta para a
+     fábrica antiga do painel que nasceu antes de existir nome. */
   project: string;
-  folder: string | null;
+  /* O nome que o diretor digitou, ou nulo. É o que a caixa de renomear mostra. */
+  nomeDado: string | null;
+  /* Aberta na mão, fora do painel. */
+  externa: boolean;
+  /* Só o NOME da pasta do projeto, nunca o caminho. OST 9: o caminho C:Users
+     saiu de toda tela que o diretor lê. */
+  projeto: string;
+  /* O caminho inteiro fica só por dentro, para a escolha rápida de projeto na
+     abertura. Nenhuma tela mostra este campo. */
+  caminho: string | null;
   agent: string;
   model: string;
   state: FactoryState;
   doing: string;
   startedAt: Date | null;
-  elapsedMs: number;
+  /* OST 9: tempo da TAREFA, não da abertura. Nulo quando não foi medido. */
+  taskMs: number | null;
+  /* A tarefa está andando agora: o relógio conta até agora. */
+  tarefaAndando: boolean;
   /* Nulo quer dizer NÃO MEDIDO, que é diferente de zero. Fábrica aberta na mão
      não tem contagem de token, porque o gancho do Claude Code não entrega. */
   tokens: number | null;
@@ -275,14 +320,32 @@ export function traduzirFabrica(
    * trabalho. Medir tempo de trabalho de verdade é somar os intervalos entre
    * passos, e isso muda o desenho do §A.4: está proposto ao diretor, não feito.
    */
-  const fimGravado = paraData(doc.encerradaEm) ?? paraData(doc.atualizadoEm);
-  const acabou = estadoGravado === 'done' || estadoGravado === 'failed';
-  const decorrido =
-    typeof doc.tempoDecorridoMs === 'number' && doc.tempoDecorridoMs >= 0
-      ? doc.tempoDecorridoMs
-      : inicio
-        ? Math.max(0, (acabou && fimGravado ? fimGravado.getTime() : agora.getTime()) - inicio.getTime())
-        : 0;
+  /*
+   * OST 9: o número que a tela mostra passou a ser o TEMPO DA TAREFA, pedido do
+   * diretor. Tarefa é o comando que está rodando, ou o último que rodou: começa
+   * quando a ponte entrega o comando (ou quando o diretor manda o prompt na
+   * sessão aberta na mão) e para quando a rodada termina.
+   *
+   * Andando: conta do começo até agora. Parada: do começo até o fim gravado.
+   * Sem começo gravado, ou parada sem fim gravado, é "não medida": a tela não
+   * estima, e fábrica antiga, de antes da OST 9, cai aqui.
+   */
+  const tarefaInicio = paraData(doc.tarefaInicio);
+  const tarefaFim = paraData(doc.tarefaFim ?? null);
+  const ativa = estadoGravado === 'running' || estadoGravado === 'approval';
+  const tarefaAndando = tarefaInicio !== null && tarefaFim === null && ativa && !opcoes.pontePerdida;
+  const taskMs =
+    tarefaInicio === null
+      ? null
+      : tarefaFim !== null && tarefaFim.getTime() >= tarefaInicio.getTime()
+        ? tarefaFim.getTime() - tarefaInicio.getTime()
+        : tarefaAndando
+          ? Math.max(0, agora.getTime() - tarefaInicio.getTime())
+          : null;
+  const externa = semAcento(doc.origem ?? '') === 'mao' || doc.id.startsWith('mao-');
+  const caminho = doc.projeto?.trim() || doc.pasta?.trim() || null;
+  const nomeDaPasta = caminho ? (caminho.split(/[\\/]+/).filter(Boolean).pop() ?? null) : null;
+  const nomeDado = doc.nome?.trim() || null;
 
   /*
    * CONSUMO. `null` quer dizer NÃO MEDIDO, e isso é diferente de zero.
@@ -296,8 +359,11 @@ export function traduzirFabrica(
   const pausada = doc.pausada === true;
   return {
     id: doc.id,
-    project: doc.projeto?.trim() || 'Projeto sem nome',
-    folder: doc.pasta?.trim() || null,
+    project: nomeDado ?? (externa ? NOME_EXTERNA : (nomeDaPasta ?? 'Fábrica sem nome')),
+    nomeDado,
+    externa,
+    projeto: nomeDaPasta ?? 'projeto não informado',
+    caminho,
     agent: doc.agente?.trim() || 'Agente não informado',
     /*
      * MODELO. Quando falta, a tela tem de dizer POR QUE falta.
@@ -318,9 +384,10 @@ export function traduzirFabrica(
     state,
     doing: frasePeloEstado(state, temPedido, pausada),
     startedAt: inicio,
-    elapsedMs: decorrido,
+    taskMs,
+    tarefaAndando,
     tokens,
-    elapsed: tempoDecorrido(decorrido),
+    elapsed: taskMs === null ? 'tarefa não medida' : `${tarefaAndando ? 'tarefa' : 'última tarefa'} ${tempoDecorrido(taskMs)}`,
     usage: formatarConsumo(tokens),
     pending: temPedido ? `Parado há ${formatarTempoParado(opcoes.pedidoParado)}` : null,
     maquinaId: doc.maquinaId ?? null,
@@ -368,8 +435,8 @@ export interface CaminhoDeProjeto {
 export function caminhosDeProjeto(lista: Fabrica[]): CaminhoDeProjeto[] {
   const vistos = new Map<string, CaminhoDeProjeto>();
   for (const f of lista) {
-    const caminho = (f.folder ?? f.project ?? '').trim();
-    if (!caminho || caminho === 'Projeto sem nome') continue;
+    const caminho = (f.caminho ?? '').trim();
+    if (!caminho) continue;
     const anterior = vistos.get(caminho);
     if (anterior) {
       anterior.quantas += 1;

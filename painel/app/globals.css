@@ -156,3 +156,108 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ---------------------------------------------------------------------------
+   OST 9, cartoes compactos da Visao geral. Pedido do diretor: mais fabricas na
+   mesma altura, sem perder estado, nome, tempo da tarefa e consumo. Quatro
+   colunas no computador largo, tres no estreito. A linha tem a altura do cartao,
+   e nao um terco da tela: com poucas fabricas, o cartao nao estica.
+   --------------------------------------------------------------------------- */
+.gf-fgrid-compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: min-content;
+  align-content: start;
+  overflow: hidden;
+}
+
+@media (max-width: 1279px) {
+  .gf-fgrid-compact {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.gf-fcard-compact {
+  gap: var(--space-1);
+  padding: var(--space-3);
+}
+
+/* O nome pode ocupar duas linhas: cortar o nome escondia justamente o que
+   distingue duas fabricas externas, a hora e o numero no fim. */
+.gf-fcard-compact .gf-fcard-project {
+  margin-top: 0;
+  min-width: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+}
+
+.gf-fcard-id {
+  min-width: 0;
+}
+
+/* Tempo da tarefa e consumo nunca saem cortados: quando nao cabem lado a lado,
+   o consumo desce para a linha de baixo. */
+.gf-fcard-compact .gf-fcard-foot {
+  padding-top: 6px;
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   OST 9, menu lateral recolhido que abre ao passar o mouse. O trilho ocupa o
+   lugar dele na grade; aberto, o menu FLUTUA por cima da tela, sem empurrar o
+   conteudo nem fazer a pagina pular.
+   --------------------------------------------------------------------------- */
+.gf-side-wrap {
+  position: relative;
+  width: var(--size-rail);
+  height: 100%;
+  z-index: 40;
+}
+
+.gf-side-float {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--size-sidebar);
+  box-shadow: var(--shadow-glass), 0 12px 40px rgba(0, 0, 0, 0.28);
+  background: var(--bg-100);
+}
+
+/* ---------------------------------------------------------------------------
+   OST 9, nome editavel da fabrica.
+   --------------------------------------------------------------------------- */
+.gf-nome {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.gf-nome-texto {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gf-nome-edita {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1;
+}
+
+.gf-nome-linha {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.gf-nome-linha .gf-input {
+  min-width: 0;
+  flex: 1;
+}

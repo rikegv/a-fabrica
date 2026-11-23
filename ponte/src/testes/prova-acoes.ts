@@ -126,6 +126,7 @@ function comandoDeMentira(d: Partial<ComandoTomado> & { texto: string }): Comand
     texto: d.texto,
     cwd: d.cwd ?? null,
     conversationId: d.conversationId ?? null,
+    nome: d.nome ?? null,
     // null aqui e de proposito: e o que a ponte le quando a acao veio escrita e
     // nao e nenhuma das cinco. Por isso nao se usa ?? neste campo.
     acao: d.acao === undefined ? 'comando' : d.acao,
@@ -223,6 +224,32 @@ async function parte2(): Promise<void> {
   reg('');
   reg('PARTE 2, o roteador das cinco acoes, com documento de comando montado a mao');
 
+  // OST 9: o NOME entra no nascimento e a ponte nunca mais escreve por cima.
+  {
+    const mem = memoriaNova();
+    const mundo = mundoDeMemoria(mem, sessaoDeMentira(mem));
+    const fabricaId = randomUUID();
+    await despachar(
+      mundo,
+      comandoDeMentira({ fabricaId, acao: 'abrir', texto: 'nasce com nome', cwd: join(RODADA, 'projeto-nome'), nome: '  Envio   de documentos ' })
+    );
+    conferir(campo(mem, fabricaId, 'nome') === 'Envio de documentos', 'abrir grava o nome digitado, limpo', String(campo(mem, fabricaId, 'nome')));
+    // O diretor renomeia pelo painel, direto na base.
+    mem.fabricas.set(fabricaId, { ...(mem.fabricas.get(fabricaId) ?? {}), nome: 'Nome que o diretor deu depois' });
+    await despachar(
+      mundo,
+      comandoDeMentira({ fabricaId, acao: 'comando', texto: 'segue', conversationId: 'c1', nome: 'nome velho que nao pode voltar' })
+    );
+    conferir(
+      campo(mem, fabricaId, 'nome') === 'Nome que o diretor deu depois',
+      'comando seguinte NAO sobrescreve o nome que o diretor deu',
+      String(campo(mem, fabricaId, 'nome'))
+    );
+    const semNome = randomUUID();
+    await despachar(mundo, comandoDeMentira({ fabricaId: semNome, acao: 'abrir', texto: 'sem nome', cwd: join(RODADA, 'projeto-nome'), nome: '   ' }));
+    conferir(campo(mem, semNome, 'nome') === undefined, 'nome vazio nao vira nome, a tela decide', String(campo(mem, semNome, 'nome')));
+  }
+
   // abrir, com agente e modelo
   {
     const mem = memoriaNova();
@@ -280,6 +307,7 @@ async function parte2(): Promise<void> {
       texto: 'continue de onde paramos',
       cwd: join(RODADA, 'projeto-onda1'),
       conversationId: 'conversa-de-antes',
+      nome: null,
       acao: acaoDe({ texto: 'continue de onde paramos' }).acao,
       acaoBruta: null,
       agente: null,
