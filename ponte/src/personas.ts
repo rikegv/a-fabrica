@@ -48,7 +48,7 @@
 // aparencia.
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { SEPARADOR, caminhoComparavel, casaDoDiretor } from './plataforma.js';
+import { caminhoComparavel, casaDoDiretor, prefixoDaPasta } from './plataforma.js';
 import { dirname, join, resolve } from 'node:path';
 import type { AgentDefinition } from '@anthropic-ai/claude-agent-sdk';
 
@@ -285,7 +285,7 @@ export function acharPastaDeAgentes(cwd: string, casa: string = casaDoDiretor(),
   const pararEm = comparavelDePasta(casa);
   const inicio = comparavelDePasta(cwd);
   if (inicio === pararEm) return null;
-  const dentroDaCasa = inicio.startsWith(`${pararEm}${SEPARADOR}`);
+  const dentroDaCasa = inicio.startsWith(prefixoDaPasta(pararEm));
   if (!subir || !dentroDaCasa) return pastaDeAgentesAqui(resolve(cwd));
   let atual = resolve(cwd);
   for (let i = 0; i < 64; i++) {

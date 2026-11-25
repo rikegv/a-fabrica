@@ -76,9 +76,17 @@ export function caminhoComparavel(valor: string): string {
   return t;
 }
 
+/** O prefixo de quem fica dentro de uma pasta ja comparavel. Raiz: so ela mesma. */
+export function prefixoDaPasta(comparavel: string): string {
+  return comparavel.endsWith(SEPARADOR) ? comparavel : `${comparavel}${SEPARADOR}`;
+}
+
 /** O caminho e igual ao alvo, ou fica dentro dele, por fronteira de pasta? */
 export function dentroDaPasta(caminho: string, pasta: string): boolean {
   const c = caminhoComparavel(caminho);
   const a = caminhoComparavel(pasta);
-  return c === a || c.startsWith(`${a}${SEPARADOR}`);
+  // Achados do tester, OST 14: pasta vazia nao contem nada, e a raiz ja termina
+  // no separador, entao nao se acrescenta outro.
+  if (a.length === 0) return false;
+  return c === a || c.startsWith(prefixoDaPasta(a));
 }

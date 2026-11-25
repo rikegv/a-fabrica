@@ -18,8 +18,12 @@
 #      do diretor escreve e a ponte le);
 #   4. compila a ponte numa pasta nova com data e hora em /opt/a-fabrica-ponte, e
 #      aponta /opt/a-fabrica-ponte/app para ela. A versao anterior fica, §A.17;
-#   5. grava os dois lancadores e a regra estreita do sudo que deixa a ponte rodar
-#      SO eles e SO como o diretor;
+#   5. grava os dois lancadores e a regra do sudo que deixa a ponte rodar SO eles
+#      e SO como o diretor. ALCANCE REAL, dito por extenso (achado R2 da
+#      seguranca): o lancador abre o Claude Code com qualquer argumento, entao a
+#      regra equivale a "a ponte age como o diretor". Isso nao e escalada, porque
+#      a ponte ja tem a chave de aprovacao. O que a regra segura e o sentido
+#      contrario: o diretor, e portanto uma fabrica, nao vira a ponte;
 #   6. pareia a maquina e grava a configuracao do cliente, lida da hospedagem do
 #      projeto, que a serve em aberto de proposito;
 #   7. liga os ganchos no ~/.claude/settings.json do diretor, so acrescentando;
@@ -78,6 +82,14 @@ NODE="$(command -v node || true)"
 if [ -z "$NODE" ]; then NODE="$(sudo -u "$DIRETOR" -H bash -lc 'command -v node' 2>/dev/null || true)"; fi
 [ -n "$NODE" ] && [ -x "$NODE" ] || falhar "nao achei o Node" "instale o Node 20 ou mais novo"
 NODE="$(readlink -f "$NODE")"
+# Achado N1 da seguranca: o Node roda como a ponte. Se ele, ou uma pasta acima
+# dele, puder ser trocado pelo diretor, o diretor vira a ponte. So aceita do root.
+p="$NODE"
+while [ "$p" != "/" ]; do
+  [ "$(stat -c %u "$p")" = "0" ] || falhar "o Node em $NODE nao e do root ($p)" "instale o Node 20 do sistema, por exemplo pelo pacote da distribuicao ou do NodeSource"
+  [ $(( 0$(stat -c %a "$p") & 022 )) = 0 ] || falhar "$p deixa grupo ou outros escreverem, e o Node roda como a ponte"
+  p="$(dirname "$p")"
+done
 VERSAO_NODE="$("$NODE" -p 'process.versions.node.split(".")[0]')"
 [ "$VERSAO_NODE" -ge 20 ] || falhar "o Node desta maquina e a versao $VERSAO_NODE, e a ponte precisa da 20 ou mais"
 NPM="$(dirname "$NODE")/npm"; [ -x "$NPM" ] || NPM="$(command -v npm || true)"
@@ -143,12 +155,16 @@ vars=()
 while [ "\${1:-}" = "--env" ]; do
   par="\${2:-}"; shift 2
   nome="\${par%%=*}"
-  if [[ "\$nome" =~ ^(CLAUDE_CODE_ENTRYPOINT|CLAUDE_AGENT_SDK[A-Z_]*|DEBUG)\$ ]]; then vars+=("\$par"); else echo "variavel recusada: \$nome" >&2; exit 64; fi
+  # Achado R2: exige NOME=valor. So o nome, sem igual, viraria programa no env.
+  if [[ "\$par" =~ ^(CLAUDE_CODE_ENTRYPOINT|CLAUDE_AGENT_SDK[A-Z_]*|DEBUG)= ]]; then vars+=("\$par"); else echo "variavel recusada: \$nome" >&2; exit 64; fi
 done
 [ "\${1:-}" = "--" ] && shift
 alvo="\$(readlink -f -- "\${1:-}")"; shift || true
+# Achado R2: o caminho EXATO do binario do kit, e nao um prefixo da pasta.
 case "\$alvo" in
-  "\$APP"/node_modules/@anthropic-ai/*) ;;
+  "\$APP"/node_modules/@anthropic-ai/claude-agent-sdk-linux-x64/claude) ;;
+  "\$APP"/node_modules/@anthropic-ai/claude-agent-sdk-linux-x64-musl/claude) ;;
+  "\$APP"/node_modules/@anthropic-ai/claude-agent-sdk-linux-arm64/claude) ;;
   *) echo "programa recusado: so o Claude Code do kit da ponte" >&2; exit 64 ;;
 esac
 eu="\$(id -un)"; casa="\$(getent passwd "\$eu" | cut -d: -f6)"
@@ -241,7 +257,7 @@ fi
 # ---------------------------------------------------------------------------
 echo "7. Ganchos do Claude Code de $DIRETOR"
 sudo -u "$DIRETOR" -H "$NODE" "$RAIZ_APP/app/linux/ligar-ganchos.mjs" "$NODE" "$RAIZ_APP/app/ganchos/a-fabrica-gancho.cjs"
-echo "   sessao do Claude Code que ja estava aberta so passa a aparecer depois de reabrir"
+echo "   com o Claude Code 2.1.332 a sessao ja aberta passa a escrever sozinha; em versao antiga, reabra com claude --continue"
 
 # ---------------------------------------------------------------------------
 echo "8. Servico do systemd"
@@ -251,8 +267,7 @@ cat > "/etc/systemd/system/$UNIDADE.service" <<EOF
 Description=A Fabrica: ponte local entre o painel e o Claude Code
 After=network-online.target
 Wants=network-online.target
-# Sem login feito, a ponte nao tem o que fazer: nao sobe, e nao fica tentando.
-ConditionPathExists=$PASTA_PONTE/sessao.json
+# Sem login feito, a ponte sai com o codigo 3 e o systemd nao fica tentando.
 StartLimitIntervalSec=0
 
 [Service]
@@ -274,6 +289,9 @@ RuntimeDirectoryMode=0755
 ExecStart=$NODE $RAIZ_APP/app/dist/ponte.js
 Restart=always
 RestartSec=10
+# 3: falta o login. 6: a tranca da sessao nao esta de pe. Os dois so o diretor
+# destrava; religar a cada 10 segundos nao resolve nada. Todo o resto religa.
+RestartPreventExitStatus=3 6
 TimeoutStopSec=30
 
 [Install]
@@ -285,8 +303,12 @@ systemctl enable "$UNIDADE" >/dev/null 2>&1
 echo "   $UNIDADE.service ligado: sobe com a maquina e volta em 10 segundos se cair"
 
 # ---------------------------------------------------------------------------
+# Tem login? Quem responde e a propria ponte, olhando o usuario salvo, sem rede.
+# Arquivo existir nao basta: o kit do Firebase cria o arquivo mesmo sem login.
+tem_sessao() { (cd / && sudo -u "$USUARIO_PONTE" env HOME="$PASTA_PONTE" PONTE_PASTA_LOCAL="$PASTA_PONTE" "$NODE" "$RAIZ_APP/app/dist/entrar.js" --tem-sessao); }
+
 echo "9. Login"
-if [ -f "$PASTA_PONTE/sessao.json" ]; then
+if tem_sessao; then
   echo "   a ponte ja tem sessao, nada a fazer"
 elif [ "$SEM_LOGIN" = "1" ]; then
   echo "   deixado para depois: sudo bash $RAIZ_APP/app/linux/entrar.sh"
@@ -296,7 +318,7 @@ fi
 
 # ---------------------------------------------------------------------------
 echo "10. Subindo a ponte"
-if [ -f "$PASTA_PONTE/sessao.json" ]; then
+if tem_sessao; then
   systemctl restart "$UNIDADE"
   sleep 8
   if systemctl is-active --quiet "$UNIDADE"; then

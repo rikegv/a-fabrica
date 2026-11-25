@@ -43,7 +43,11 @@ import type { NivelRisco, PacoteAprovacao } from './tipos.js';
 import type { Firestore } from 'firebase/firestore';
 import type { PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 import { homedir } from 'node:os';
-import { comoInstalar } from './plataforma.js';
+import { comoEntrar, comoInstalar } from './plataforma.js';
+import { IdentidadeRecusada } from './identidade.js';
+
+/** OST 14: a ponte nao tem login. O systemd do Linux nao religa com este codigo. */
+export const SAIDA_SEM_SESSAO = 3;
 
 /**
  * As fabricas vivas deste processo, com o AbortController de cada uma. E por aqui
@@ -74,6 +78,10 @@ export function risco(cmd: string): NivelRisco {
   }
   // OST 14, verbos de Linux. Antes, sudo e ssh chegavam ao diretor como risco
   // baixo, o mesmo defeito de tela que a pasta da ponte teve. Estudo, secao 1.7.
+  // Achado do tester: comando que roda OUTRO comando, ou apaga sem rm.
+  if (/\b(bash|sh|zsh)\s+-c\b|\b(python3?|node|perl|ruby)\s+-(c|e|pi)\b|\bxargs\b|\bfind\b.*-(delete|exec)\b|\btruncate\b/.test(c)) {
+    return 'alto';
+  }
   if (/\b(sudo|su|ssh|scp|rsync|nc|systemctl|kill|pkill|killall|reboot|mkfs|crontab|visudo|passwd|useradd|usermod)\b/.test(c)) {
     return 'alto';
   }
@@ -400,6 +408,12 @@ if (executadoDireto) {
   main({ emulador: process.env.PONTE_EMULADOR === '1' }).catch((e: unknown) => {
     console.error('a ponte nao subiu.');
     console.error(e instanceof Error ? e.message : String(e));
+    if (e instanceof IdentidadeRecusada && e.semSessao) {
+      // OST 14: falta o login. Codigo proprio, que o servico do Linux nao religa.
+      console.error('');
+      console.error(`Falta o login da ponte, uma vez so: ${comoEntrar()}`);
+      process.exit(SAIDA_SEM_SESSAO);
+    }
     if (e instanceof SessaoDesprotegida) {
       console.error('');
       console.error('Isto e recusa de proposito, nao defeito. O que resolve, uma vez so:');

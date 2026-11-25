@@ -49,13 +49,15 @@
 
 import {
   closeSync,
+  constants as constantesFs,
   existsSync,
+  fstatSync,
+  readSync,
   mkdirSync,
   openSync,
   readFileSync,
   readdirSync,
   renameSync,
-  statSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
@@ -515,13 +517,32 @@ export async function varrerFila(
     const caminho = join(PASTA_FILA, nome);
     r.arquivosVistos++;
     const marca = marcas.arquivos[nome] ?? { bytes: 0, seq: 0 };
+    // OST 14, achado R3 da seguranca: no Linux quem escreve nesta pasta e o
+    // diretor, isto e, qualquer fabrica, e a ponte le com a permissao dela. Um
+    // atalho simbolico aqui apontando para a pasta da ponte viraria leitura da
+    // chave pela mao da fabrica. Por isso: abre SEM seguir atalho, confere pelo
+    // descritor que e arquivo comum com um nome so, poe teto, e le pelo mesmo
+    // descritor. No Windows o sinal de nao seguir atalho nao existe e vale 0.
+    const TETO_ARQUIVO_DA_FILA = 16 * 1024 * 1024;
+    let fd: number | null = null;
     let tamanho = 0;
     try {
-      tamanho = statSync(caminho).size;
+      fd = openSync(caminho, constantesFs.O_RDONLY | (constantesFs.O_NOFOLLOW ?? 0));
+      const st = fstatSync(fd);
+      if (!st.isFile() || st.nlink !== 1 || st.size > TETO_ARQUIVO_DA_FILA) {
+        r.erros.push(`${nome} recusado: nao e arquivo comum de um nome so, ou passou do teto`);
+        closeSync(fd);
+        continue;
+      }
+      tamanho = st.size;
     } catch {
+      if (fd !== null) closeSync(fd);
       continue;
     }
-    if (tamanho <= marca.bytes) continue;
+    if (tamanho <= marca.bytes) {
+      closeSync(fd);
+      continue;
+    }
 
     let bruto = '';
     try {
@@ -531,10 +552,14 @@ export async function varrerFila(
       // meio de uma linha, e os passos seguintes se perderem como ilegiveis. O
       // corte agora e feito nos bytes, e so depois o pedaco vira texto. A marca
       // sempre cai em fim de linha, entao nunca corta um caractere ao meio.
-      bruto = readFileSync(caminho).subarray(marca.bytes).toString('utf8');
+      const pedaco = Buffer.alloc(tamanho - marca.bytes);
+      const lidos = readSync(fd, pedaco, 0, pedaco.length, marca.bytes);
+      bruto = pedaco.subarray(0, lidos).toString('utf8');
     } catch (e) {
       r.erros.push(`nao deu para ler ${nome}: ${e instanceof Error ? e.message : String(e)}`);
       continue;
+    } finally {
+      closeSync(fd);
     }
     // A ultima linha pode estar pela metade, porque o gancho pode ter escrito no
     // meio desta leitura. So linha terminada em quebra conta.

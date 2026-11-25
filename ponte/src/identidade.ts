@@ -111,7 +111,17 @@ export interface Identidade {
 }
 
 export class IdentidadeRecusada extends Error {
-  constructor(mensagem: string, public readonly relato: string[]) {
+  constructor(
+    mensagem: string,
+    public readonly relato: string[],
+    /**
+     * OST 14: verdadeiro quando NAO existe sessao nenhuma, isto e, falta o login.
+     * O servico do Linux sai com codigo proprio nesse caso, e o systemd nao fica
+     * religando a cada 10 segundos uma ponte que so o diretor pode destravar.
+     * Falso para todo o resto (rede fora, conta errada), que pode passar sozinho.
+     */
+    public readonly semSessao = false
+  ) {
     super(mensagem);
     this.name = 'IdentidadeRecusada';
   }
@@ -648,7 +658,8 @@ export async function abrirIdentidade(opcoes: OpcoesIdentidade = {}): Promise<Id
     throw new IdentidadeRecusada(
       'nenhum degrau da escada de credencial entregou sessao. A ponte nao sobe sem identidade do diretor, §A.6. ' +
         `Rode o login, uma vez so: ${comoEntrar()}`,
-      relato
+      relato,
+      true
     );
   }
 
@@ -660,6 +671,21 @@ export async function abrirIdentidade(opcoes: OpcoesIdentidade = {}): Promise<Id
   }
   registrar(`identidade confirmada, ${usuario.email}, pelo degrau ${degrauUsado || 'sessao-salva'}`);
   return { app, auth, usuario, degrau: degrauUsado || 'sessao-salva', relato };
+}
+
+/**
+ * OST 14: existe USUARIO salvo na sessao em disco? Nao basta o arquivo existir:
+ * o proprio SDK cria o arquivo ao conferir a persistencia, mesmo quando o login
+ * falha, e "arquivo existe" fazia o login seguinte achar que ja tinha sessao.
+ */
+export function temSessaoSalva(emulador = false): boolean {
+  try {
+    const config = carregarConfig({ emulador });
+    const sessao = criarPersistenciaEmArquivo(emulador ? CAMINHO_SESSAO_EMULADOR : CAMINHO_SESSAO);
+    return sessao.ler(sessao.chaveDoUsuario(config.apiKey, NOME_APP)) !== null;
+  } catch {
+    return false;
+  }
 }
 
 export { NOME_APP };

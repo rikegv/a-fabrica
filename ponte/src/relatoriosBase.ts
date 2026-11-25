@@ -11,7 +11,7 @@
 //
 // §A.6: so conexao de saida. Nada aqui escuta porta.
 
-import { SEPARADOR, caminhoComparavel, casaDoDiretor, usuarioDasFabricas } from './plataforma.js';
+import { caminhoComparavel, prefixoDaPasta, casaDoDiretor, usuarioDasFabricas } from './plataforma.js';
 import { lerTextoDoFechamentoDaSessao } from './leitorDoDiretor.js';
 import { join } from 'node:path';
 import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where, type Firestore } from 'firebase/firestore';
@@ -101,7 +101,7 @@ export function projetoIgnorado(projetos: Array<string | null>, pastaLocal = PAS
     for (const alvo of lista) {
       if (typeof alvo !== 'string' || alvo.length === 0) continue;
       const a = comparavel(alvo);
-      if (c === a || c.startsWith(`${a}${SEPARADOR}`)) return true;
+      if (c === a || c.startsWith(prefixoDaPasta(a))) return true;
     }
   }
   return false;

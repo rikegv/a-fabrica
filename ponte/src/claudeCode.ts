@@ -80,9 +80,14 @@ export interface EscolhasDaSessao {
  * usuario, ela leria a chave, e a tranca nao valeria nada. Entao a fabrica nasce
  * como o DIRETOR, com a pasta, a conta do Claude Code e a configuracao dele, como
  * se ele tivesse aberto na mao (§A.9). Quem permite a troca de usuario e uma regra
- * estreita do sudo, gravada pela instalacao, que deixa a ponte rodar SO este
- * lancador e SO como o diretor. O lancador, por sua vez, so aceita o Claude Code
- * do proprio kit da ponte e so passa adiante as variaveis do kit.
+ * do sudo, gravada pela instalacao, que deixa a ponte rodar SO este lancador e SO
+ * como o diretor. O lancador so aceita o binario exato do Claude Code do kit e so
+ * passa adiante as variaveis do kit.
+ *
+ * ALCANCE REAL, achado R2 da seguranca, dito para ninguem confiar demais: o
+ * Claude Code aceita qualquer argumento, entao a regra equivale a "a ponte age
+ * como o diretor". Nao e escalada: a ponte ja tem a chave de aprovacao. O que a
+ * regra segura de verdade e o sentido contrario, o diretor nao vira a ponte.
  *
  * As opcoes, o portao e o fluxo de dados continuam os mesmos: o kit fala com o
  * filho pela entrada e pela saida padrao, e o sudo so fica no meio do caminho.

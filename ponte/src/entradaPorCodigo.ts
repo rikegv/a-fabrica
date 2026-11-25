@@ -9,7 +9,7 @@
 // --------------------------------------------------------------
 //   1. A ponte pede ao Authentication do proprio projeto um endereco de login do
 //      Google (createAuthUri). Ele devolve o link e um identificador de sessao.
-//      O identificador fica so com a ponte, num arquivo trancado, e vale 15
+//      O identificador fica so com a ponte, num arquivo trancado, e vale 60
 //      minutos.
 //   2. O diretor abre o link em QUALQUER navegador, no notebook ou no celular, e
 //      entra com o Google do jeito que a conta dele exigir, inclusive a segunda
@@ -35,10 +35,15 @@
 // morre na primeira troca. A chave que nasce dele vai direto para o arquivo
 // trancado e nao aparece em tela nenhuma.
 //
-// LIMITE DECLARADO: na VM fabrica-1 o diretor cola o endereco NA CONVERSA com a
-// fabrica, e a fabrica repassa para a ponte. A fabrica ve o codigo por alguns
-// segundos. Ela nao tem o identificador, entao nao consegue troca-lo sozinha, e
-// depois da troca o codigo nao vale mais nada.
+// LIMITE DECLARADO, achado R1 da seguranca na OST 14. O codigo colado so vale
+// com o identificador do passo 1, e esse identificador fica com a ponte. MAS:
+// quando quem roda o login e repassa o link e uma FABRICA (o diretor cola na
+// conversa com ela), a fabrica controla os dois lados. Ela pode pedir um link
+// proprio ao Authentication (a chave do cliente e publica), mostrar esse link ao
+// diretor, e trocar o codigo ela mesma, ficando com uma sessao da conta dele.
+// Nada neste arquivo impede isso. O caminho fechado e o diretor rodar o login no
+// terminal DELE (sudo bash /opt/a-fabrica-ponte/app/linux/entrar.sh), com o link
+// e a colagem passando so por ali, e com o usuario das fabricas sem sudo.
 //
 // §A.11: nenhum travessao em texto que o diretor le.
 
@@ -48,7 +53,7 @@ import { join } from 'node:path';
 import { DIRETOR, PASTA_LOCAL, type ConfigLocal } from './config.js';
 
 /** Quanto vale a entrada pendente, do link ate a colagem. */
-export const VALIDADE_DA_ENTRADA_MS = 15 * 60_000;
+export const VALIDADE_DA_ENTRADA_MS = 60 * 60_000;
 
 /** Onde mora a entrada pendente. Pasta trancada da ponte, arquivo 600. */
 export const CAMINHO_ENTRADA_PENDENTE = join(PASTA_LOCAL, 'entrada-pendente.json');

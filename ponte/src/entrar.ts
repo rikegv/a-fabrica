@@ -21,7 +21,7 @@
 // No Linux, OST 14, o login e por codigo colado, no modelo do login do Claude
 // Code, e nada escuta porta nenhuma (veja entradaPorCodigo.ts):
 //   node dist/entrar.js                 mostra o link e espera o endereco colado na entrada
-//   node dist/entrar.js --link          so gera o link e guarda a entrada pendente, 15 minutos
+//   node dist/entrar.js --link          so gera o link e guarda a entrada pendente, 60 minutos
 //   node dist/entrar.js --codigo        le o endereco colado da entrada e conclui a entrada pendente
 
 import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
@@ -34,7 +34,7 @@ import {
   PASTA_LOCAL,
   protegerPastaLocal,
 } from './config.js';
-import { ESCADA, IdentidadeRecusada, abrirIdentidade } from './identidade.js';
+import { ESCADA, IdentidadeRecusada, abrirIdentidade, temSessaoSalva } from './identidade.js';
 import { createInterface } from 'node:readline';
 import { carregarConfig } from './config.js';
 import {
@@ -114,6 +114,11 @@ async function lerTudo(): Promise<string> {
 }
 
 async function principal(): Promise<void> {
+  // OST 14: pergunta sem rede, para o instalador do Linux. 0 com usuario salvo,
+  // 1 sem. Nao abre nada, nao mostra nada da sessao.
+  if (process.argv.includes('--tem-sessao')) {
+    process.exit(temSessaoSalva(process.argv.includes('--emulador')) ? 0 : 1);
+  }
   const emulador = process.argv.includes('--emulador') || process.env.PONTE_EMULADOR === '1';
   const semNavegador = process.argv.includes('--sem-navegador');
   const soLink = process.argv.includes('--link');
@@ -145,7 +150,7 @@ async function principal(): Promise<void> {
   let entradaPorCodigo: { pendente: EntradaPendente; colado: string } | null = null;
   try {
     if (porCodigo) {
-      const jaTem = existsSync(caminhoSessao);
+      const jaTem = temSessaoSalva(emulador);
       if (soLink) {
         if (jaTem) {
           console.log(`A ponte ja tem sessao em ${caminhoSessao}. Nenhum link novo foi gerado.`);

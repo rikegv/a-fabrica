@@ -132,7 +132,9 @@ function dentroDe(projeto, lista) {
     const alvo = lista[i];
     if (typeof alvo !== 'string' || alvo.length === 0) continue;
     const a = caminhoComparavel(alvo);
-    if (p === a || p.startsWith(a + SEP)) return true;
+    // OST 14, achado do tester: a raiz ja termina no separador. Sem isto,
+    // projetosIgnorados com "/" deixava tudo passar.
+    if (p === a || p.startsWith(a.charAt(a.length - 1) === SEP ? a : a + SEP)) return true;
   }
   return false;
 }
