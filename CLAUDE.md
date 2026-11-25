@@ -196,3 +196,18 @@ Só volta para a mão dele o que o desenho exige:
 4. decisão de negócio ou de escopo.
 
 Esta regra não afrouxa nenhuma outra. Antes de reiniciar ou desligar algo que pode estar trabalhando, a fábrica confere que não derruba trabalho dele; se derrubaria, espera ou avisa. Se um comando que ela deveria rodar for barrado (pelo gate, pela configuração ou pelo próprio ambiente), ela NÃO contorna: anota o que foi barrado, por quê, e avisa o diretor no relatório.
+
+## A.25 Duas fábricas no mesmo repositório (regra permanente)
+Desde a OST 12, este repositório tem duas fábricas. A fábrica do NOTEBOOK roda na máquina do diretor. A fábrica da NUVEM roda na VM `fabrica-1`, projeto `soulan-fabricas`, sessão "A Fábrica (nuvem)". Para saber qual você é: na nuvem, o comando `hostname` responde `fabrica-1`.
+
+Ramo tem um dono só. A nuvem só faz commit em ramo que começa com `nuvem/`, e ela mesma cria esse ramo. O notebook nunca faz commit em ramo `nuvem/`. A nuvem nunca faz commit em ramo que não seja `nuvem/`, nem no ramo de onde partiu. Ao receber uma tarefa, a nuvem atualiza o ramo de partida pelo GitHub e cria `nuvem/<tema>` a partir dele.
+
+Sempre partir do que está no GitHub. Antes de começar e antes de subir, `git fetch`. Nunca `push --force`, nunca reescrever ramo que já subiu.
+
+Juntar o trabalho das duas é decisão do diretor. O caminho é o GitHub: ele lê o ramo `nuvem/` e manda juntar. Quem junta é a fábrica do notebook, por merge, sem reescrever nada.
+
+A mesma tarefa nunca vai para as duas ao mesmo tempo.
+
+Só o notebook faz: a ponte, o painel local, os ganchos de ciclo de vida, qualquer comando contra o `a-fabrica-soulan` (Firebase, gcloud, regra, índice, hospedagem), a main e a produção. A nuvem não tem credencial nenhuma disso e não tenta conseguir. O acesso dela ao GitHub é uma chave que só alcança este repositório.
+
+O gate do §A.7 vale nas duas. Na nuvem, subir ramo `nuvem/` segue o peso leve, com a flag READY_ na pasta dela. Peso pesado nunca nasce na nuvem.
