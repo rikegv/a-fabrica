@@ -1,0 +1,35 @@
+Diário de 24/11/2026, C:\Users\Henrique\a-fabrica
+Janela: de 23/11 às 20h00 até 24/11 às 20h00, horário de Brasília.
+Gerado em 24/11/2026 às 20:00, horário de Brasília.
+
+Rodadas no dia: 3
+Tempo das rodadas: 1 h 15 min, somando 2 de 3 rodadas, as outras sem hora de começo
+Consumo do dia: não medido
+Fechamentos no dia: 2
+
+O que ficou pendente
+
+- validação visual do diretor
+- prova no celular
+
+nada.
+
+Fechamento 1, às 10:30
+
+## O que foi solicitado
+Arrumar o chat.
+## O que foi feito
+Arrumei.
+## O que ficou faltando
+- validação visual do diretor
+- prova no celular
+
+## Próximo passo
+Validar.
+
+Fechamento 2, às 15:45
+
+**O que foi feito:** a ponte.
+**O que ficou faltando:** nada.
+**Problemas encontrados:** nenhum.
+**Quem trabalhou:** ponte.

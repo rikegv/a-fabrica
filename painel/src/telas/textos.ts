@@ -99,10 +99,6 @@ export const DESTINOS_INERTES: Record<string, { titulo: string; detalhe: string 
     detalhe:
       'Nesta onda, a Visão geral lista as fábricas por urgência, pagina quando passam de seis e abre cada uma no posto de comando.'
   },
-  reports: {
-    titulo: 'Relatórios entra na Onda 3',
-    detalhe: 'O fechamento por tarefa e o consolidado diário aparecem aqui quando a Onda 3 for construída.'
-  },
   metrics: {
     titulo: 'Indicadores entra na Onda 4',
     detalhe:
@@ -116,6 +112,6 @@ export const DESTINOS_INERTES: Record<string, { titulo: string; detalhe: string 
   more: {
     titulo: 'Mais entra nas ondas seguintes',
     detalhe:
-      'Indicadores e Configurações moram aqui no celular. Nesta onda estão prontas Fábricas, Aprovações e a abertura de fábrica nova.'
+      'Indicadores e Configurações moram aqui no celular. Estão prontas Fábricas, Aprovações, Relatórios e a abertura de fábrica nova.'
   }
 };

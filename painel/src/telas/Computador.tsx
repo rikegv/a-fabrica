@@ -5,8 +5,8 @@
  * corpo da tela. Uma tela so, sem rolagem da pagina.
  *
  * Telas construidas: Visao geral, Fabrica (posto de comando), Aprovacoes e Nova
- * fabrica. Relatórios, Indicadores, Configurações e a tela Fábricas seguem como
- * destino inerte, dito na tela, §A.12.
+ * fabrica. OST 13: Relatórios, juntando todas as fábricas. Indicadores,
+ * Configurações e a tela Fábricas seguem como destino inerte, dito na tela, §A.12.
  */
 
 import { useCallback, useState } from 'react';
@@ -21,6 +21,7 @@ import { FabricaTela } from './FabricaTela';
 import { FabricasFechadas } from './FabricasFechadas';
 import { Inerte } from './Inerte';
 import { NovaFabrica } from './NovaFabrica';
+import { RelatoriosGerais } from './Relatorios';
 import { Aviso, Topbar } from './pecas';
 import { usarResposta } from './pedido';
 import { DONO, MARCA, motivoDeAbrirFabrica } from './textos';
@@ -116,7 +117,9 @@ export function Computador({
           ? 'Mais antiga primeiro'
           : tela === 'closed'
             ? 'Nada é apagado. A fábrica só muda de lugar, e abre igual.'
-            : undefined;
+            : tela === 'reports'
+              ? 'Fechamentos e diários de todas as fábricas, mais novo em cima'
+              : undefined;
 
   const motivoDeAbrir = motivoDeAbrirFabrica(impedimentoDaEscrita(escrita));
   const direita =
@@ -150,6 +153,7 @@ export function Computador({
         resposta={resposta}
         avisar={avisar}
         pedidaEm={pedidaEm !== null && pedidaEm.id === fabricaId ? pedidaEm.em : null}
+        voltar={voltarParaVisaoGeral}
         verPedido={() => {
           setFabricaId(null);
           setTela('approvals');
@@ -177,6 +181,8 @@ export function Computador({
         }}
       />
     );
+  } else if (tela === 'reports') {
+    corpo = <RelatoriosGerais base={base} estado={estado} />;
   } else if (tela === 'approvals') {
     corpo = <Aprovacoes estado={estado} resposta={resposta} />;
   } else if (tela === 'new') {
@@ -204,8 +210,11 @@ export function Computador({
   }
 
   const comKpis = tela === 'overview' && !naFabrica;
+  /* OST 13: na fábrica que existe, sai o título grande; a linha fina do topo
+     mora dentro da própria tela. Enquanto ela nasce, o cabeçalho fica. */
+  const comTopbar = !(naFabrica && nomeDaFabrica);
   const linhas = [
-    'var(--size-topbar)',
+    comTopbar ? 'var(--size-topbar)' : null,
     faixa ? 'auto' : null,
     comKpis ? 'auto' : null,
     'minmax(0,1fr)'
@@ -252,12 +261,14 @@ export function Computador({
         }
       />
       <main className="gf-main" style={{ gridTemplateRows: linhas }}>
-        <Topbar
-          title={titulo}
-          sub={sub}
-          right={direita}
-          onBack={naFabrica || tela === 'new' ? voltarParaVisaoGeral : undefined}
-        />
+        {comTopbar ? (
+          <Topbar
+            title={titulo}
+            sub={sub}
+            right={direita}
+            onBack={naFabrica || tela === 'new' ? voltarParaVisaoGeral : undefined}
+          />
+        ) : null}
         {faixa}
         {comKpis ? <LinhaDeIndicadores estado={estado} /> : null}
         {corpo}

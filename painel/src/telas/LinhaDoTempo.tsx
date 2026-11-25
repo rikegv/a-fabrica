@@ -45,6 +45,9 @@ export function usarLinhaDoTempo(base: Firestore | null, fabricaId: string | nul
   );
   return {
     ...montada,
+    /* OST 13: a conversa do chat usa as mesmas ordens do painel, sem abrir um
+       segundo ouvinte da fila de comandos. */
+    comandos: comandos.itens,
     carregando: atividade.carregando,
     erro: atividade.erro ?? comandos.erro,
     carregados: atividade.itens.length,

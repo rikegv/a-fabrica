@@ -161,8 +161,63 @@ function donoDoPasso(l: LinhaDaAtividade, principal: string): string | null {
   return l.agente;
 }
 
+/*
+ * OST 13, item 2. Junta a conversa inteira (consulta própria, sem o limite de
+ * 200) com a janela recente da atividade, sem repetir passo, na ordem da tela:
+ * hora, e na mesma hora a ordem do diretor antes do que veio dela.
+ */
+export function juntarSemRepetir(...listas: LinhaDaAtividade[][]): LinhaDaAtividade[] {
+  const porId = new Map<string, LinhaDaAtividade>();
+  for (const lista of listas) for (const l of lista) if (!porId.has(l.id)) porId.set(l.id, l);
+  return [...porId.values()].sort((a, b) => {
+    const ta = a.quando?.getTime() ?? 0;
+    const tb = b.quando?.getTime() ?? 0;
+    if (ta !== tb) return ta - tb;
+    if (a.doDiretor !== b.doDiretor) return a.doDiretor ? -1 : 1;
+    return a.seq - b.seq;
+  });
+}
+
+/* Resposta da sessão principal: o fim de rodada da aberta na mão, ou o texto do
+   agente principal da aberta pelo painel. Texto de subagente não é. */
+function respostaDoPrincipal(l: LinhaDaAtividade, principal: string): boolean {
+  if (l.tipo !== 'resposta') return false;
+  if (l.semRegistroDeAgente) return !l.agente && l.evento === 'Resposta';
+  return !l.agente || l.agente === principal;
+}
+
+/*
+ * OST 13, os três pontinhos. Defeito medido: depois do fim de rodada o Claude
+ * Code manda um aviso e um "fim de agente" sem nome (o resumo automático), e a
+ * tela olhava só a última linha. Agora conta só o que é trabalho de verdade:
+ * ordem do diretor ainda sem resposta, ou passo do time depois da última
+ * resposta. Aviso, fim de agente, início e fim de sessão não acendem nada.
+ */
+function trabalhoDoTime(l: LinhaDaAtividade, principal: string): boolean {
+  if (l.tipo === 'ferramenta' || l.tipo === 'pensamento' || l.tipo === 'resultado') return true;
+  if (l.tipo === 'subagente') return Boolean(l.agente) && l.agente !== principal && !l.titulo.endsWith('terminou');
+  /* Texto de subagente, na fábrica aberta pelo painel. */
+  if (l.tipo === 'resposta') return Boolean(l.agente) && l.agente !== principal;
+  return false;
+}
+
+export function conversaEmAndamento(linhas: LinhaDaAtividade[], principal: string): boolean {
+  let ultimoFecho = -1;
+  let ultimaOrdem = -1;
+  let ultimoTrabalho = -1;
+  linhas.forEach((l, i) => {
+    if (l.doDiretor) ultimaOrdem = i;
+    else if (respostaDoPrincipal(l, principal) || l.tipo === 'fim') ultimoFecho = i;
+    else if (trabalhoDoTime(l, principal)) ultimoTrabalho = i;
+  });
+  return ultimaOrdem > ultimoFecho || ultimoTrabalho > ultimoFecho;
+}
+
 export function montarTime(opcoes: {
   linhas: LinhaDaAtividade[];
+  /* OST 13: a conversa inteira, lida numa consulta própria. Sem ela, o chat sai
+     só da janela recente. */
+  conversa?: LinhaDaAtividade[];
   agentePrincipal: string;
   agentesDoProjeto: Array<{ nome: string; descricao: string }>;
   estado: FactoryState;
@@ -208,17 +263,9 @@ export function montarTime(opcoes: {
 
   for (const l of opcoes.linhas) {
     const t = l.quando?.getTime() ?? 0;
-    if (l.doDiretor) {
-      chat.push({ id: l.id, quando: l.quando, de: 'diretor', texto: l.texto ?? l.titulo, situacao: l.situacao });
-      continue;
-    }
+    if (l.doDiretor) continue;
     if (l.semRegistroDeAgente) {
       semRegistro++;
-      /* Mesmo sem saber quem agiu, a resposta final da rodada é da sessão
-         principal, e o chat a mostra. */
-      if (l.tipo === 'resposta' && l.texto && l.evento === 'Resposta' && !l.agente) {
-        chat.push({ id: l.id, quando: l.quando, de: 'coordenador', texto: l.texto, situacao: null });
-      }
       continue;
     }
     const dono = donoDoPasso(l, principal) as string;
@@ -227,8 +274,10 @@ export function montarTime(opcoes: {
     const quem = delegacao ? principal : dono;
     const c = cartao(quem);
     /* O Claude Code às vezes manda "fim de agente" com o nome do próprio
-       principal. Isso não é entrega de ninguém, e não vira ação no cartão. */
-    const acao = quem === principal && l.tipo === 'subagente' ? null : acaoDaLinha(l);
+       principal. Isso não é entrega de ninguém, e não vira ação no cartão.
+       OST 13: a resposta do coordenador mora no chat e sai do cartão dele; o
+       cartão mostra o que ele fez. */
+    const acao = quem === principal && (l.tipo === 'subagente' || l.tipo === 'resposta') ? null : acaoDaLinha(l);
     if (acao) {
       c.totalDeAcoes++;
       c.acoes.push(acao);
@@ -242,9 +291,6 @@ export function montarTime(opcoes: {
     }
     if (quem === principal) {
       if (t) ultimoDoPrincipal = Math.max(ultimoDoPrincipal, t);
-      if (l.tipo === 'resposta' && l.texto && !/Entregou/.test(acao?.frase ?? '')) {
-        chat.push({ id: l.id, quando: l.quando, de: 'coordenador', texto: l.texto, situacao: null });
-      }
     } else {
       if (t) ultimoPasso.set(quem, Math.max(ultimoPasso.get(quem) ?? 0, t));
       if (l.tipo === 'subagente' && l.titulo.endsWith('começou')) chamadoEm.set(quem, Math.max(chamadoEm.get(quem) ?? 0, t));
@@ -269,10 +315,25 @@ export function montarTime(opcoes: {
     else if (viva && entregou > 0 && agora - entregou < JANELA_DA_TROCA_MS) c.fluxo = 'volta';
     else c.fluxo = 'apagada';
   }
+  /* OST 13: o chat sai da conversa inteira mais a janela recente. Aviso
+     automático do Claude Code não entra, e nunca aparece como "Você". */
+  const todas = juntarSemRepetir(opcoes.conversa ?? [], opcoes.linhas);
+  for (const l of todas) {
+    if (l.doDiretor) {
+      chat.push({ id: l.id, quando: l.quando, de: 'diretor', texto: l.texto ?? l.titulo, situacao: l.situacao });
+    } else if (l.texto && respostaDoPrincipal(l, principal)) {
+      chat.push({
+        id: l.id,
+        quando: l.quando,
+        de: 'coordenador',
+        texto: l.texto,
+        situacao: /\[\.\.\.cortado\]\s*$/.test(l.texto) ? 'texto cortado na gravação' : null
+      });
+    }
+  }
+
   const coord = cartoes.get(principal) as CartaoDeAgente;
-  const ultimaLinha = opcoes.linhas[opcoes.linhas.length - 1];
-  const parado = ultimaLinha ? ultimaLinha.tipo === 'resposta' && ultimaLinha.evento === 'Resposta' && !ultimaLinha.agente : true;
-  coord.trabalhando = viva && (!parado || [...cartoes.values()].some((c) => c.trabalhando));
+  coord.trabalhando = viva && (conversaEmAndamento(todas, principal) || [...cartoes.values()].some((c) => c.trabalhando));
   coord.fluxo = coord.trabalhando ? 'troca' : 'apagada';
 
   const agentes = [...cartoes.values()].filter((c) => c.nome !== principal);

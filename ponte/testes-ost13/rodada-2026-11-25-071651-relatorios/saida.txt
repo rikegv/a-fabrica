@@ -1,0 +1,122 @@
+prova dos relatorios, OST 13, 2026-11-25T10:16:51.791Z
+rodada: C:\Users\Henrique\a-fabrica\ponte\testes-ost13\rodada-2026-11-25-071651-relatorios
+
+PARTE 1, criterio do fechamento com os tres textos reais da OST 12
+  PASSOU os tres textos reais existem na transcricao: transcricao ~\.claude\projects\C--Users-Henrique-a-fabrica-painel\505e8cbc-62a5-4fdc-b587-868cacf3cec0.jsonl
+  PASSOU o fechamento real tem 5208 caracteres: 5208
+  PASSOU 01:44:41, o fechamento da OST 12, PASSA: grupos FEITO, FALTA, PEDIDO, DECISOES, ARQUIVOS, PROBLEMAS, PROXIMO, QUEM
+  PASSOU 01:36:34, abre com "A OST 12 esta fechada" e tem quatro titulos, PASSA: grupos FEITO, FALTA, DECISOES, QUEM, fechamento
+  PASSOU 02:09:58, a parada da Onda 0, NAO passa: grupos nenhum, faltam os titulos de feito e de faltando
+
+PARTE 2, criterio com casos falsos e formas de titulo
+  PASSOU titulos com #, **, numero e forma longa do §A.16: grupos FEITO, FALTA, PEDIDO, DECISOES, PROXIMO
+  PASSOU mencao no meio de frase nao conta: faltam os titulos de feito e de faltando
+  PASSOU titulo seguido de mais palavras na mesma frase nao conta: grupos DECISOES, ARQUIVOS
+  PASSOU tres grupos nao bastam: menos de quatro grupos
+  PASSOU task-notification no FIM do texto exclui o texto inteiro: aviso automatico
+  PASSOU system-reminder no meio exclui: aviso automatico
+  PASSOU SubagentStop nunca e fim da sessao principal: falso
+  PASSOU SubagentStop com o nome do principal tambem nao: falso
+  PASSOU Stop sem subagente e da sessao principal: verdadeiro
+  PASSOU Stop com agent_type igual ao principal (--agent) conta: verdadeiro
+  PASSOU Stop com nome de outro agente, texto de subagente, nao conta: falso
+  PASSOU Stop com subagente e principal desconhecido nao conta: falso
+  PASSOU comando do diretor nunca e fechamento: falso
+  PASSOU aviso nunca e fechamento: falso
+
+PARTE 3, texto inteiro pela transcricao, condicoes da seguranca
+  PASSOU caminho real da sessao e aceito: dentro de ~/.claude/projects, .jsonl, nome igual ao sid
+  PASSOU nome diferente do sid, recusado: falso
+  PASSOU pasta de nome parecido, fronteira de pasta, recusado: projects-x
+  PASSOU caminho com .. recusado: falso
+  PASSOU sem .jsonl, recusado: falso
+  PASSOU calibragem real: o Stop das 01:44 acha o texto inteiro: 5208 caracteres, achado
+  PASSOU Stop anterior a mensagem nao pega mensagem do futuro: nenhuma mensagem da sessao principal bateu com o trecho do gancho
+  PASSOU trecho que nao bate exato, sem normalizar, nao acha: nenhuma mensagem da sessao principal bateu com o trecho do gancho
+  PASSOU resposta cortada do gancho vira texto inteiro da transcricao: fonte transcricao, 5208 caracteres
+  PASSOU caminho fora da regra: texto do gancho, cortado: fonte gancho, cortado true
+  PASSOU resposta sem corte nem abre a transcricao: aberturas 0
+  PASSOU pega a mensagem principal, nunca subagente, pensamento, ferramenta ou usuario: termina em PRINCIPAL
+  PASSOU texto acima de 200.000 caracteres e cortado e marcado: 200000
+  PASSOU transcricao ausente diz so "ilegivel", sem trecho: transcricao ilegivel
+  PASSOU projeto ignorado nao gera relatorio: verdadeiro
+  PASSOU nome parecido nao e alcancado, fronteira de caminho: falso
+  PASSOU fabrica do painel em projeto ignorado nao grava, nem toca a base: projeto ignorado ou lista ilegivel
+  PASSOU fabrica do painel fora da lista segue para a base: erro: a base foi tocada
+  PASSOU fabrica do painel com lista ilegivel, falha fechada: projeto ignorado ou lista ilegivel
+  PASSOU lista ilegivel, falha fechada, nada sai: verdadeiro
+
+PARTE 4, ids sem texto
+  PASSOU mesma rodada, mesmo id; outra hora, outro id: fech-mao-x-3c4cbef9b2546d5a, fech-mao-x-4912c1fcb7e03658
+  PASSOU id do diario: diario-mao-x-2026-11-24
+
+PARTE 5, P1: subagente nao muda o estado da fabrica
+  PASSOU SubagentStop sem nome (resumo automatico) nao reacende a fabrica: null
+  PASSOU SubagentStart nao muda estado: null
+  PASSOU Stop continua aguardando comando: aguardando comando
+  PASSOU passo de ferramenta continua em execucao: em execucao
+
+PARTE 6, P2: agentes achados subindo de pasta
+  PASSOU subpasta acha os agentes da raiz do projeto: coordenador, ponte
+  PASSOU a propria raiz continua achando: coordenador, ponte
+  PASSOU projeto sem agentes nao sobe alem da pasta do usuario: 0 agente(s)
+  PASSOU a pasta do usuario nao e lida como projeto: null
+  PASSOU real: a-fabrica\painel acha o time da raiz: 8 agente(s)
+  PASSOU raiz do disco, fora da pasta do usuario, le so ela e nao acha: null
+  PASSOU projeto fora da pasta do usuario nao sobe de pasta: 0 agente(s) na subpasta
+  PASSOU fora da pasta do usuario le o proprio cwd: de-fora
+  PASSOU sem subir, subpasta nao acha a raiz: 0 agente(s)
+  PASSOU fabrica do painel em a-fabrica\painel nao sobe para a raiz: 0 agente(s)
+  PASSOU fabrica do painel na raiz cadastrada continua achando o time: 8 agente(s)
+
+PARTE 7, dia de Brasilia e consumo por dia
+  PASSOU 23:59:59 de Brasilia ainda e o dia 24: 2026-11-24
+  PASSOU 00:00 de Brasilia ja e o dia 25: 2026-11-25
+  PASSOU hora ilegivel nao inventa dia: null
+  PASSOU acrescimo soma na chave do dia, sem zero: {"2026-11-24":{"input_tokens":10,"cache_read_input_tokens":5}}
+  PASSOU acrescimo zerado nao escreve dia: {}
+  PASSOU 19:59:59 de 24/11 cai na janela do dia 24: 2026-11-24
+  PASSOU 20:00 de 24/11 ja cai na janela do dia 25: 2026-11-25
+  PASSOU 23:30 de 24/11, trabalho da noite, vai para o diario do dia 25: 2026-11-25
+  PASSOU janela do dia 24 em ISO: 2026-11-23T23:00:00.000Z ate 2026-11-24T23:00:00.000Z
+  PASSOU consumo somado as 22:00 de 24/11 entra na chave do dia 25, mesma janela: 2026-11-25
+
+PARTE 8, diario: quando gera, e o que leva
+  PASSOU 19:59 de Brasilia: o dia de hoje ainda nao gera: [{"fabricaId":"painel-b","dia":"2026-11-23","geradoAtrasado":true,"parcialDesde":null}]
+  PASSOU dia anterior que ficou para tras gera, marcado atrasado: painel-b 23/11
+  PASSOU 20:00 de Brasilia gera o do dia, no horario: [{"fabricaId":"mao-a","dia":"2026-11-24","geradoAtrasado":false,"parcialDesde":null}]
+  PASSOU fabrica sem atividade no dia nao gera: vazia fora
+  PASSOU mais de sete dias para tras nao gera: painel-c fora
+  PASSOU diario ja gerado nao gera de novo: fora
+  PASSOU maquina dormiu as 20h: gera ao acordar, para o dia que ficou para tras: [{"fabricaId":"painel-b","dia":"2026-11-23","geradoAtrasado":true,"parcialDesde":null},{"fabricaId":"mao-a","dia":"2026-11-24","geradoAtrasado":true,"parcialDesde":null}]
+  PASSOU livro esquece o que passou do prazo: mao-a, painel-b, vazia
+  PASSOU janelaInicio e janelaFim no documento: 2026-11-23T23:00:00.000Z ate 2026-11-24T23:00:00.000Z
+  PASSOU o texto diz a janela por extenso: sim
+  PASSOU id e tipo: diario-mao-a-2026-11-24
+  PASSOU rodada repetida nao conta duas vezes: 3 rodadas
+  PASSOU tempo e a soma das rodadas com comeco conhecido: 4500000 ms
+  PASSOU o texto diz quantas rodadas o tempo cobre: sim
+  PASSOU dia sem medicao diz "nao medido": sim
+  PASSOU pendencias copiadas sem reescrever, na ordem do dia: ["- validação visual do diretor\n- prova no celular","nada."]
+  PASSOU fechamentos inteiros, em ordem de tempo: fech-1, fech-2
+  PASSOU o diario diz a hora em que foi gerado: sim
+  PASSOU nenhum travessao no texto do diario, §A.11: sem travessao
+  PASSOU diario normal nao e cortado: falso
+  PASSOU 22:00 de 23/11 entra no diario do dia 24; 20:30 de 24/11 fica para o do dia 25: {"f":["dentro"],"r":1,"t":1800000}
+  PASSOU janela ainda aberta nao gera: []
+  PASSOU janela fechada gera, marcada parcial desde o comeco do livro: [{"fabricaId":"mao-z","dia":"2026-11-25","geradoAtrasado":false,"parcialDesde":"2026-11-24T23:40:00.000Z"}]
+  PASSOU o texto do parcial diz desde quando, sem travessao: sim
+  PASSOU o 24/11 ja gravado nao e gerado de novo, nem pelo livro nem pela janela: {"comId":[],"semId":[]}
+  PASSOU diario atrasado diz que saiu atrasado: sim
+  PASSOU consumo do dia por extenso, tempo nao medido: sim
+  PASSOU sem travessao no atrasado: sem travessao
+  PASSOU diario acima de 1 MiB e cortado, marcado e dito no texto: 998995 bytes
+
+PARTE 9, fabrica de verdade pelo kit, modelo claude-haiku-5-5, portao nega tudo, base em memoria
+  rodada 1: success, 1 fim(ns) de rodada, resposta com 133 caracteres
+  PASSOU resposta final do agente principal chega pelo kit e passa no criterio: grupos FEITO, FALTA, PEDIDO, PROBLEMAS
+  PASSOU rodada tem sessao do kit, comeco e fim: sessao 55b12d9b...
+  PASSOU resposta comum da rodada seguinte nao vira relatorio: 7 caracteres, faltam os titulos de feito e de faltando
+  PASSOU cada rodada do painel tem id proprio: sim
+
+RESUMO: tudo passou.

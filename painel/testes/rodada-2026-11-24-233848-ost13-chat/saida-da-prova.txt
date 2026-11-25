@@ -1,0 +1,57 @@
+Caso 1. Conversa longa: 300 rodadas, cada uma com ordem, 3 ferramentas e resposta (1500 passos).
+PASSOU  antes do conserto, a janela de 200 perde a conversa  (80 mensagens no chat)
+PASSOU  agora o chat tem as 600 mensagens  (600 mensagens)
+PASSOU  a primeira mensagem é a ordem 0, do diretor
+PASSOU  a última é a resposta 299, do coordenador
+PASSOU  ordem e resposta alternam, em ordem de hora
+PASSOU  sem passo repetido
+PASSOU  fábrica parada depois da última resposta: pontinho apagado
+
+Caso 2. Fim de rodada seguido do aviso e do resumo automático, fábrica marcada em execução.
+PASSOU  pontinho apagado
+PASSOU  nenhum agente aceso
+PASSOU  o aviso não entra no chat  (diretor, coordenador)
+PASSOU  a última linha é o fim de agente sem nome, que antes acendia
+
+Caso 3. Ordem sem resposta com a fábrica em execução.
+PASSOU  pontinho aceso pela ordem da mão
+PASSOU  mesma conversa com a fábrica esperando comando: apagado
+PASSOU  pontinho aceso pela ordem do painel ainda sem resposta
+PASSOU  a ordem do painel aparece no chat como Você
+PASSOU  passo do time depois da última resposta: aceso
+
+Caso 4. A resposta fica no chat e sai do cartão do coordenador.
+PASSOU  o cartão do coordenador não tem "Respondeu"  (Passou trabalho para Frontend | Leu)
+PASSOU  o cartão mostra o que ele fez: leu e passou trabalho
+PASSOU  a resposta está no chat
+PASSOU  o agente frontend tem a ação dele no cartão dele
+
+Caso 5. Aviso automático do Claude Code entregue como prompt.
+PASSOU  o aviso não aparece como Você
+PASSOU  pontinho apagado depois da resposta ao aviso
+
+Caso 6. Fábrica aberta pelo painel, passos do kit.
+PASSOU  texto seguido de ferramenta: aceso
+PASSOU  texto final e fim da rodada: apagado
+PASSOU  as duas falas do coordenador estão no chat
+
+Caso 7. Resposta cortada pelo gancho em 4000 caracteres.
+PASSOU  a mensagem diz que foi cortada na gravação
+
+Caso 8. Texto do fechamento em blocos, sem HTML.
+PASSOU  dois títulos
+PASSOU  negrito vira trecho forte
+PASSOU  lista numerada guarda o número
+PASSOU  o <script> continua texto puro, inteiro
+PASSOU  nada some do texto: todo caractere visível está nos blocos
+
+Caso 9. Dia de Brasília e filtros.
+PASSOU  23h59 de Brasília ainda é o mesmo dia
+PASSOU  00h00 de Brasília já é o dia seguinte
+PASSOU  a faixa começa à meia-noite de Brasília e cobre o diário atrasado
+PASSOU  mais novo em cima
+PASSOU  filtro por dia acha o diário gerado depois
+PASSOU  filtro por fábrica
+PASSOU  diário sem consumo diz não medido (nulo, não zero)
+
+Todas as verificações passaram.

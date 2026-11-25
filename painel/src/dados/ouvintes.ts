@@ -26,7 +26,7 @@ import {
   type FirestoreError,
   type Query
 } from 'firebase/firestore';
-import type { AprovacaoBase, AtividadeBase, ComandoBase, FabricaBase, MaquinaBase, TarefaBase } from './tipos';
+import type { AprovacaoBase, AtividadeBase, ComandoBase, FabricaBase, MaquinaBase, RelatorioBase, TarefaBase } from './tipos';
 
 export interface Colecao<T> {
   itens: T[];
@@ -166,6 +166,72 @@ export function usarComandosDaFabrica(base: Firestore | null, fabricaId: string 
     [base, fabricaId]
   );
   return usarConsulta<ComandoBase>(consulta);
+}
+
+/*
+ * OST 13, item 2: a CONVERSA da fábrica, lida à parte, sem o limite de 200 da
+ * atividade. Numa sessão longa as ordens e as respostas ficavam fora da janela
+ * e o chat aparecia vazio. Só os passos de conversa, num único `in`, sem
+ * orderBy: assim a base não pede índice composto. A ordem é feita no painel.
+ * A escuta se encerra ao sair da tela, no cleanup do efeito de usarConsulta.
+ */
+export const TIPOS_DA_CONVERSA = ['comando do diretor', 'fim de rodada', 'texto', 'agent_response', 'user_input'];
+
+export function usarConversa(base: Firestore | null, fabricaId: string | null): Colecao<AtividadeBase> {
+  const consulta = useMemo(
+    () =>
+      base && fabricaId
+        ? query(collection(base, 'fabricas', fabricaId, 'atividade'), where('tipo', 'in', TIPOS_DA_CONVERSA))
+        : null,
+    [base, fabricaId]
+  );
+  return usarConsulta<AtividadeBase>(consulta);
+}
+
+/*
+ * OST 13, Onda 3: relatórios. Três leituras, todas sem índice composto:
+ *  - os de UMA fábrica, filtro de um campo só, sem orderBy (a aba da fábrica e o
+ *    filtro por fábrica do menu);
+ *  - os mais recentes de todas, por criadoEm, com limite (o menu);
+ *  - os de uma faixa de criadoEm, quando a data pedida está fora do que já foi
+ *    carregado. Faixa e ordem no mesmo campo, que a base atende sem índice novo.
+ */
+export function usarRelatoriosDaFabrica(base: Firestore | null, fabricaId: string | null): Colecao<RelatorioBase> {
+  const consulta = useMemo(
+    () => (base && fabricaId ? query(collection(base, 'relatorios'), where('fabricaId', '==', fabricaId)) : null),
+    [base, fabricaId]
+  );
+  return usarConsulta<RelatorioBase>(consulta);
+}
+
+export function usarRelatoriosRecentes(base: Firestore | null, quantos: number, ativo = true): Colecao<RelatorioBase> {
+  const consulta = useMemo(
+    () => (base && ativo ? query(collection(base, 'relatorios'), orderBy('criadoEm', 'desc'), limitar(quantos)) : null),
+    [base, quantos, ativo]
+  );
+  return usarConsulta<RelatorioBase>(consulta);
+}
+
+export function usarRelatoriosDaFaixa(
+  base: Firestore | null,
+  faixa: { de: Date; ate: Date } | null
+): Colecao<RelatorioBase> {
+  const de = faixa?.de.getTime() ?? null;
+  const ate = faixa?.ate.getTime() ?? null;
+  const consulta = useMemo(
+    () =>
+      base && de !== null && ate !== null
+        ? query(
+            collection(base, 'relatorios'),
+            where('criadoEm', '>=', new Date(de)),
+            where('criadoEm', '<', new Date(ate)),
+            orderBy('criadoEm', 'desc'),
+            limitar(500)
+          )
+        : null,
+    [base, de, ate]
+  );
+  return usarConsulta<RelatorioBase>(consulta);
 }
 
 export function usarTarefas(base: Firestore | null, fabricaId: string | null): Colecao<TarefaBase> {

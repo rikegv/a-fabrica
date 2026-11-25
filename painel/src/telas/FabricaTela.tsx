@@ -18,11 +18,15 @@
  * coordenador no topo, coordenador no centro, um cartão por agente embaixo,
  * ligados por linhas de luz. A lista por ordem de hora e os cartões grandes da
  * direita saíram; tempo da rodada, consumo e máquina viraram o rodapé.
+ *
+ * OST 13: sai o título grande. No topo, uma linha fina com voltar, nome,
+ * situação, consumo, as abas (Ao vivo e Relatórios) e os botões. O corpo ao vivo
+ * tem o chat na esquerda, um terço, e o time na direita, dois terços.
  */
 
 import { useState } from 'react';
 import type { Firestore } from 'firebase/firestore';
-import { Button, FactoryHeader, RiskTag, StateIcon } from '@/componentes/ds';
+import { Button, Icon, RiskTag, StateBadge, StateIcon, Tabs } from '@/componentes/ds';
 import {
   encerrarFabrica,
   impedimentoDaEscrita,
@@ -31,9 +35,11 @@ import {
   reiniciarFabrica,
   type ContextoDeEscrita
 } from '@/dados/escritas';
+import { usarRelatoriosDaFabrica } from '@/dados/ouvintes';
 import type { EstadoDoPainel } from '@/dados/painel';
 import type { Fabrica } from '@/dados/tradutor';
 import { ChatComCoordenador, PalcoDoTime, RodapeDaFabrica, SemFabrica, usarTimeDaFabrica } from './FabricaViva';
+import { RelatoriosDaFabrica } from './Relatorios';
 import { TituloEditavel } from './renomear';
 import { Confirmacao, ErroDeEscrita, EsperandoNascer, MarcaDeOrigem, Panel, PRAZO_PARA_NASCER_MS, Vazio } from './pecas';
 import { type EstadoDaResposta } from './pedido';
@@ -121,6 +127,7 @@ export function FabricaTela({
   resposta,
   avisar,
   verPedido,
+  voltar,
   pedidaEm = null
 }: {
   base: Firestore | null;
@@ -130,6 +137,7 @@ export function FabricaTela({
   resposta: EstadoDaResposta;
   avisar: (mensagem: string) => void;
   verPedido: () => void;
+  voltar: () => void;
   /** Quando a ordem de abrir ESTA fabrica foi aceita, se foi nesta visita. §A.22. */
   pedidaEm?: Date | null;
 }) {
@@ -140,6 +148,10 @@ export function FabricaTela({
   const vivo = usarTimeDaFabrica(base, fabrica);
   const acoes = usarAcoesDaFabrica(escrita, fabrica, avisar);
   const caixa = usarCaixaDeComando(escrita, fabrica, avisar);
+  const [aba, setAba] = useState<'vivo' | 'relatorios'>('vivo');
+  /* A escuta dos relatórios vive enquanto a tela da fábrica está aberta, e se
+     encerra ao sair dela. A conta aparece na aba. */
+  const relatorios = usarRelatoriosDaFabrica(base, fabrica ? fabricaId : null);
 
   if (!fabrica) {
     // §A.22: "ainda nao nasceu" e "nao esta mais aqui" sao coisas diferentes e
@@ -170,20 +182,51 @@ export function FabricaTela({
   return (
     <div className="gf-body" style={{ gridTemplateColumns: 'minmax(0,1fr)' }}>
       <section className="gf-panel gf-glass gf-fv">
-        <FactoryHeader
-          project={fabrica.project}
-          titleNode={<TituloEditavel fabrica={fabrica} escrita={escrita} avisar={avisar} />}
-          agent={[fabrica.projeto, fabrica.model].filter(Boolean).join(' · ')}
-          state={fabrica.state}
-          elapsed={fabrica.elapsed}
-          usage={fabrica.usage}
-          paused={fabrica.pausada}
-          busy={acoes.ordem.ocupado}
-          actionsDisabledReason={acoes.motivo}
-          onPause={fabrica.pausada ? acoes.retomar : acoes.pausar}
-          onRestart={acoes.reiniciar}
-          onStop={acoes.pedirConfirmacaoDeEncerramento}
-        />
+        <header className="gf-fv-topo">
+          <button type="button" className="gf-iconbtn" aria-label="Voltar" onClick={voltar} style={{ width: 32, height: 32 }}>
+            <Icon name="back" size={16} />
+          </button>
+          <TituloEditavel fabrica={fabrica} escrita={escrita} avisar={avisar} pequeno />
+          <StateBadge state={fabrica.state} />
+          <span className="gf-fv-topo-meta caption gf-muted">
+            {fabrica.pausada ? <span>pausada por você</span> : null}
+            <span className="mono">{fabrica.usage}</span>
+            <span className="mono">{fabrica.elapsed}</span>
+            <span className="gf-faint">{[fabrica.projeto, fabrica.model].filter(Boolean).join(' · ')}</span>
+          </span>
+          <Tabs
+            value={aba}
+            onChange={(id) => setAba(id as 'vivo' | 'relatorios')}
+            tabs={[
+              { id: 'vivo', label: 'Ao vivo' },
+              { id: 'relatorios', label: 'Relatórios', count: relatorios.itens.length || undefined }
+            ]}
+          />
+          <span className="gf-fv-topo-acoes">
+            {acoes.motivo ? (
+              <span className="caption gf-faint gf-fv-topo-motivo" title={acoes.motivo}>
+                {acoes.motivo}
+              </span>
+            ) : null}
+            <Button
+              variant="secondary"
+              disabled={Boolean(acoes.motivo) || acoes.ordem.ocupado}
+              onClick={fabrica.pausada ? acoes.retomar : acoes.pausar}
+            >
+              {fabrica.pausada ? 'Retomar' : 'Pausar'}
+            </Button>
+            <Button variant="secondary" disabled={Boolean(acoes.motivo) || acoes.ordem.ocupado} onClick={acoes.reiniciar}>
+              Reiniciar
+            </Button>
+            <Button
+              variant="danger"
+              disabled={Boolean(acoes.motivo) || acoes.ordem.ocupado}
+              onClick={acoes.pedirConfirmacaoDeEncerramento}
+            >
+              Encerrar
+            </Button>
+          </span>
+        </header>
         {acoes.ordem.erro && !acoes.confirmando ? (
           <ErroDeEscrita mensagem={acoes.ordem.erro} aoFechar={acoes.ordem.limparErro} />
         ) : null}
@@ -217,11 +260,13 @@ export function FabricaTela({
             </Button>
           </div>
         ) : null}
-        <ChatComCoordenador dados={vivo} coordenador="Coordenador" caixa={caixa} />
-        {vivo.time ? (
-          <PalcoDoTime time={vivo.time} agora={vivo.agora} semRegistro={vivo.time.semRegistro} />
+        {aba === 'relatorios' ? (
+          <RelatoriosDaFabrica leitura={relatorios} estado={estado} />
         ) : (
-          <SemFabrica carregando={vivo.dados.carregando} />
+          <div className="gf-fv-corpo">
+            <ChatComCoordenador dados={vivo} coordenador="Coordenador" caixa={caixa} />
+            {vivo.time ? <PalcoDoTime time={vivo.time} agora={vivo.agora} /> : <SemFabrica carregando={vivo.dados.carregando} />}
+          </div>
         )}
         <RodapeDaFabrica fabrica={fabrica} estado={estado} time={vivo.time} />
       </section>

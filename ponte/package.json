@@ -26,7 +26,8 @@
     "prova:acoes:sem-claude": "tsc -p tsconfig.json && cross-env PONTE_SEM_CLAUDE=1 node dist/testes/prova-acoes.js",
     "prova:acoes:emulador": "tsc -p tsconfig.json && cross-env PONTE_EMULADOR=1 node dist/testes/prova-acoes-emulador.js",
     "medir:ganchos": "node ganchos/medir.mjs",
-    "prova:consumo": "tsc -p tsconfig.json && node dist/testes/prova-consumo.js"
+    "prova:consumo": "tsc -p tsconfig.json && node dist/testes/prova-consumo.js",
+    "prova:relatorios": "tsc -p tsconfig.json && node dist/testes/prova-relatorios.js"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.3.296",

@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "outDir": "./compilado",
+    "rootDir": "../../src",
+    "module": "commonjs",
+    "target": "es2020",
+    "moduleResolution": "node",
+    "skipLibCheck": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "jsx": "preserve",
+    "baseUrl": "../..",
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "files": ["../../src/dados/time.ts", "../../src/dados/tradutor.ts", "../../src/dados/relatorios.ts", "../../src/formato.ts"]
+}

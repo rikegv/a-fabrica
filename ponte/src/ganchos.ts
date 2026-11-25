@@ -67,6 +67,8 @@ import { lerTranscricao, type MarcaDaTranscricao } from './transcricao.js';
 import { mascarar } from './mascara.js';
 import type { EstadoFabrica } from './tipos.js';
 import { agentesParaABase, lerAgentesDoProjeto } from './personas.js';
+import { anotarPasso, anotarRodada, livroDaPonte, marcarLivroSujo, salvarLivro } from './relatorios.js';
+import { fechamentoDaMao } from './relatoriosBase.js';
 
 /**
  * Onde mora a fila de atividade. Producao: a pasta local da ponte.
@@ -127,6 +129,17 @@ async function temIdentificacao(db: Firestore, fabricaId: string): Promise<boole
     // Na duvida, NAO escreve. Deixar campo faltando e menos grave do que trocar a
     // raiz do projeto do diretor por uma subpasta.
     return true;
+  }
+}
+
+/** OST 13, P2: o projeto ja gravado na fabrica, a raiz. Null quando nao ha ou nao deu para ler. */
+async function projetoGravado(db: Firestore, fabricaId: string): Promise<string | null> {
+  try {
+    const d = await getDoc(doc(db, 'fabricas', fabricaId));
+    const p = d.exists() ? d.data()['projeto'] : null;
+    return typeof p === 'string' && p.length > 0 ? p : null;
+  } catch {
+    return null;
   }
 }
 
@@ -225,7 +238,7 @@ export interface PassoPublicado {
  *   SessionStart       nasce a fabrica, estado em execucao
  *   UserPromptSubmit   o diretor mandou algo, estado em execucao
  *   PostToolUse        um passo, estado em execucao
- *   SubagentStart/Stop inicio e fim de subagente
+ *   SubagentStart/Stop inicio e fim de subagente, nao muda estado (OST 13)
  *   Stop               a rodada acabou, estado aguardando comando
  *   SessionEnd         terminou, estado concluida, ou falhou quando o motivo diz
  *   Notification       aviso, nao muda estado
@@ -300,12 +313,18 @@ export function traduzir(linha: LinhaDeGancho, seq: number): { passo: PassoPubli
     case 'PostToolUse':
       tipo = 'ferramenta';
       break;
+    // OST 13, P1: inicio e fim de subagente NAO mudam o estado da fabrica. O
+    // agente principal ja esta em execucao quando um subagente roda, e o resumo
+    // automatico que o Claude Code manda depois do Stop (um SubagentStop sem
+    // nome) reacendia a fabrica que ja estava aguardando comando.
     case 'SubagentStart':
       tipo = 'subagente';
+      estado = null;
       descricao = `subagente ${subagente ?? 'sem nome'} comecou`;
       break;
     case 'SubagentStop':
       tipo = 'subagente';
+      estado = null;
       descricao = `subagente ${subagente ?? 'sem nome'} terminou`;
       break;
     case 'Stop':
@@ -393,6 +412,8 @@ interface MarcaDoArquivo {
   seq: number;
   /** OST 9: existe tarefa aberta, comecou com comando do diretor e nao parou. */
   tarefaAberta?: boolean;
+  /** OST 13: hora do comando do diretor que abriu a tarefa, para a rodada do diario. Metadado. */
+  tarefaInicio?: string | null;
   /** OST 9: ate onde a transcricao desta sessao ja foi lida para consumo. */
   transcricao?: MarcaDaTranscricao;
   /** OST 9: ultimo modelo gravado na base, para nao regravar a cada passada. */
@@ -526,6 +547,7 @@ export async function varrerFila(
     // fabrica em vez de recomecar do zero. OST 10.
     let seqContinuado = marcas.arquivos[nome] !== undefined;
     let tarefaAberta = marca.tarefaAberta === true;
+    let tarefaInicio: string | null = marca.tarefaInicio ?? null;
     let caminhoDaTranscricao: string | null = marca.transcricao?.caminho ?? null;
     let fabricaDaSessao: string | null = null;
     let encerrou = false;
@@ -598,22 +620,52 @@ export async function varrerFila(
         }
         // OST 11: a lista de agentes do projeto, uma vez por vida da ponte, para o
         // painel desenhar um cartao por agente. So nome e descricao.
+        // OST 13, P2: de preferencia o projeto ja gravado na fabrica (a raiz),
+        // nao a pasta desta linha, que pode ser uma subpasta; e a leitura sobe de
+        // pasta em pasta ate achar .claude/agents.
         if (projeto !== null && !timePublicado.has(fabricaId)) {
+          const raiz = passo.tipo === 'init' ? projeto : ((await projetoGravado(db, fabricaId)) ?? projeto);
+          await atualizarFabrica(db, fabricaId, { agentesDoProjeto: agentesParaABase(lerAgentesDoProjeto(raiz, { subir: true })) });
           timePublicado.add(fabricaId);
-          await atualizarFabrica(db, fabricaId, { agentesDoProjeto: agentesParaABase(lerAgentesDoProjeto(projeto)) });
         }
         await addDoc(collection(db, 'fabricas', fabricaId, 'atividade'), { ...passo, em: serverTimestamp() });
         if (estado !== null) await atualizarFabrica(db, fabricaId, { estado });
         // OST 9: relogio da TAREFA. Comeca no comando do diretor e para no fim da
         // rodada. A hora e a que o gancho anotou, no instante do evento.
         const quando = texto(linha.t) ?? new Date().toISOString();
+        // OST 13, P3: fechamento. So o Stop da sessao principal, e so com
+        // conteudo === true; o resto das condicoes mora em fechamentoDaMao. Se a
+        // base falhar, LANCA, e a marca da fila nao anda: o relatorio e criado ou
+        // confirmado antes de a linha contar como lida.
+        if (passo.evento === 'Stop' && linha.conteudo === true) {
+          const saida = await fechamentoDaMao(db, {
+            fabricaId,
+            maquinaId,
+            sid,
+            evento: passo.evento,
+            subagente: texto(linha.subagente),
+            conteudo: linha.conteudo,
+            resposta: texto(linha.resposta),
+            t: quando,
+            transcricao: texto(linha.transcricao) ?? caminhoDaTranscricao,
+            projetoDaLinha: projeto,
+            rodadaInicio: tarefaAberta ? tarefaInicio : null,
+          });
+          if (saida.startsWith('fechamento')) registrar(`fabrica ${fabricaId}: ${saida}`);
+        }
+        const livro = livroDaPonte();
+        anotarPasso(livro, fabricaId, quando);
         if (passo.evento === 'UserPromptSubmit') {
           await atualizarFabrica(db, fabricaId, { tarefaInicio: quando, tarefaFim: null });
           tarefaAberta = true;
+          tarefaInicio = quando;
         } else if ((passo.evento === 'Stop' || passo.evento === 'SessionEnd') && tarefaAberta) {
           await atualizarFabrica(db, fabricaId, { tarefaFim: quando });
+          anotarRodada(livro, fabricaId, tarefaInicio, quando);
           tarefaAberta = false;
+          tarefaInicio = null;
         }
+        marcarLivroSujo();
         fabricaDaSessao = fabricaId;
         const caminhoNaLinha = texto(linha.transcricao);
         if (caminhoNaLinha !== null) caminhoDaTranscricao = caminhoNaLinha;
@@ -664,6 +716,7 @@ export async function varrerFila(
       bytes: bytesOk,
       seq,
       tarefaAberta,
+      tarefaInicio,
       ...(marcaDaTranscricao !== undefined ? { transcricao: marcaDaTranscricao } : {}),
       ...(modeloGravado !== undefined ? { modelo: modeloGravado } : {}),
     };
@@ -682,6 +735,11 @@ export async function varrerFila(
     }
   }
 
+  try {
+    salvarLivro();
+  } catch {
+    r.erros.push('nao deu para gravar o livro do dia');
+  }
   try {
     gravarMarcas(marcas);
   } catch (e) {

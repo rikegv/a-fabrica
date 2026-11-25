@@ -219,8 +219,10 @@ async function principal(): Promise<void> {
     { ev: 'SessionStart', tipo: 'init', estado: 'em execucao' },
     { ev: 'UserPromptSubmit', tipo: 'comando do diretor', estado: 'em execucao' },
     { ev: 'PostToolUse', tipo: 'ferramenta', estado: 'em execucao' },
-    { ev: 'SubagentStart', tipo: 'subagente', estado: 'em execucao', extra: (p) => p.passo.inicioSubagente === true && p.passo.subagente === true },
-    { ev: 'SubagentStop', tipo: 'subagente', estado: 'em execucao', extra: (p) => p.passo.inicioSubagente === false && p.passo.subagente === true },
+    { ev: 'SubagentStart', tipo: 'subagente', estado: null, // OST 13, P1
+    extra: (p) => p.passo.inicioSubagente === true && p.passo.subagente === true },
+    { ev: 'SubagentStop', tipo: 'subagente', estado: null, // OST 13, P1
+    extra: (p) => p.passo.inicioSubagente === false && p.passo.subagente === true },
     { ev: 'Stop', tipo: 'fim de rodada', estado: 'aguardando comando' },
     { ev: 'SessionEnd', tipo: 'fim', estado: 'concluida', extra: (p) => p.encerra === true },
     { ev: 'Notification', tipo: 'aviso', estado: null },

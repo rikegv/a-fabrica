@@ -7,7 +7,7 @@
  *
  * Prioridade no celular, nesta ordem: responder aprovacao, ver o que esta
  * rodando, mandar comando, ler relatorio. Na Onda 2 as tres primeiras estao
- * vivas; ler relatorio segue como destino inerte, §A.12.
+ * vivas; OST 13: ler relatorio tambem, no menu e dentro de cada fabrica.
  *
  * O pedido parado abre direto na entrada, com o pacote completo e as tres
  * respostas. Pausar, reiniciar e encerrar moram numa folha que sobe do pe, e
@@ -39,6 +39,8 @@ import { ChatComCoordenador, RodapeDaFabrica, TimeNoCelular, usarTimeDaFabrica }
 import { desdeQuando, plural } from '@/formato';
 import { usarAcoesDaFabrica, usarCaixaDeComando, type AcoesDaFabrica } from './FabricaTela';
 import { NovaFabricaCelular } from './NovaFabrica';
+import { usarRelatoriosDaFabrica } from '@/dados/ouvintes';
+import { RelatoriosDaFabrica, RelatoriosGerais } from './Relatorios';
 import {
   Aviso,
   Confirmacao,
@@ -393,9 +395,17 @@ export function Celular({
         detalhe="A ponte removeu ou encerrou a fábrica. Volte para Fábricas para ver o que está aberto agora."
       />
     );
+  } else if (tela === 'reports') {
+    cabecalho = <MHead title="Relatórios" sub="Mais novo em cima" right={chipDaPonte} />;
+    corpo = (
+      <>
+        {faixaDaPonte}
+        <RelatoriosGerais base={base} estado={estado} celular />
+      </>
+    );
   } else {
     const texto = DESTINOS_INERTES[tela] ?? DESTINOS_INERTES.more;
-    cabecalho = <MHead title={tela === 'reports' ? 'Relatórios' : 'Mais'} right={chipDaPonte} />;
+    cabecalho = <MHead title="Mais" right={chipDaPonte} />;
     corpo = (
       <>
         {faixaDaPonte}
@@ -464,6 +474,9 @@ function CelularFabrica({
   verPedido: () => void;
 }) {
   const [folha, setFolha] = useState<'acoes' | null>(null);
+  /* OST 13: os relatórios desta fábrica, no lugar do chat e do time, com volta. */
+  const [verRelatorios, setVerRelatorios] = useState(false);
+  const relatorios = usarRelatoriosDaFabrica(base, fabricaId);
   const fabrica = estado.fabricas.find((f) => f.id === fabricaId) ?? null;
   const pedido = (estado.porFabrica.get(fabricaId) ?? [])[0];
   /* OST 11: a fábrica viva também no celular. Chat com o coordenador em cima,
@@ -483,6 +496,13 @@ function CelularFabrica({
         {fabrica.pausada ? <span className="caption gf-muted">pausada</span> : null}
         <span className="mono gf-faint">{fabrica.usage}</span>
         <span className="mono gf-faint gf-push">{fabrica.elapsed}</span>
+        <button type="button" className="gf-linkbtn caption" onClick={() => setVerRelatorios(!verRelatorios)}>
+          {verRelatorios
+            ? 'Ao vivo'
+            : relatorios.itens.length
+              ? `Relatórios (${relatorios.itens.length})`
+              : 'Relatórios'}
+        </button>
       </div>
       {pedido ? (
         <button
@@ -498,10 +518,16 @@ function CelularFabrica({
           <span className="caption gf-muted">Responder</span>
         </button>
       ) : null}
-      <ChatComCoordenador dados={vivo} coordenador="Coordenador" caixa={caixa} celular />
-      <div className="min-h-0 flex-1 overflow-hidden flex flex-col">
-        {vivo.time ? <TimeNoCelular time={vivo.time} agora={vivo.agora} /> : null}
-      </div>
+      {verRelatorios ? (
+        <RelatoriosDaFabrica leitura={relatorios} estado={estado} celular />
+      ) : (
+        <>
+          <ChatComCoordenador dados={vivo} coordenador="Coordenador" caixa={caixa} celular />
+          <div className="min-h-0 flex-1 overflow-hidden flex flex-col">
+            {vivo.time ? <TimeNoCelular time={vivo.time} agora={vivo.agora} /> : null}
+          </div>
+        </>
+      )}
       <RodapeDaFabrica fabrica={fabrica} estado={estado} time={vivo.time} />
       {acoes.ordem.erro && !acoes.confirmando && !folha ? (
         <ErroDeEscrita mensagem={acoes.ordem.erro} aoFechar={acoes.ordem.limparErro} />

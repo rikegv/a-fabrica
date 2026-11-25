@@ -1,0 +1,56 @@
+{
+  "mao-76486df0-903f-4d72-ba63-b2e684810fcf": {
+    "antes": {
+      "2026-11-25": {
+        "cache_read_input_tokens": 340955,
+        "output_tokens": 593,
+        "input_tokens": 6,
+        "cache_creation_input_tokens": 2317
+      },
+      "2026-11-24": {
+        "output_tokens": 1393,
+        "cache_read_input_tokens": 332118,
+        "input_tokens": 6,
+        "cache_creation_input_tokens": 5529
+      }
+    },
+    "movido": {
+      "output_tokens": 1393,
+      "cache_read_input_tokens": 332118,
+      "input_tokens": 6,
+      "cache_creation_input_tokens": 5529
+    },
+    "depois": {
+      "2026-11-25": {
+        "cache_read_input_tokens": 673073,
+        "output_tokens": 1986,
+        "input_tokens": 12,
+        "cache_creation_input_tokens": 7846
+      }
+    }
+  },
+  "mao-1f407a26-d207-4300-9cb9-3d7d39205550": {
+    "antes": {
+      "2026-11-24": {
+        "input_tokens": 18,
+        "output_tokens": 3712,
+        "cache_creation_input_tokens": 13087,
+        "cache_read_input_tokens": 930590
+      }
+    },
+    "movido": {
+      "input_tokens": 18,
+      "output_tokens": 3712,
+      "cache_creation_input_tokens": 13087,
+      "cache_read_input_tokens": 930590
+    },
+    "depois": {
+      "2026-11-25": {
+        "input_tokens": 18,
+        "output_tokens": 3712,
+        "cache_creation_input_tokens": 13087,
+        "cache_read_input_tokens": 930590
+      }
+    }
+  }
+}

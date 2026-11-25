@@ -1,6 +1,13 @@
 'use client';
 
 /*
+ * OST 13, DISPOSIÇÃO NOVA, pedido do diretor: "a tela tem de aproveitar a área
+ * inteira". No computador, o chat ocupa a coluna da esquerda, um terço, de cima
+ * a baixo; a direita, dois terços, tem o coordenador em largura inteira e os
+ * agentes embaixo em grade de três por linha, ligados a ele pelas linhas de
+ * luz, que correm pelos vãos entre os cartões. Sem parágrafo explicativo no
+ * meio da tela. O celular segue como estava: chat em cima, time embaixo.
+ *
  * OST 11, A FÁBRICA VIVA. O posto de comando, do jeito que o diretor desenhou:
  *
  *   - no topo, o CHAT COM O COORDENADOR. É ali que o diretor conversa: manda
@@ -21,10 +28,11 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Firestore } from 'firebase/firestore';
-import { CommandBox, Pager, StateIcon } from '@/componentes/ds';
+import { CommandBox, StateIcon } from '@/componentes/ds';
 import type { EstadoDoPainel } from '@/dados/painel';
+import { usarConversa } from '@/dados/ouvintes';
 import { montarTime, type CartaoDeAgente, type Fluxo, type TimeDaFabrica } from '@/dados/time';
-import type { Fabrica } from '@/dados/tradutor';
+import { traduzirComando, traduzirPasso, type Fabrica } from '@/dados/tradutor';
 import { consumoEmPartes, horaCurta, plural, quandoCurto, tempoDecorrido } from '@/formato';
 import { usarLinhaDoTempo } from './LinhaDoTempo';
 import { Falha, Vazio } from './pecas';
@@ -42,21 +50,32 @@ function usarRelogioFino(ms = 2000): Date {
 
 export function usarTimeDaFabrica(base: Firestore | null, fabrica: Fabrica | null) {
   const dados = usarLinhaDoTempo(base, fabrica?.id ?? null);
+  /* OST 13: a conversa inteira, numa escuta própria, sem o limite de 200. */
+  const conversaDaBase = usarConversa(base, fabrica?.id ?? null);
+  const conversa = useMemo(
+    () => [...conversaDaBase.itens.map(traduzirPasso), ...dados.comandos.map(traduzirComando)],
+    [conversaDaBase.itens, dados.comandos]
+  );
   const agora = usarRelogioFino();
   const time = useMemo<TimeDaFabrica | null>(
     () =>
       fabrica
         ? montarTime({
             linhas: dados.linhas,
+            conversa,
             agentePrincipal: fabrica.agent,
             agentesDoProjeto: fabrica.agentesDoProjeto,
             estado: fabrica.state,
             agora
           })
         : null,
-    [dados.linhas, fabrica, agora]
+    [dados.linhas, conversa, fabrica, agora]
   );
-  return { dados, time, agora };
+  const chat = {
+    erro: conversaDaBase.erro ?? dados.erro,
+    carregando: conversaDaBase.carregando || dados.carregando
+  };
+  return { dados, time, agora, chat };
 }
 
 export type DadosDoTime = ReturnType<typeof usarTimeDaFabrica>;
@@ -78,30 +97,38 @@ export function ChatComCoordenador({
   };
   celular?: boolean;
 }) {
-  const fim = useRef<HTMLDivElement>(null);
+  const lista = useRef<HTMLDivElement>(null);
+  const colado = useRef(true);
   const chat = dados.time?.chat ?? [];
   const ultimo = chat[chat.length - 1]?.id ?? null;
-  useEffect(() => {
-    fim.current?.scrollIntoView({ block: 'end' });
-  }, [ultimo]);
   const trabalhando = dados.time?.coordenador.trabalhando ?? false;
+  /* Abre no fim e segue o fim, enquanto o diretor não rolar para cima para ler
+     uma resposta antiga. */
+  useEffect(() => {
+    const el = lista.current;
+    if (el && colado.current) el.scrollTop = el.scrollHeight;
+  }, [ultimo, trabalhando]);
 
   return (
     <section className={celular ? 'gf-fv-chat gf-fv-chat-cel gf-glass' : 'gf-fv-chat gf-glass'} aria-label="Chat com o Coordenador">
       <div className="gf-fv-chat-topo">
         <span className="title-sm">Chat com o Coordenador</span>
-        <span className="caption gf-faint">
-          {trabalhando
-            ? `${coordenador} está trabalhando com o time`
-            : 'Você fala com o coordenador, e ele repassa para o time. Mais antiga em cima.'}
-        </span>
+        {trabalhando ? <span className="caption gf-fv-chat-vivo">{`${coordenador} trabalhando`}</span> : null}
+        {chat.length ? <span className="caption gf-faint gf-push">{plural(chat.length, 'mensagem', 'mensagens')}</span> : null}
       </div>
-      <div className="gf-fv-chat-lista">
-        {dados.dados.erro ? (
-          <Falha mensagem={dados.dados.erro} />
+      <div
+        className="gf-fv-chat-lista"
+        ref={lista}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          colado.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+        }}
+      >
+        {dados.chat.erro ? (
+          <Falha mensagem={dados.chat.erro} />
         ) : chat.length === 0 ? (
           <span className="caption gf-faint">
-            {dados.dados.carregando ? 'Lendo a conversa na base.' : 'Nenhuma mensagem ainda. Escreva abaixo para o coordenador.'}
+            {dados.chat.carregando ? 'Lendo a conversa na base.' : 'Nenhuma mensagem ainda. Escreva abaixo para o coordenador.'}
           </span>
         ) : (
           chat.map((m) => (
@@ -122,7 +149,6 @@ export function ChatComCoordenador({
             <span className="gf-fv-ponto" />
           </div>
         ) : null}
-        <div ref={fim} />
       </div>
       <CommandBox
         touch={celular}
@@ -170,7 +196,11 @@ export function CartaoDoAgente({
         {c.totalDeAcoes ? <span className="caption gf-faint gf-push">{plural(c.totalDeAcoes, 'ação', 'ações')}</span> : null}
       </div>
       <div className="caption gf-muted">{situacaoDoCartao(c, agora)}</div>
-      {c.descricao && !principal ? <div className="caption gf-faint gf-fv-desc">{c.descricao}</div> : null}
+      {c.descricao && !principal ? (
+        <div className="caption gf-faint gf-fv-desc" title={c.descricao}>
+          {c.descricao}
+        </div>
+      ) : null}
       <ul className="gf-fv-acoes" aria-label={`O que ${principal ? 'o coordenador' : c.rotulo} fez, mais recente em cima`}>
         {c.acoes.length === 0 ? (
           <li className="caption gf-faint">Nada ainda.</li>
@@ -213,38 +243,105 @@ function LinhaDeLuz({ t }: { t: Traco }) {
   );
 }
 
-const AGENTES_POR_PAGINA = 7;
+/*
+ * Caminho das linhas na grade de três por linha. A linha sai do pé do
+ * coordenador, desce até o vão entre ele e a primeira linha de cartões e, para
+ * quem está nas linhas de baixo, corre pelo vão entre as colunas e pelo vão
+ * entre as linhas, sem passar por cima de cartão nenhum. Cantos arredondados.
+ */
+type Ponto = [number, number];
 
-export function PalcoDoTime({ time, agora, semRegistro }: { time: TimeDaFabrica; agora: Date; semRegistro: number }) {
-  const palco = useRef<HTMLDivElement>(null);
+function caminhoComCantos(pontos: Ponto[], raio = 10): string {
+  const limpos = pontos.filter((p, i) => i === 0 || p[0] !== pontos[i - 1][0] || p[1] !== pontos[i - 1][1]);
+  if (limpos.length < 2) return '';
+  let d = `M ${limpos[0][0]} ${limpos[0][1]}`;
+  for (let i = 1; i < limpos.length - 1; i++) {
+    const [ax, ay] = limpos[i - 1];
+    const [px, py] = limpos[i];
+    const [bx, by] = limpos[i + 1];
+    const la = Math.hypot(px - ax, py - ay);
+    const lb = Math.hypot(bx - px, by - py);
+    const r = Math.min(raio, la / 2, lb / 2);
+    const x1 = px - ((px - ax) / (la || 1)) * r;
+    const y1 = py - ((py - ay) / (la || 1)) * r;
+    const x2 = px + ((bx - px) / (lb || 1)) * r;
+    const y2 = py + ((by - py) / (lb || 1)) * r;
+    d += ` L ${x1} ${y1} Q ${px} ${py} ${x2} ${y2}`;
+  }
+  const ultimo = limpos[limpos.length - 1];
+  return `${d} L ${ultimo[0]} ${ultimo[1]}`;
+}
+
+interface Caixa {
+  nome: string;
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+function tracarLinhas(coord: Omit<Caixa, 'nome'>, cartoes: Caixa[]): Omit<Traco, 'fluxo'>[] {
+  if (!cartoes.length) return [];
+  /* Linhas da grade pela altura do topo, colunas pela posição na primeira. */
+  const topos: number[] = [];
+  for (const c of [...cartoes].sort((a, b) => a.top - b.top)) {
+    if (!topos.length || c.top - topos[topos.length - 1] > 4) topos.push(c.top);
+  }
+  const linhaDe = (c: Caixa) => topos.findIndex((t) => Math.abs(c.top - t) <= 4);
+  const fundoDaLinha = topos.map((_, i) => Math.max(...cartoes.filter((c) => linhaDe(c) === i).map((c) => c.bottom)));
+  const primeira = cartoes.filter((c) => linhaDe(c) === 0).sort((a, b) => a.left - b.left);
+  const vaos: number[] = [];
+  for (let i = 0; i < primeira.length - 1; i++) vaos.push((primeira[i].right + primeira[i + 1].left) / 2);
+  const meio = (c: { left: number; right: number }) => (c.left + c.right) / 2;
+  const x0 = meio(coord);
+  const y0 = coord.bottom;
+  const yA = (coord.bottom + topos[0]) / 2;
+  return cartoes.map((c) => {
+    const r = linhaDe(c);
+    const cx = meio(c);
+    if (r <= 0 || !vaos.length) {
+      return { nome: c.nome, d: caminhoComCantos([[x0, y0], [x0, yA], [cx, yA], [cx, c.top]]) };
+    }
+    /* Coluna pela proximidade com os cartões da primeira linha. */
+    let col = 0;
+    primeira.forEach((p, i) => {
+      if (Math.abs(meio(p) - cx) < Math.abs(meio(primeira[col]) - cx)) col = i;
+    });
+    const gx = vaos[Math.min(Math.max(col - 1, 0), vaos.length - 1)];
+    const yR = (fundoDaLinha[r - 1] + topos[r]) / 2;
+    return {
+      nome: c.nome,
+      d: caminhoComCantos([[x0, y0], [x0, yA], [gx, yA], [gx, yR], [cx, yR], [cx, c.top]])
+    };
+  });
+}
+
+export function PalcoDoTime({ time, agora }: { time: TimeDaFabrica; agora: Date }) {
+  const conteudo = useRef<HTMLDivElement>(null);
   const coord = useRef<HTMLDivElement | null>(null);
   const cartoes = useRef(new Map<string, HTMLDivElement>());
-  const [pagina, setPagina] = useState(1);
-  const total = Math.max(1, Math.ceil(time.agentes.length / AGENTES_POR_PAGINA));
-  const atual = Math.min(pagina, total);
-  const visiveis = time.agentes.slice((atual - 1) * AGENTES_POR_PAGINA, atual * AGENTES_POR_PAGINA);
   const [geo, setGeo] = useState<{ w: number; h: number; tracos: Omit<Traco, 'fluxo'>[] }>({ w: 0, h: 0, tracos: [] });
-  const chaveDosNomes = visiveis.map((a) => a.nome).join('|');
+  const chaveDosNomes = time.agentes.map((a) => a.nome).join('|');
 
   useLayoutEffect(() => {
-    const el = palco.current;
+    const el = conteudo.current;
     if (!el) return;
     const medir = () => {
       const caixa = el.getBoundingClientRect();
       const c = coord.current?.getBoundingClientRect();
       if (!c) return;
-      const x1 = c.left + c.width / 2 - caixa.left;
-      const y1 = c.bottom - caixa.top;
-      const tracos: Omit<Traco, 'fluxo'>[] = [];
+      const rel = (r: DOMRect) => ({
+        left: r.left - caixa.left,
+        right: r.right - caixa.left,
+        top: r.top - caixa.top,
+        bottom: r.bottom - caixa.top
+      });
+      const caixas: Caixa[] = [];
       for (const nome of chaveDosNomes ? chaveDosNomes.split('|') : []) {
         const a = cartoes.current.get(nome)?.getBoundingClientRect();
-        if (!a) continue;
-        const x2 = a.left + a.width / 2 - caixa.left;
-        const y2 = a.top - caixa.top;
-        const meio = y1 + (y2 - y1) / 2;
-        tracos.push({ nome, d: `M ${x1} ${y1} C ${x1} ${meio}, ${x2} ${meio}, ${x2} ${y2}` });
+        if (a) caixas.push({ nome, ...rel(a) });
       }
-      setGeo({ w: caixa.width, h: caixa.height, tracos });
+      setGeo({ w: caixa.width, h: caixa.height, tracos: tracarLinhas(rel(c), caixas) });
     };
     medir();
     const obs = new ResizeObserver(medir);
@@ -253,61 +350,55 @@ export function PalcoDoTime({ time, agora, semRegistro }: { time: TimeDaFabrica;
   }, [chaveDosNomes]);
 
   const fluxoDe = new Map(time.agentes.map((a) => [a.nome, a.fluxo]));
+  /* As linhas dividem os vãos: a apagada vai por baixo, a acesa por cima. */
+  const tracos = geo.tracos
+    .map((t) => ({ ...t, fluxo: fluxoDe.get(t.nome) ?? ('apagada' as Fluxo) }))
+    .sort((a, b) => Number(a.fluxo !== 'apagada') - Number(b.fluxo !== 'apagada'));
 
   return (
-    <div className="gf-fv-palco" ref={palco}>
-      <svg className="gf-fv-svg" width={geo.w} height={geo.h} aria-hidden>
-        <defs>
-          <filter id="gf-fv-brilho" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3" result="b" />
-            <feMerge>
-              <feMergeNode in="b" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-        {geo.tracos.map((t) => (
-          <LinhaDeLuz key={t.nome} t={{ ...t, fluxo: fluxoDe.get(t.nome) ?? 'apagada' }} />
-        ))}
-      </svg>
-      <div className="gf-fv-linha-coord">
-        <CartaoDoAgente
-          c={time.coordenador}
-          agora={agora}
-          principal
-          refDoCartao={(el) => {
-            coord.current = el;
-          }}
-        />
-      </div>
-      {time.agentes.length === 0 ? (
-        <div className="gf-fv-semtime caption gf-faint">
-          Esta fábrica ainda não tem agentes do projeto lidos pela ponte, e o coordenador não passou trabalho a ninguém.
-          Quando ele despachar um agente, o cartão dele aparece aqui.
-        </div>
-      ) : (
-        <div className="gf-fv-time" style={{ gridTemplateColumns: `repeat(${visiveis.length}, minmax(0, 1fr))` }}>
-          {visiveis.map((a) => (
-            <CartaoDoAgente
-              key={a.nome}
-              c={a}
-              agora={agora}
-              refDoCartao={(el) => {
-                if (el) cartoes.current.set(a.nome, el);
-                else cartoes.current.delete(a.nome);
-              }}
-            />
+    <div className="gf-fv-palco">
+      <div className="gf-fv-palco-conteudo" ref={conteudo}>
+        <svg className="gf-fv-svg" width={geo.w} height={geo.h} aria-hidden>
+          <defs>
+            <filter id="gf-fv-brilho" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="b" />
+              <feMerge>
+                <feMergeNode in="b" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          {tracos.map((t) => (
+            <LinhaDeLuz key={t.nome} t={t} />
           ))}
+        </svg>
+        <div className="gf-fv-linha-coord">
+          <CartaoDoAgente
+            c={time.coordenador}
+            agora={agora}
+            principal
+            refDoCartao={(el) => {
+              coord.current = el;
+            }}
+          />
         </div>
-      )}
-      <div className="gf-fv-palco-pe caption gf-faint">
-        <span>
-          {`${plural(time.agentes.length, 'agente no time', 'agentes no time')}. Dentro de cada cartão, a ação mais recente fica em cima.`}
-          {semRegistro
-            ? ` ${plural(semRegistro, 'passo antigo ficou', 'passos antigos ficaram')} sem cartão: foram gravados antes de a ponte registrar qual agente agiu.`
-            : ''}
-        </span>
-        {total > 1 ? <Pager page={atual} total={total} onChange={setPagina} /> : null}
+        {time.agentes.length === 0 ? (
+          <div className="gf-fv-semtime caption gf-faint">Nenhum agente no time ainda.</div>
+        ) : (
+          <div className="gf-fv-time">
+            {time.agentes.map((a) => (
+              <CartaoDoAgente
+                key={a.nome}
+                c={a}
+                agora={agora}
+                refDoCartao={(el) => {
+                  if (el) cartoes.current.set(a.nome, el);
+                  else cartoes.current.delete(a.nome);
+                }}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -350,8 +441,12 @@ export function RodapeDaFabrica({ fabrica, estado, time }: { fabrica: Fabrica; e
       ? 'Rodada: não medida'
       : `${fabrica.tarefaAndando ? 'Rodada em curso' : 'Última rodada'}: ${tempoDecorrido(fabrica.taskMs)}`,
     fabrica.tokens === null ? 'Consumo: não medido' : `Consumo: ${uso.valor} ${uso.unidade}`.trim(),
+    time ? plural(time.agentes.length, 'agente no time', 'agentes no time') : null,
     time
       ? `Delegações ao time: ${time.delegacoes}${time.delegacoes ? `, ${time.delegacoesEntregues} entregues` : ''}`
+      : null,
+    time?.semRegistro
+      ? plural(time.semRegistro, 'passo antigo sem agente registrado', 'passos antigos sem agente registrado')
       : null,
     `${estado.ponte.online ? 'Ponte conectada' : 'Ponte offline'}${estado.ponte.maquina ? `, ${estado.ponte.maquina}` : ''}${
       estado.ponte.versao ? `, versão ${estado.ponte.versao}` : ''

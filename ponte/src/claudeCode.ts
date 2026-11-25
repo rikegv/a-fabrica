@@ -166,6 +166,12 @@ export interface EventoFabrica {
   estado?: string;
   usage?: Consumo;
   custo?: number;
+  /**
+   * OST 13, so no evento fim: a resposta final da rodada do AGENTE PRINCIPAL. E o
+   * `result` do kit quando a rodada terminou com sucesso; sem ele, o texto da
+   * ultima mensagem do assistente sem parent_tool_use_id. Nunca texto de subagente.
+   */
+  resposta?: string;
 }
 
 export type Portao = (toolName: string, input: Record<string, unknown>) => Promise<PermissionResult>;
@@ -344,6 +350,10 @@ export async function abrirFabrica(opcoes: OpcoesAbertura): Promise<EstadoAbertu
   const chamados = new Map<string, string>();
   const quemAgiu = (pai: string | null): string | null =>
     pai === null ? null : (chamados.get(pai) ?? 'subagente');
+  // OST 13: texto da ultima mensagem do agente principal, juntando os blocos de
+  // texto da mesma mensagem. Reserva para quando o resultado nao traz o texto.
+  let ultimaPrincipalId: string | null = null;
+  let ultimaPrincipalTexto = '';
   for await (const m of query({ prompt, options })) {
     if (m.type === 'system' && m.subtype === 'init') {
       estado.sessionId = m.session_id;
@@ -372,6 +382,13 @@ export async function abrirFabrica(opcoes: OpcoesAbertura): Promise<EstadoAbertu
       if (acrescimo !== null) await opcoes.onConsumo?.(acrescimo);
       const agente = quemAgiu(m.parent_tool_use_id);
       for (const b of m.message.content) {
+        if (b.type === 'text' && !sub) {
+          if (ultimaPrincipalId !== idDaMensagem) {
+            ultimaPrincipalId = idDaMensagem;
+            ultimaPrincipalTexto = '';
+          }
+          ultimaPrincipalTexto += (ultimaPrincipalTexto.length > 0 ? '\n' : '') + b.text;
+        }
         if (b.type === 'text') {
           estado.textoAoVivo += b.text;
           await onEvento?.({ tipo: 'texto', sub, texto: b.text, agente });
@@ -414,7 +431,15 @@ export async function abrirFabrica(opcoes: OpcoesAbertura): Promise<EstadoAbertu
       estado.usage = m.usage as unknown as Consumo;
       estado.resultado = m.subtype;
       estado.custo = m.total_cost_usd;
-      await onEvento?.({ tipo: 'fim', estado: m.subtype, usage: estado.usage, custo: m.total_cost_usd });
+      const resposta =
+        m.subtype === 'success' && typeof m.result === 'string' && m.result.length > 0 ? m.result : ultimaPrincipalTexto;
+      await onEvento?.({
+        tipo: 'fim',
+        estado: m.subtype,
+        usage: estado.usage,
+        custo: m.total_cost_usd,
+        ...(resposta.length > 0 ? { resposta } : {}),
+      });
     }
   }
   return estado;

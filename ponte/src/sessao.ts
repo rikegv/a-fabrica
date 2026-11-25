@@ -127,6 +127,19 @@ export interface PortasDaSessao {
   somarConsumo?: (fabricaId: string, acrescimo: Record<string, number>) => Promise<void>;
   /** OST 9: hora do servidor para o relogio da tarefa. Ausente, vale a hora local. */
   horaDoServidor?: () => Momento;
+  /**
+   * OST 13: fim de uma rodada, com a resposta final do agente principal pelo kit.
+   * Quem liga decide se e fechamento e grava em `relatorios`, e anota a rodada
+   * para o diario. Ausente, nada disso acontece (provas de memoria).
+   */
+  fimDaRodada?: (dados: {
+    fabricaId: string;
+    sessao: string;
+    cwd: string;
+    inicio: string;
+    fim: string;
+    resposta: string | null;
+  }) => Promise<void>;
 }
 
 /**
@@ -257,6 +270,8 @@ export async function rodarSessao(portas: PortasDaSessao, pedido: PedidoDeSessao
         )
       : null;
   let tarefaFechada = false;
+  // OST 13: hora local ISO do comeco da rodada, para o fechamento e o diario.
+  const inicioDaRodada = new Date().toISOString();
   try {
     // O relogio da TAREFA comeca aqui, a cada comando, OST 9. O fim fica nulo
     // enquanto ela roda, para o painel contar ate agora.
@@ -304,6 +319,22 @@ export async function rodarSessao(portas: PortasDaSessao, pedido: PedidoDeSessao
           // comandos anteriores.
           await lote?.esvaziar();
           tarefaFechada = true;
+          // OST 13, P3: o fechamento da fabrica do painel. Falha aqui nao derruba
+          // a sessao nem o estado final: fica no registro da ponte, sem texto.
+          if (portas.fimDaRodada !== undefined) {
+            await portas
+              .fimDaRodada({
+                fabricaId,
+                sessao: viva.conversationId ?? fabricaId,
+                cwd,
+                inicio: inicioDaRodada,
+                fim: new Date().toISOString(),
+                resposta: ev.resposta ?? null,
+              })
+              .catch((e: unknown) =>
+                registrar(`fabrica ${fabricaId}: fechamento nao gravado (${e instanceof Error ? e.message.slice(0, 120) : 'erro'})`)
+              );
+          }
           // Interrompida por ordem do diretor nao vira concluida nem falhou por
           // aqui: quem mandou encerrar ou pausar ja gravou o estado verdadeiro.
           if (viva.interrupcao === null) {

@@ -25,12 +25,15 @@ export function TituloEditavel({
   fabrica,
   escrita,
   avisar,
-  celular
+  celular,
+  pequeno
 }: {
   fabrica: Pick<Fabrica, 'id' | 'project' | 'nomeDado'>;
   escrita: ContextoDeEscrita;
   avisar: (mensagem: string) => void;
   celular?: boolean;
+  /* OST 13: na linha fina do topo da fábrica, o nome em tamanho de linha. */
+  pequeno?: boolean;
 }) {
   const [editando, setEditando] = useState(false);
   const [nome, setNome] = useState('');
@@ -53,7 +56,7 @@ export function TituloEditavel({
   if (!editando) {
     return (
       <span className="gf-nome">
-        <span className={celular ? 'title-sm gf-nome-texto' : 'title-lg gf-nome-texto'} title={fabrica.project}>
+        <span className={celular || pequeno ? 'title-sm gf-nome-texto' : 'title-lg gf-nome-texto'} title={fabrica.project}>
           {fabrica.project}
         </span>
         <button type="button" className="gf-linkbtn caption" onClick={abrir}>

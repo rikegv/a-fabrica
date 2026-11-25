@@ -33,6 +33,8 @@ import {
 } from './config.js';
 import { SessaoDesprotegida, exigirProtecao } from './protecaoSessao.js';
 import { iniciarPublicadorDeGanchos } from './ganchos.js';
+import { anotarPasso, anotarRodada, livroDaPonte, marcarLivroSujo, salvarLivro } from './relatorios.js';
+import { fechamentoDoPainel, iniciarDiario } from './relatoriosBase.js';
 import { mascararCampo } from './mascara.js';
 import { despachar, type MundoDaPonte } from './acoes.js';
 import { RegistroDeFabricas } from './vivas.js';
@@ -229,6 +231,31 @@ export function mundoNaBase(db: Firestore, maquinaId: string, registrar: (l: str
     somarConsumo: (fabricaId, acrescimo) => somarConsumoDaFabrica(db, fabricaId, acrescimo),
     publicarPasso: async (fabricaId, passo): Promise<void> => {
       await publicarAtividade(db, fabricaId, passo);
+      // OST 13: o diario so sai para fabrica que teve atividade no dia.
+      anotarPasso(livroDaPonte(), fabricaId, new Date().toISOString());
+      marcarLivroSujo();
+    },
+    // OST 13, P3 e P4: a rodada vai para o livro do diario, e a resposta final do
+    // agente principal passa pelo criterio do fechamento.
+    fimDaRodada: async (d): Promise<void> => {
+      anotarRodada(livroDaPonte(), d.fabricaId, d.inicio, d.fim);
+      marcarLivroSujo();
+      try {
+        salvarLivro();
+      } catch {
+        registrar(`fabrica ${d.fabricaId}: livro do dia nao foi gravado agora`);
+      }
+      if (d.resposta === null) return;
+      const saida = await fechamentoDoPainel(db, {
+        fabricaId: d.fabricaId,
+        maquinaId,
+        sessao: d.sessao,
+        texto: d.resposta,
+        inicio: d.inicio,
+        fim: d.fim,
+        cwd: d.cwd,
+      });
+      if (saida.startsWith('fechamento')) registrar(`fabrica ${d.fabricaId}: ${saida}`);
     },
     lerConversa: (fabricaId) => lerConversaDaFabrica(db, fabricaId),
     recusarPendentes: (fabricaId, motivo) => recusarAprovacoesDaFabrica(db, fabricaId, motivo),
@@ -279,6 +306,9 @@ export async function main(opcoes: OpcoesServico = {}): Promise<void> {
   const ganchos = iniciarPublicadorDeGanchos(base.db, maquinaId, {
     registrar: (l) => console.log(`[ganchos] ${l}`),
   });
+  // OST 13, P4: diario de cada fabrica, depois das 20h00 de Brasilia, e o que
+  // ficou para tras quando a maquina acorda.
+  const diario = iniciarDiario(base.db, maquinaId, (l) => console.log(`[diario] ${l}`));
   const r = await reconciliarPendentes(base.db, maquinaId, registro);
   console.log(
     `reconciliacao no inicio: ${r.aprovacoesRecusadas} pedido(s) recusado(s) por seguranca, ` +
@@ -317,6 +347,7 @@ export async function main(opcoes: OpcoesServico = {}): Promise<void> {
       // ouvinte ja desligado
     }
     ganchos.parar();
+    diario.parar();
     // Uma ultima passada na fila antes de morrer: o que o gancho escreveu nos
     // ultimos segundos nao fica para tras so porque a ponte esta encerrando.
     await ganchos.agora().catch(() => undefined);

@@ -190,3 +190,32 @@ export interface AprovacaoBase {
   respondidoEm?: HoraDaBase;
   respondidoPor?: string | null;
 }
+
+/* OST 13, Onda 3: o relatório que a ponte grava, criado uma vez e nunca
+   alterado. Formato em docs/ost13-contrato.md. */
+export interface RelatorioBase {
+  id: string;
+  tipo?: 'fechamento' | 'diario' | string;
+  fabricaId?: string;
+  maquinaId?: string;
+  projeto?: string | null;
+  titulo?: string | null;
+  texto?: string;
+  criadoEm?: HoraDaBase;
+  versao?: number;
+  /* Fechamento. */
+  rodadaInicio?: string | null;
+  rodadaFim?: string | null;
+  dia?: string;
+  origem?: 'mao' | 'painel' | string;
+  fonteDoTexto?: 'transcricao' | 'gancho' | 'kit' | string;
+  cortado?: boolean;
+  marcas?: string[];
+  /* Diário. */
+  fechamentos?: Array<{ relatorioId?: string; rodadaFim?: string | null }>;
+  pendencias?: string[];
+  rodadas?: number;
+  tempoMs?: number | null;
+  consumoDoDia?: ConsumoBase | null;
+  geradoAtrasado?: boolean;
+}

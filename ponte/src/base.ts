@@ -33,6 +33,7 @@ import type { Auth } from 'firebase/auth';
 import type { FirebaseApp } from 'firebase/app';
 import { abrirIdentidade, type Identidade } from './identidade.js';
 import { DIRETOR, VERSAO_PONTE } from './config.js';
+import { diaDaJanela, somaDoDia } from './relatorios.js';
 import {
   acaoDe,
   respostaDe,
@@ -133,16 +134,28 @@ export function atualizarFabrica(db: Firestore, fabricaId: string, dados: Partia
 export function somarConsumoDaFabrica(
   db: Firestore,
   fabricaId: string,
-  acrescimo: Record<string, number>
+  acrescimo: Record<string, number>,
+  quando: Date = new Date()
 ): Promise<void> {
   const consumo: Record<string, ReturnType<typeof increment>> = {};
   for (const [campo, valor] of Object.entries(acrescimo)) {
     if (typeof valor === 'number' && Number.isFinite(valor) && valor > 0) consumo[campo] = increment(valor);
   }
   if (Object.keys(consumo).length === 0) return Promise.resolve();
+  // OST 13: o mesmo acrescimo soma tambem no dia D da janela do diario (20h00 de
+  // D-1 ate 20h00 de D, Brasilia) que contem o instante da soma,
+  // para o diario dizer o consumo DO DIA. Mesma escrita: ou sobem os dois, ou
+  // nenhum, e o total e o do dia nunca divergem.
+  const consumoPorDia: Record<string, Record<string, ReturnType<typeof increment>>> = {};
+  const dia = diaDaJanela(quando);
+  if (dia !== null) {
+    for (const [d, campos] of Object.entries(somaDoDia(acrescimo, dia))) {
+      consumoPorDia[d] = Object.fromEntries(Object.entries(campos).map(([c, v]) => [c, increment(v)]));
+    }
+  }
   return setDoc(
     doc(db, 'fabricas', fabricaId),
-    { fabricaId, atualizadoEm: serverTimestamp(), consumo },
+    { fabricaId, atualizadoEm: serverTimestamp(), consumo, ...(dia !== null ? { consumoPorDia } : {}) },
     { merge: true }
   );
 }

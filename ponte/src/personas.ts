@@ -47,9 +47,9 @@
 // persona veio por instrucao e nao por definicao de agente. Honestidade acima de
 // aparencia.
 
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import type { AgentDefinition } from '@anthropic-ai/claude-agent-sdk';
 
 /**
@@ -255,9 +255,65 @@ export interface AgenteDoProjeto {
   modelo: 'sonnet' | 'opus' | 'haiku' | 'inherit' | null;
 }
 
-/** Agentes da pasta .claude/agents do projeto. Pasta ausente devolve lista vazia. */
-export function lerAgentesDoProjeto(cwd: string): AgenteDoProjeto[] {
-  const pasta = join(cwd, '.claude', 'agents');
+function comparavelDePasta(c: string): string {
+  let t = resolve(c).toLowerCase().replace(/\//g, '\\');
+  while (t.length > 1 && t.endsWith('\\')) t = t.slice(0, -1);
+  return t;
+}
+
+function pastaDeAgentesAqui(pasta: string): string | null {
+  const alvo = join(pasta, '.claude', 'agents');
+  try {
+    return statSync(alvo).isDirectory() ? alvo : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * OST 13, P2: a pasta .claude/agents do projeto.
+ *
+ * Sem `subir`, le SO o .claude/agents do proprio cwd, como sempre foi. Com
+ * `subir`, e so quando o cwd esta DENTRO da pasta do usuario, sobe de pasta em
+ * pasta ate achar, como o proprio Claude Code acha a raiz, e para antes da pasta
+ * do usuario SEM ler a dela (a .claude/agents do usuario nao e do projeto).
+ * Projeto fora da pasta do usuario (D:\x) le so o proprio cwd, sem subir.
+ * Ressalva da seguranca na OST 13: a subida serve SO a lista do time publicada
+ * na base (nome e descricao) da fabrica aberta na mao; a fabrica aberta pelo
+ * painel le exatamente o cwd cadastrado.
+ */
+export function acharPastaDeAgentes(cwd: string, casa: string = homedir(), subir = false): string | null {
+  const pararEm = comparavelDePasta(casa);
+  const inicio = comparavelDePasta(cwd);
+  if (inicio === pararEm) return null;
+  const dentroDaCasa = inicio.startsWith(`${pararEm}\\`);
+  if (!subir || !dentroDaCasa) return pastaDeAgentesAqui(resolve(cwd));
+  let atual = resolve(cwd);
+  for (let i = 0; i < 64; i++) {
+    if (comparavelDePasta(atual) === pararEm) return null;
+    const pasta = join(atual, '.claude', 'agents');
+    try {
+      if (statSync(pasta).isDirectory()) return pasta;
+    } catch {
+      // nao existe aqui, sobe
+    }
+    const pai = dirname(atual);
+    if (pai === atual) return null;
+    atual = pai;
+  }
+  return null;
+}
+
+/**
+ * Agentes da pasta .claude/agents do projeto. Sem pasta, lista vazia. `subir`
+ * so para a lista do time da fabrica aberta na mao; veja acharPastaDeAgentes.
+ */
+export function lerAgentesDoProjeto(
+  cwd: string,
+  opcoes: { subir?: boolean; casa?: string } = {}
+): AgenteDoProjeto[] {
+  const pasta = acharPastaDeAgentes(cwd, opcoes.casa ?? homedir(), opcoes.subir === true);
+  if (pasta === null) return [];
   let nomes: string[] = [];
   try {
     nomes = readdirSync(pasta).filter((n) => n.toLowerCase().endsWith('.md'));
@@ -304,7 +360,8 @@ export function aplicarPersonaComTime(
   modelo: string,
   pedido: string
 ): PersonaAplicada & { time: AgenteDoProjeto[] } {
-  const time = lerAgentesDoProjeto(cwd);
+  // Fabrica do painel: exatamente o .claude/agents do cwd cadastrado, sem subir.
+  const time = lerAgentesDoProjeto(cwd, { subir: false });
   const semPedido =
     agente === null || agente.trim().length === 0 || agente.trim().toLowerCase() === NOME_DO_MOTOR;
   const temCoordenador = time.some((a) => a.nome === NOME_DO_COORDENADOR);
