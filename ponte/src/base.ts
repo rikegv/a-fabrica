@@ -85,6 +85,17 @@ export async function initBase(opcoes: OpcoesBase = {}): Promise<Base> {
   return { app: identidade.app, auth: identidade.auth, db, identidade };
 }
 
+/**
+ * OST 15: este documento e DESTA ponte? So quando o maquinaId gravado nele e
+ * igual ao dela, texto exato. Sem campo, de outra maquina ou ilegivel: nao e, e a
+ * ponte nao toca. Varias pontes dividem a mesma base, e uma nao pode derrubar o
+ * estado da outra. A consulta ja filtra por maquinaId; isto e a segunda tranca,
+ * conferida documento a documento antes de qualquer escrita.
+ */
+export function ehDaMaquina(dado: unknown, maquinaId: string): boolean {
+  return textoDe(dado, 'maquinaId') === maquinaId;
+}
+
 export interface Heartbeat {
   parar(fabricasVivas?: Iterable<string>): Promise<void>;
 }
@@ -113,7 +124,15 @@ export function iniciarHeartbeat(
     parar: async (fabricasVivas: Iterable<string> = []): Promise<void> => {
       clearInterval(t);
       for (const fabricaId of fabricasVivas) {
-        await atualizarFabrica(db, fabricaId, { estado: 'ponte offline' }).catch(() => undefined);
+        // OST 15: so fabrica desta maquina vira ponte offline. Na duvida (leitura
+        // falhou), nao escreve: a reconciliacao da proxima subida acerta.
+        try {
+          const atual = await getDoc(doc(db, 'fabricas', fabricaId));
+          if (!atual.exists() || !ehDaMaquina(atual.data(), maquinaId)) continue;
+          await atualizarFabrica(db, fabricaId, { estado: 'ponte offline' });
+        } catch {
+          // segue para a proxima
+        }
       }
       await setDoc(ref, { estadoPonte: 'offline', vistoPorUltimo: serverTimestamp() }, { merge: true }).catch(
         () => undefined
@@ -343,7 +362,9 @@ export function ouvirComandos(
   return onSnapshot(
     q,
     (snap) => {
-      snap.forEach((docSnap) => aoChegar(docSnap.id));
+      snap.forEach((docSnap) => {
+        if (ehDaMaquina(docSnap.data(), maquinaId)) aoChegar(docSnap.id);
+      });
     },
     () => undefined
   );
@@ -373,6 +394,7 @@ export async function reconciliarPendentes(
         let n = 0;
         for (const s of snap.docs) {
           const fabricaId = textoDe(s.data(), 'fabricaId');
+          if (!ehDaMaquina(s.data(), maquinaId)) continue; // OST 15, segunda tranca
           if (fabricaId !== null && !sessoesVivas.has(fabricaId)) {
             await updateDoc(s.ref, {
               situacao: 'respondida',
@@ -408,6 +430,7 @@ export async function reconciliarPendentes(
           // offline. Antes disto, todo reinicio pintava de offline o trabalho vivo
           // dele, ate o proximo passo do gancho corrigir.
           if (fabricaId.startsWith('mao-')) continue;
+          if (!ehDaMaquina(s.data(), maquinaId)) continue; // OST 15, segunda tranca
           if (!sessoesVivas.has(fabricaId)) {
             const estado: EstadoFabrica = 'ponte offline';
             await atualizarFabrica(db, fabricaId, { estado }).catch(() => undefined);

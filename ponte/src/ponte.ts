@@ -298,7 +298,8 @@ export async function main(opcoes: OpcoesServico = {}): Promise<void> {
   const maquinaId = config.maquinaId;
   console.log(`ponte entrou como ${base.identidade.usuario.email}, degrau ${base.identidade.degrau}`);
 
-  const hb = iniciarHeartbeat(base.db, maquinaId, { nome: config.nomeMaquina });
+  // OST 15: o rotulo vai em todo sinal de vida, null quando nao configurado.
+  const hb = iniciarHeartbeat(base.db, maquinaId, { nome: config.nomeMaquina, rotulo: config.rotulo ?? null });
 
   // Bloco 1 da OST 7: a fila que os ganchos do Claude Code escrevem. Com isto, a
   // sessao que o DIRETOR abre na mao, em qualquer projeto, aparece no painel.

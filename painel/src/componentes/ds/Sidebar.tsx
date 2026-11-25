@@ -5,7 +5,7 @@
    passar o mouse, POR CIMA da tela, sem empurrar o conteudo. Abre tambem quando
    o teclado entra nele, para quem navega com Tab, e fecha quando o foco sai. */
 import { useState, type FocusEvent, type ReactNode } from 'react';
-import { BridgeStatus, type BridgeStatusProps } from './BridgeStatus';
+import { BridgeList, BridgeStatus, type BridgeStatusProps } from './BridgeStatus';
 import { Icon, type IconName } from './Icon';
 import { StateIcon } from './StateIcon';
 import { cx, type FactoryState } from './tipos';
@@ -16,6 +16,8 @@ export interface SidebarProps {
   onChange?: (id: string) => void;
   projects?: { name: string; state: FactoryState; count?: number }[];
   bridge?: BridgeStatusProps;
+  /* OST 15: uma ponte por máquina. Quando vem, vale mais que `bridge`. */
+  bridges?: BridgeStatusProps[];
   brand?: string;
   owner?: string;
   collapsed?: boolean;
@@ -30,6 +32,7 @@ export function Sidebar({
   onChange,
   projects,
   bridge,
+  bridges,
   brand,
   owner,
   collapsed,
@@ -95,7 +98,16 @@ export function Sidebar({
       ) : null}
       <div className="gf-side-foot flex flex-col gap-2">
         {recolhido ? null : footer}
-        {bridge ? (
+        {bridges && bridges.length ? (
+          recolhido ? (
+            <span
+              className={cx('gf-side-bdot', bridges.some((b) => b.online === false) && 'gf-side-bdot-off')}
+              title={bridges.map((b) => b.label ?? (b.online === false ? 'Ponte offline' : 'Ponte conectada')).join(', ')}
+            />
+          ) : (
+            <BridgeList items={bridges} />
+          )
+        ) : bridge ? (
           recolhido ? (
             <span
               className={cx('gf-side-bdot', bridge.online === false && 'gf-side-bdot-off')}

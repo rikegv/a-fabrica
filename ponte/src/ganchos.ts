@@ -59,16 +59,18 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { addDoc, collection, doc, getDoc, serverTimestamp, type Firestore } from 'firebase/firestore';
 import { PASTA_LOCAL, ROTULO_DE_TESTE } from './config.js';
 import { atualizarFabrica, somarConsumoDaFabrica } from './base.js';
-import { lerTranscricao, type MarcaDaTranscricao } from './transcricao.js';
+import { caminhoDeTranscricaoAceito, lerTranscricao, type MarcaDaTranscricao } from './transcricao.js';
+import { eventoPedeNome, lerNomeDaSessao, mudancaDoNome, type MarcaDoNome } from './nomeDaSessao.js';
 import { mascarar } from './mascara.js';
 import type { EstadoFabrica } from './tipos.js';
 import { agentesParaABase, lerAgentesDoProjeto } from './personas.js';
 import { anotarPasso, anotarRodada, livroDaPonte, marcarLivroSujo, salvarLivro } from './relatorios.js';
-import { fechamentoDaMao } from './relatoriosBase.js';
+import { fechamentoDaMao, projetoIgnorado } from './relatoriosBase.js';
 
 /**
  * Onde mora a fila de atividade. Producao: a pasta local da ponte.
@@ -401,6 +403,8 @@ interface Marcas {
    * seq voltava a zero, e a tela, que ordenava por seq, misturava as rodadas.
    */
   seqs?: Record<string, number>;
+  /** OST 15: ate onde a transcricao foi lida para o nome da sessao, por fabrica. So resumo, nunca o nome. */
+  nomes?: Record<string, MarcaDoNome>;
 }
 
 /** Teto de fabricas lembradas, para o arquivo de marcas nao crescer sem fim. */
@@ -428,11 +432,13 @@ function lerMarcas(): Marcas {
     if (typeof a === 'object' && a !== null) {
       const t = (j as Record<string, unknown>)['transcricoes'];
       const s = (j as Record<string, unknown>)['seqs'];
+      const nm = (j as Record<string, unknown>)['nomes'];
       return {
         versao: 1,
         arquivos: a as Record<string, MarcaDoArquivo>,
         transcricoes: typeof t === 'object' && t !== null ? (t as Record<string, MarcaDaTranscricao>) : {},
         seqs: typeof s === 'object' && s !== null ? (s as Record<string, number>) : {},
+        nomes: typeof nm === 'object' && nm !== null ? (nm as Record<string, MarcaDoNome>) : {},
       };
     }
   } catch {
@@ -459,6 +465,35 @@ function lembrarSeq(m: Marcas, fabricaId: string, seq: number): void {
   m.seqs = s;
 }
 
+/**
+ * OST 15: a ponte pode abrir a transcricao para buscar o nome da sessao? Todas
+ * valem, e qualquer duvida e nao:
+ *   a linha que disparou tem conteudo === true exato, decidido pelo gancho;
+ *   o projeto dela e conhecido e esta fora de projetosIgnorados, relido agora,
+ *   com falha fechada;
+ *   o caminho passa em caminhoDeTranscricaoAceito, com o sid da linha.
+ */
+export function deveLerNome(
+  gatilho: { sid: string; projeto: string | null; conteudo: boolean },
+  caminho: string,
+  casa: string = homedir(),
+  pastaLocal?: string
+): boolean {
+  if (gatilho.conteudo !== true) return false;
+  if (gatilho.projeto === null) return false;
+  if (projetoIgnorado([gatilho.projeto], pastaLocal)) return false;
+  return caminhoDeTranscricaoAceito(caminho, gatilho.sid, casa);
+}
+
+function lembrarNome(m: Marcas, fabricaId: string, marca: MarcaDoNome): void {
+  const n = m.nomes ?? {};
+  delete n[fabricaId];
+  n[fabricaId] = marca;
+  const chaves = Object.keys(n);
+  for (const velha of chaves.slice(0, Math.max(0, chaves.length - TETO_TRANSCRICOES_LEMBRADAS))) delete n[velha];
+  m.nomes = n;
+}
+
 function gravarMarcas(m: Marcas): void {
   const temporario = `${CAMINHO_MARCAS}.novo`;
   writeFileSync(temporario, JSON.stringify(m, null, 2), { encoding: 'utf8', mode: 0o600 });
@@ -474,6 +509,8 @@ export interface ResultadoDaVarredura {
   mascaradas: number;
   /** OST 9: quantas sessoes tiveram consumo somado nesta passada. */
   consumoSomado: number;
+  /** OST 15: quantas sessoes tiveram nome ou titulo gravado nesta passada. */
+  nomesGravados?: number;
   erros: string[];
 }
 
@@ -550,6 +587,10 @@ export async function varrerFila(
     let tarefaInicio: string | null = marca.tarefaInicio ?? null;
     let caminhoDaTranscricao: string | null = marca.transcricao?.caminho ?? null;
     let fabricaDaSessao: string | null = null;
+    // OST 15: a linha que DISPAROU a leitura do nome: o ultimo Stop ou
+    // UserPromptSubmit publicado nesta passada, ou, se a ponte nunca leu o nome
+    // desta sessao, a primeira linha publicada. A decisao de ler sai dela.
+    let gatilhoDoNome: { sid: string; projeto: string | null; conteudo: boolean } | null = null;
     let encerrou = false;
     let falhouNesteArquivo = false;
     // Bytes publicados com sucesso. Cresce linha por linha, DEPOIS da publicacao,
@@ -667,6 +708,9 @@ export async function varrerFila(
         }
         marcarLivroSujo();
         fabricaDaSessao = fabricaId;
+        if (eventoPedeNome(passo.evento) || (gatilhoDoNome === null && marcas.nomes?.[fabricaId] === undefined)) {
+          gatilhoDoNome = { sid, projeto, conteudo: linha.conteudo === true };
+        }
         const caminhoNaLinha = texto(linha.transcricao);
         if (caminhoNaLinha !== null) caminhoDaTranscricao = caminhoNaLinha;
         r.passosPublicados++;
@@ -707,6 +751,38 @@ export async function varrerFila(
         lembrarTranscricao(marcas, fabricaDoArquivo, leitura.marca);
       } catch (e) {
         r.erros.push(`fabrica ${fabricaDoArquivo}, consumo: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+
+    // OST 15: nome e titulo da sessao, docs/ost15-contrato.md. Na primeira vez que
+    // a ponte ve a sessao e a cada Stop e UserPromptSubmit. So com conteudo === true
+    // (o conteudoDeTodos do gancho, §A.23), projeto fora de projetosIgnorados e
+    // caminho de transcricao aceito pela mesma regra da OST 13.
+    // O nome so e gravado na fabrica desta sessao, que saiu da fila desta ponte, e
+    // a escrita nao leva maquinaId.
+    if (!falhouNesteArquivo && caminhoDaTranscricao !== null && fabricaDaSessao !== null && gatilhoDoNome !== null) {
+      const fab = fabricaDaSessao;
+      const g = gatilhoDoNome;
+      if (deveLerNome(g, caminhoDaTranscricao)) {
+        const leitura = lerNomeDaSessao(caminhoDaTranscricao, g.sid, marcas.nomes?.[fab] ?? null);
+        try {
+          if (Object.keys(leitura.achado).length > 0) {
+            const gravado = await getDoc(doc(db, 'fabricas', fab));
+            const mudanca = mudancaDoNome(leitura.achado, gravado.exists() ? gravado.data() : {});
+            if (mudanca !== null) {
+              await atualizarFabrica(db, fab, { ...mudanca, nomeDaSessaoLidoEm: serverTimestamp() });
+              r.nomesGravados = (r.nomesGravados ?? 0) + 1;
+              // So o nome dos campos, nunca o valor.
+              registrar(`fabrica ${fab}: ${Object.keys(mudanca).join(' e ')} atualizado`);
+            }
+          }
+          // A marca so anda depois de a mudanca subir.
+          lembrarNome(marcas, fab, leitura.marca);
+        } catch (e) {
+          // Sem mensagem da base: ela poderia ecoar o valor que tentou gravar.
+          r.erros.push(`fabrica ${fab}, nome da sessao nao subiu agora, fica para o proximo gatilho`);
+          void e;
+        }
       }
     }
 

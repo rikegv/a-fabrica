@@ -192,7 +192,7 @@ export function FabricaTela({
             {fabrica.pausada ? <span>pausada por você</span> : null}
             <span className="mono">{fabrica.usage}</span>
             <span className="mono">{fabrica.elapsed}</span>
-            <span className="gf-faint">{[fabrica.projeto, fabrica.model].filter(Boolean).join(' · ')}</span>
+            <span className="gf-faint">{[fabrica.ondeRoda, fabrica.projeto, fabrica.model].filter(Boolean).join(' · ')}</span>
           </span>
           <Tabs
             value={aba}

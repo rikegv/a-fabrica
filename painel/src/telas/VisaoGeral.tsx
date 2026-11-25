@@ -135,7 +135,7 @@ export function VisaoGeral({
                 elapsed={f.elapsed}
                 usage={f.usage}
                 pending={f.pending ?? undefined}
-                opened={f.abertaEm}
+                opened={f.ondeRoda ? `${f.abertaEm} · ${f.ondeRoda}` : f.abertaEm}
                 onOpen={() => abrirFabrica(f.id)}
               />
             ))}

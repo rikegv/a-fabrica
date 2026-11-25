@@ -44,6 +44,32 @@ export interface ConfigLocal {
   authDomain: string;
   appId: string;
   criadoEm: string;
+  /** OST 15: onde a maquina esta, para o diretor ler. Null sem configuracao. */
+  rotulo?: string | null;
+}
+
+/** OST 15: teto do rotulo da maquina. */
+export const TETO_ROTULO = 40;
+
+/**
+ * OST 15: o rotulo da maquina, de PONTE_ROTULO (vale mais) ou da chave `rotulo`
+ * do config.json. So texto, sem caractere de controle, com no maximo 40.
+ * Qualquer coisa fora disso vira null, e o painel mostra o nome da maquina.
+ *
+ * Nao tem relacao com ROTULO_DE_TESTE / PONTE_ROTULO_TESTE: nome parecido,
+ * variavel diferente, e uma nao mexe na outra.
+ */
+export function rotuloValido(v: unknown): string | null {
+  if (typeof v !== 'string') return null;
+  if (/[\p{Cc}\p{Cf}]/u.test(v)) return null;
+  const t = v.trim();
+  if (t.length === 0 || t.length > TETO_ROTULO) return null;
+  return t;
+}
+
+export function escolherRotulo(ambiente: string | undefined, doArquivo: unknown): string | null {
+  if (ambiente !== undefined && ambiente.length > 0) return rotuloValido(ambiente);
+  return rotuloValido(doArquivo);
 }
 
 export class FaltaConfig extends Error {
@@ -119,6 +145,7 @@ export function carregarConfig(opcoes: { emulador?: boolean } = {}): ConfigLocal
     authDomain,
     appId,
     criadoEm: texto(bruto, 'criadoEm') ?? new Date().toISOString(),
+    rotulo: escolherRotulo(process.env.PONTE_ROTULO, bruto['rotulo']),
   };
 }
 

@@ -33,6 +33,9 @@ export interface MaquinaBase {
   vistoPorUltimo?: HoraDaBase;
   versaoPonte?: string;
   pareadoEm?: HoraDaBase;
+  /* OST 15: onde a máquina está, para o diretor ler: Notebook, Nuvem, Escritório.
+     Nulo quando a ponte não tem rótulo configurado; aí a tela usa o nome. */
+  rotulo?: string | null;
   /* Máquina de rodada de teste. Fica na base, rotulada, e não conta para o estado
      da ponte na tela, §A.17. */
   teste?: boolean;
@@ -93,6 +96,12 @@ export interface FabricaBase {
   /* OST 9: nome dado pelo diretor, na abertura ou renomeando. A ponte copia da
      ordem de abrir uma vez e nunca mais escreve. */
   nome?: string;
+  /* OST 15: o nome que o app do Claude mostra, lido pela ponte da transcrição da
+     sessão aberta na mão. nomeDaSessao é o customTitle (/rename ou --name);
+     tituloDaSessao é o aiTitle, que o próprio Claude Code dá. */
+  nomeDaSessao?: string | null;
+  tituloDaSessao?: string | null;
+  nomeDaSessaoLidoEm?: HoraDaBase;
   /* OST 9: relógio da tarefa em execução. Fim nulo com começo gravado quer dizer
      que a tarefa está andando. */
   tarefaInicio?: HoraDaBase;

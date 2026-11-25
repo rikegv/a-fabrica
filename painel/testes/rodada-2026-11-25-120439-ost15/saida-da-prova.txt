@@ -1,0 +1,62 @@
+Caso 1. Prioridade do nome: nomeDado, nomeDaSessao, tituloDaSessao, Fábrica externa.
+PASSOU  nomeDado vale mais que tudo
+PASSOU  a caixa de renomear começa com o nomeDado
+PASSOU  sem nomeDado, vale o customTitle
+PASSOU  renomeada só na sessão: a caixa de renomear começa vazia
+PASSOU  sem customTitle, vale o aiTitle
+PASSOU  sem nada, Fábrica externa  (Fábrica externa)
+PASSOU  duas sem nome ganham a hora  (Fábrica externa das 10:00 / Fábrica externa das 11:00)
+PASSOU  a que tem título da sessão não entra na conta da hora
+PASSOU  uma sem nome sozinha fica Fábrica externa, mesmo com outra nomeada pela sessão
+
+Caso 2. Condição 21: campo ausente, nulo ou que não é texto; teto de 80 no nome e 40 no rótulo.
+PASSOU  nomeDaSessao numérico é ignorado e cai no título
+PASSOU  objeto e lista nos dois campos caem em Fábrica externa  (Fábrica externa das 11:00, nº 1)
+PASSOU  texto em branco nos dois campos cai em Fábrica externa  (Fábrica externa das 11:00, nº 2)
+PASSOU  nomeDaSessao de 200 letras é cortado em 80
+PASSOU  tituloDaSessao de 200 letras é cortado em 80
+PASSOU  quebra de linha e tabulação viram espaço simples
+PASSOU  o teto do painel é o mesmo TETO_NOME de escritas.ts  (80 e 80)
+PASSOU  rótulo de 100 letras é cortado em 40
+PASSOU  rótulo ausente: o painel usa o nome da máquina
+PASSOU  rótulo nulo: o painel usa o nome da máquina
+PASSOU  rótulo número: o painel usa o nome da máquina
+PASSOU  rótulo objeto: o painel usa o nome da máquina
+PASSOU  rótulo em branco: o painel usa o nome da máquina
+
+Caso 3. A queda de uma máquina não derruba a fábrica da outra.
+PASSOU  Nuvem caída: a fábrica do Notebook continua em execução
+PASSOU  Nuvem caída: a fábrica da Nuvem fica ponte offline
+PASSOU  Nuvem caída: concluída na Nuvem continua concluída
+PASSOU  Nuvem caída: a perda de conexão da Nuvem tem a hora do último sinal dela
+PASSOU  o indicador geral diz cada máquina  (Notebook conectada, Nuvem offline)
+PASSOU  a offline diz há quanto tempo
+PASSOU  Notebook caído: a fábrica da Nuvem continua em execução
+PASSOU  Notebook caído: a fábrica do Notebook fica ponte offline
+PASSOU  o indicador geral diz Notebook offline e Nuvem conectada  (Notebook offline, Nuvem conectada)
+PASSOU  as duas no ar: as duas fábricas em execução
+PASSOU  máquina que a base não conhece: ponte offline, nunca em execução
+
+Caso 4. Fábrica sem maquinaId segue a regra de antes, a ponte geral.
+PASSOU  sem maquinaId, alguma máquina no ar: em execução
+PASSOU  sem maquinaId, todas caídas: ponte offline
+PASSOU  sem maquinaId e sem máquina nenhuma: ponte offline
+PASSOU  sem máquina nenhuma, o indicador geral fica com a regra de antes
+PASSOU  máquina de rodada de teste fica fora do indicador geral
+
+Caso 5. Onde roda: rótulo; sem rótulo, nome; sem máquina, nada.
+PASSOU  com rótulo, o cartão diz Notebook
+PASSOU  sem rótulo, o cartão diz o nome da máquina
+PASSOU  sem maquinaId, o cartão não diz nada
+PASSOU  máquina que a base não conhece, o cartão não diz nada
+PASSOU  máquina sem rótulo e sem nome: o cartão não diz nada, o indicador usa o identificador
+
+Caso 6. Condições 19 e 20: o nome só entra como texto; sem travessão na tela.
+PASSOU  nenhum arquivo do painel monta HTML cru
+PASSOU  nome, título e rótulo não entram em href, src, estilo nem ação
+PASSOU  o painel não monta aviso de celular com o nome (não há aviso de sistema no código do painel)
+PASSOU  nenhum travessão nos arquivos tocados
+PASSOU  nenhum travessão nas frases do indicador  (Notebook conectada  Notebook, PC-RIKE Nuvem offline há 1 h Nuvem, fabrica-1)
+PASSOU  painel.ts usa ponteDaFabrica, e não mais a ponte geral, para cada fábrica
+
+Todas as verificações passaram.

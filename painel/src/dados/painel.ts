@@ -14,7 +14,9 @@ import {
   aprovacaoPendente,
   avaliarPonte,
   distinguirExternas,
+  mapaDeMaquinas,
   ordenarAprovacoes,
+  ponteDaFabrica,
   ordenarDecisoes,
   ordenarFabricas,
   traduzirAprovacao,
@@ -100,7 +102,9 @@ export function montarEstadoDoPainel(
       maquinas.itens.filter((m) => m.teste !== true),
       agora
     );
-    const pontePerdida = !ponte.online;
+    /* OST 15: cada fábrica olha o sinal de vida da máquina DELA. O mapa leva
+       também as de teste, porque a fábrica de teste mora numa máquina de teste. */
+    const mapa = mapaDeMaquinas(maquinas.itens, agora);
 
     const pendentes = ordenarAprovacoes(
       aprovacoes.itens.filter(aprovacaoPendente).map((doc) => traduzirAprovacao(doc, agora))
@@ -125,7 +129,7 @@ export function montarEstadoDoPainel(
       ordenarFabricas(
         fabricas.itens.map((doc) => {
           const parado = porFabrica.get(doc.id)?.[0]?.waitingMs ?? null;
-          return traduzirFabrica(doc, { pontePerdida, pedidoParado: parado, agora, ponteVistaEm: ponte.vistoPorUltimo });
+          return traduzirFabrica(doc, { ...ponteDaFabrica(doc, mapa, ponte), pedidoParado: parado, agora });
         })
       ),
       agora

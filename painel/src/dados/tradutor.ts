@@ -29,7 +29,8 @@
  *
  * REGRA DURA DA PONTE, §A.10: quando a ponte esta offline (heartbeat velho ou
  * estadoPonte "offline"), toda fabrica passa a offline, qualquer que seja o
- * estado gravado. O painel nunca diz em execução com heartbeat velho.
+ * estado gravado. O painel nunca diz em execução com heartbeat velho. OST 15:
+ * "a ponte" é a da máquina da própria fábrica, veja ponteDaFabrica.
  *
  * MAPA DE RISCO: "baixo" vira low, "medio" (ou "médio") vira medium, "alto"
  * vira high. Desconhecido vira high, porque na duvida o risco sobe, nao desce.
@@ -45,6 +46,7 @@ import type { FactoryState, RiskLevel } from '@/componentes/ds';
 import {
   consumo as formatarConsumo,
   dataAmigavel,
+  desdeQuando,
   horaComSegundos,
   quandoCurto,
   tempoDecorrido,
@@ -149,6 +151,75 @@ export interface Ponte {
   versao: string | null;
   vistoPorUltimo: Date | null;
   atrasoMs: number | null;
+  /* OST 15: cada máquina de trabalho (sem as de rodada de teste), com o seu
+     estado, para o indicador geral. */
+  maquinas: PonteDaMaquina[];
+}
+
+/*
+ * OST 15: cada máquina com o seu próprio sinal de vida. Antes o painel olhava só
+ * a "melhor" máquina, a de sinal mais novo, e o estado dela valia para todas as
+ * fábricas. Com duas pontes (notebook e nuvem), a queda de uma derrubaria na tela
+ * as fábricas da outra, ou esconderia a queda.
+ */
+export interface PonteDaMaquina {
+  id: string;
+  /* O rótulo da configuração da ponte, ou nulo. */
+  rotulo: string | null;
+  nome: string | null;
+  /* Onde a fábrica roda, para o cartão: o rótulo; sem rótulo, o nome; sem os
+     dois, nulo, e o cartão não mostra nada. */
+  ondeRoda: string | null;
+  /* Como o indicador geral chama a máquina. Nunca vazio. */
+  chamada: string;
+  online: boolean;
+  versao: string | null;
+  vistoPorUltimo: Date | null;
+  atrasoMs: number | null;
+  teste: boolean;
+}
+
+/* OST 15, condição 21 da segurança: o painel também corta, sem confiar na ponte.
+   O teto do nome é o mesmo TETO_NOME de escritas.ts (80); não é importado de lá
+   porque escritas.ts carrega o Firebase, e o tradutor tem de ser puro. A prova
+   confere que os dois números são iguais. */
+export const TETO_NOME_DA_SESSAO = 80;
+export const TETO_ROTULO = 40;
+
+/* Tolera ausente, nulo e o que não for texto: tudo isso vira nulo. O resultado
+   só entra na tela como texto filho do React, condição 19. */
+function textoLimpo(valor: unknown, teto?: number): string | null {
+  if (typeof valor !== 'string') return null;
+  const limpo = valor.replace(/\s+/g, ' ').trim();
+  if (!limpo) return null;
+  return teto ? limpo.slice(0, teto).trim() : limpo;
+}
+
+export function avaliarMaquina(m: MaquinaBase, agora: Date = new Date()): PonteDaMaquina {
+  const visto = paraData(m.vistoPorUltimo);
+  const atrasoMs = visto ? agora.getTime() - visto.getTime() : null;
+  const declaradaOffline = semAcento(m.estadoPonte ?? '') === 'offline';
+  const online = !declaradaOffline && atrasoMs != null && atrasoMs <= LIMITE_HEARTBEAT_MS;
+  const id = m.maquinaId ?? m.id;
+  const rotulo = textoLimpo(m.rotulo, TETO_ROTULO);
+  const nome = textoLimpo(m.nome, TETO_NOME_DA_SESSAO);
+  return {
+    id,
+    rotulo,
+    nome,
+    ondeRoda: rotulo ?? nome,
+    chamada: rotulo ?? nome ?? id,
+    online,
+    versao: m.versaoPonte ?? null,
+    vistoPorUltimo: visto,
+    atrasoMs,
+    teste: m.teste === true
+  };
+}
+
+/* Frase de uma máquina no indicador geral: "Notebook conectada", "Nuvem offline". */
+export function fraseDaMaquina(m: PonteDaMaquina): string {
+  return `${m.chamada} ${m.online ? 'conectada' : 'offline'}`;
 }
 
 export function avaliarPonte(maquinas: MaquinaBase[], agora: Date = new Date()): Ponte {
@@ -160,25 +231,61 @@ export function avaliarPonte(maquinas: MaquinaBase[], agora: Date = new Date()):
       maquinaId: null,
       versao: null,
       vistoPorUltimo: null,
-      atrasoMs: null
+      atrasoMs: null,
+      maquinas: []
     };
   }
   const vistas = maquinas
     .map((m) => ({ maquina: m, visto: paraData(m.vistoPorUltimo) }))
     .sort((a, b) => (b.visto?.getTime() ?? 0) - (a.visto?.getTime() ?? 0));
   const melhor = vistas[0];
-  const atrasoMs = melhor.visto ? agora.getTime() - melhor.visto.getTime() : null;
-  const declaradaOffline = semAcento(melhor.maquina.estadoPonte ?? '') === 'offline';
-  const online = !declaradaOffline && atrasoMs != null && atrasoMs <= LIMITE_HEARTBEAT_MS;
+  const avaliada = avaliarMaquina(melhor.maquina, agora);
+  /* Ordem estável no indicador: pelo nome que aparece, para o chip não trocar de
+     lugar a cada sinal de vida. */
+  const todas = maquinas
+    .map((m) => avaliarMaquina(m, agora))
+    .sort((a, b) => a.chamada.localeCompare(b.chamada, 'pt-BR'));
   return {
-    situacao: online ? 'conectada' : 'offline',
-    online,
+    situacao: avaliada.online ? 'conectada' : 'offline',
+    online: avaliada.online,
     maquina: melhor.maquina.nome ?? melhor.maquina.maquinaId ?? melhor.maquina.id,
     maquinaId: melhor.maquina.maquinaId ?? melhor.maquina.id ?? null,
     versao: melhor.maquina.versaoPonte ?? null,
     vistoPorUltimo: melhor.visto,
-    atrasoMs
+    atrasoMs: avaliada.atrasoMs,
+    maquinas: todas
   };
+}
+
+/*
+ * OST 15: de qual sinal de vida a fábrica depende.
+ *
+ * Fábrica com maquinaId: o da máquina DELA, e só dela. A queda de outra máquina
+ * não muda nada aqui. Se a máquina dela não aparece na base, não há sinal de vida
+ * nenhum, e o painel não diz que ela está trabalhando, §A.10.
+ *
+ * Fábrica sem maquinaId, dado antigo: a regra de antes, a ponte geral.
+ */
+export function ponteDaFabrica(
+  doc: Pick<FabricaBase, 'maquinaId'>,
+  mapa: Map<string, PonteDaMaquina>,
+  geral: Ponte
+): { pontePerdida: boolean; ponteVistaEm: Date | null; maquina: PonteDaMaquina | null } {
+  const id = textoLimpo(doc.maquinaId);
+  if (!id) return { pontePerdida: !geral.online, ponteVistaEm: geral.vistoPorUltimo, maquina: null };
+  const maquina = mapa.get(id) ?? null;
+  if (!maquina) return { pontePerdida: true, ponteVistaEm: null, maquina: null };
+  return { pontePerdida: !maquina.online, ponteVistaEm: maquina.vistoPorUltimo, maquina };
+}
+
+export function mapaDeMaquinas(maquinas: MaquinaBase[], agora: Date = new Date()): Map<string, PonteDaMaquina> {
+  const mapa = new Map<string, PonteDaMaquina>();
+  for (const m of maquinas) {
+    const avaliada = avaliarMaquina(m, agora);
+    mapa.set(m.id, avaliada);
+    if (m.maquinaId) mapa.set(m.maquinaId, avaliada);
+  }
+  return mapa;
 }
 
 /* ---------- fabrica ---------- */
@@ -203,7 +310,7 @@ export function nomeDaExternaPelaHora(inicio: Date | null, agora: Date = new Dat
 }
 
 export function distinguirExternas(lista: Fabrica[], agora: Date = new Date()): Fabrica[] {
-  const semNome = lista.filter((f) => f.externa && f.nomeDado === null);
+  const semNome = lista.filter((f) => f.externa && f.nomeDado === null && f.nomeDaSessao === null);
   if (semNome.length < 2) return lista;
   const ordem = [...semNome].sort((a, b) => (a.startedAt?.getTime() ?? 0) - (b.startedAt?.getTime() ?? 0));
   const rotulo = new Map<string, string>();
@@ -232,6 +339,15 @@ export interface Fabrica {
   project: string;
   /* O nome que o diretor digitou, ou nulo. É o que a caixa de renomear mostra. */
   nomeDado: string | null;
+  /* OST 15: o nome que o app do Claude mostra para a sessão, lido pela ponte. O
+     dado com /rename vale mais que o título automático. Nulo sem nenhum dos dois. */
+  nomeDaSessao: string | null;
+  /* OST 15: a máquina onde a fábrica roda, com o sinal de vida dela. Nula para
+     fábrica sem maquinaId ou com máquina que a base não conhece. */
+  maquina: PonteDaMaquina | null;
+  /* OST 15: onde roda, para o cartão e a linha do topo: rótulo, ou nome da
+     máquina. Nulo quando não se sabe; aí a tela não mostra nada. */
+  ondeRoda: string | null;
   /* Aberta na mão, fora do painel. */
   externa: boolean;
   /* Só o NOME da pasta do projeto, nunca o caminho. OST 9: o caminho C:Users
@@ -326,7 +442,14 @@ function estadoFinal(estado: FactoryState): boolean {
 
 export function traduzirFabrica(
   doc: FabricaBase,
-  opcoes: { pontePerdida: boolean; pedidoParado?: number | null; agora?: Date; ponteVistaEm?: Date | null }
+  opcoes: {
+    pontePerdida: boolean;
+    pedidoParado?: number | null;
+    agora?: Date;
+    ponteVistaEm?: Date | null;
+    /* OST 15: a máquina dela, de ponteDaFabrica. */
+    maquina?: PonteDaMaquina | null;
+  }
 ): Fabrica {
   const agora = opcoes.agora ?? new Date();
   const inicio = paraData(doc.inicio);
@@ -397,6 +520,11 @@ export function traduzirFabrica(
   const caminho = doc.projeto?.trim() || doc.pasta?.trim() || null;
   const nomeDaPasta = caminho ? (caminho.split(/[\\/]+/).filter(Boolean).pop() ?? null) : null;
   const nomeDado = doc.nome?.trim() || null;
+  /* OST 15, prioridade do nome: o dado no painel; o dado com /rename na sessão;
+     o título que o Claude Code deu; e só então "Fábrica externa". */
+  const nomeDaSessao =
+    textoLimpo(doc.nomeDaSessao, TETO_NOME_DA_SESSAO) ?? textoLimpo(doc.tituloDaSessao, TETO_NOME_DA_SESSAO);
+  const maquina = opcoes.maquina ?? null;
 
   /*
    * CONSUMO. `null` quer dizer NÃO MEDIDO, e isso é diferente de zero.
@@ -410,8 +538,11 @@ export function traduzirFabrica(
   const pausada = doc.pausada === true;
   return {
     id: doc.id,
-    project: nomeDado ?? (externa ? NOME_EXTERNA : (nomeDaPasta ?? 'Fábrica sem nome')),
+    project: nomeDado ?? nomeDaSessao ?? (externa ? NOME_EXTERNA : (nomeDaPasta ?? 'Fábrica sem nome')),
     nomeDado,
+    nomeDaSessao,
+    maquina,
+    ondeRoda: maquina?.ondeRoda ?? null,
     externa,
     projeto: nomeDaPasta ?? 'projeto não informado',
     caminho,
@@ -1070,4 +1201,27 @@ export function ordenarTarefas(lista: Tarefa[]): Tarefa[] {
     if (peso !== 0) return peso;
     return (a.startedAt?.getTime() ?? 0) - (b.startedAt?.getTime() ?? 0);
   });
+}
+
+/* ---------- indicador geral da ponte, OST 15 ---------- */
+
+/*
+ * Um indicador por máquina de trabalho, cada um com a sua frase: "Notebook
+ * conectada", "Nuvem offline". A offline leva junto há quanto tempo está sem
+ * sinal. Sem máquina nenhuma, lista vazia, e a tela usa o indicador de antes.
+ */
+export interface IndicadorDaPonte {
+  online: boolean;
+  label: string;
+  detail?: string;
+  machine?: string;
+}
+
+export function indicadoresDaPonte(ponte: Ponte): IndicadorDaPonte[] {
+  return ponte.maquinas.map((m) => ({
+    online: m.online,
+    label: fraseDaMaquina(m),
+    detail: m.online ? undefined : desdeQuando(m.atrasoMs),
+    machine: [m.rotulo, m.nome, m.versao ? `versão ${m.versao}` : null].filter(Boolean).join(', ') || undefined
+  }));
 }

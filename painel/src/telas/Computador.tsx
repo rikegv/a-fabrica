@@ -15,6 +15,7 @@ import { AlertBanner, Button, Icon, Sidebar } from '@/componentes/ds';
 import type { Entrada } from '@/dados/autenticacao';
 import { impedimentoDaEscrita, type ContextoDeEscrita } from '@/dados/escritas';
 import type { EstadoDoPainel } from '@/dados/painel';
+import { indicadoresDaPonte } from '@/dados/tradutor';
 import { desdeQuando, diaPorExtenso, plural } from '@/formato';
 import { Aprovacoes } from './Aprovacoes';
 import { FabricaTela } from './FabricaTela';
@@ -246,6 +247,7 @@ export function Computador({
                 : item
         )}
         projects={projetosDoMenu(estado.fabricasAbertas)}
+        bridges={indicadoresDaPonte(ponte)}
         bridge={{
           online: ponte.online,
           detail: ponte.online

@@ -20,6 +20,7 @@ import {
   AlertBanner,
   ApprovalDeck,
   ApprovalItem,
+  BridgeList,
   BridgeStatus,
   Button,
   Icon,
@@ -35,6 +36,7 @@ import type { Entrada } from '@/dados/autenticacao';
 import { impedimentoDaEscrita, type ContextoDeEscrita } from '@/dados/escritas';
 import { TituloEditavel } from './renomear';
 import type { EstadoDoPainel } from '@/dados/painel';
+import { indicadoresDaPonte } from '@/dados/tradutor';
 import { ChatComCoordenador, RodapeDaFabrica, TimeNoCelular, usarTimeDaFabrica } from './FabricaViva';
 import { desdeQuando, plural } from '@/formato';
 import { usarAcoesDaFabrica, usarCaixaDeComando, type AcoesDaFabrica } from './FabricaTela';
@@ -125,7 +127,7 @@ export function Celular({
 
   const { lista: listaDeFabricas, cabem } = usarQuantosCartoesCabem(
     tela === 'factories',
-    `${estado.fabricasAbertas.length}|${estado.aprovacoes.length}|${estado.ponte.online}`
+    `${estado.fabricasAbertas.length}|${estado.aprovacoes.length}|${estado.ponte.online}|${estado.ponte.maquinas.length}`
   );
 
   const ponte = estado.ponte;
@@ -144,7 +146,12 @@ export function Celular({
     />
   );
 
-  const chipDaPonte = (
+  /* OST 15: um indicador por máquina, empilhados no canto do cabeçalho. Sem
+     máquina nenhuma, o indicador de antes. */
+  const indicadores = indicadoresDaPonte(ponte);
+  const chipDaPonte = indicadores.length ? (
+    <BridgeList items={indicadores} compact />
+  ) : (
     <BridgeStatus
       online={ponte.online}
       detail={ponte.online ? undefined : ponte.situacao === 'sem maquina' ? 'sem máquina' : desdeQuando(ponte.atrasoMs)}
@@ -319,7 +326,7 @@ export function Celular({
                 </span>
                 {/* OST 9: cartão compacto também no celular. Sai a frase do estado,
                     que repetia o selo; fica o projeto, sem caminho, e o modelo. */}
-                <span className="caption gf-faint truncate text-left">{`${f.projeto} · ${f.model}`}</span>
+                <span className="caption gf-faint truncate text-left">{[f.ondeRoda, f.projeto, f.model].filter(Boolean).join(" · ")}</span>
                 {f.pending ? <span className="caption gf-fcard-pending text-left">{f.pending}</span> : null}
                 <span className="mono gf-faint text-left">{`${f.abertaEm} · ${f.elapsed} · ${f.usage}`}</span>
               </button>
@@ -363,7 +370,7 @@ export function Celular({
     cabecalho = (
       <MHead
         title={fabrica?.project ?? 'Fábrica'}
-        sub={fabrica ? `${fabrica.projeto} · ${fabrica.model}` : undefined}
+        sub={fabrica ? [fabrica.ondeRoda, fabrica.projeto, fabrica.model].filter(Boolean).join(" · ") : undefined}
         onBack={() => {
           setFabricaId(null);
           setTela('factories');

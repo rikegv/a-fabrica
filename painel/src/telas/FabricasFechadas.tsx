@@ -64,7 +64,7 @@ export function FabricasFechadas({
                 }
                 elapsed={f.elapsed}
                 usage={f.usage}
-                opened={f.abertaEm}
+                opened={f.ondeRoda ? `${f.abertaEm} · ${f.ondeRoda}` : f.abertaEm}
                 onOpen={() => abrirFabrica(f.id)}
               />
             ))}

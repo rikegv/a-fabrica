@@ -448,9 +448,17 @@ export function RodapeDaFabrica({ fabrica, estado, time }: { fabrica: Fabrica; e
     time?.semRegistro
       ? plural(time.semRegistro, 'passo antigo sem agente registrado', 'passos antigos sem agente registrado')
       : null,
-    `${estado.ponte.online ? 'Ponte conectada' : 'Ponte offline'}${estado.ponte.maquina ? `, ${estado.ponte.maquina}` : ''}${
-      estado.ponte.versao ? `, versão ${estado.ponte.versao}` : ''
-    }`,
+    /* OST 15: a ponte da máquina desta fábrica, não a geral. Sem máquina
+       conhecida, a regra de antes. */
+    fabrica.maquina
+      ? `Ponte ${fabrica.maquina.online ? 'conectada' : 'offline'}, ${fabrica.maquina.chamada}${
+          fabrica.maquina.versao ? `, versão ${fabrica.maquina.versao}` : ''
+        }`
+      : fabrica.maquinaId
+        ? 'Ponte offline, a máquina desta fábrica não aparece na base'
+        : `${estado.ponte.online ? 'Ponte conectada' : 'Ponte offline'}${estado.ponte.maquina ? `, ${estado.ponte.maquina}` : ''}${
+          estado.ponte.versao ? `, versão ${estado.ponte.versao}` : ''
+        }`,
     fabrica.nasceuNoPainel ? 'nasceu pelo painel' : 'aberta na mão'
   ].filter(Boolean);
   return <div className="gf-fv-rodape caption gf-faint">{partes.join(' · ')}</div>;

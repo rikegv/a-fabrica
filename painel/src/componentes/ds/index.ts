@@ -26,7 +26,7 @@ export { ApprovalDeck } from './ApprovalDeck';
 export type { ApprovalDeckProps } from './ApprovalDeck';
 export { ApprovalItem } from './ApprovalItem';
 export type { ApprovalItemProps } from './ApprovalItem';
-export { BridgeStatus } from './BridgeStatus';
+export { BridgeList, BridgeStatus } from './BridgeStatus';
 export type { BridgeStatusProps } from './BridgeStatus';
 export { Button } from './Button';
 export type { ButtonProps } from './Button';

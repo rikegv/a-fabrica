@@ -29,6 +29,8 @@ export interface Maquina {
   vistoPorUltimo: Momento;
   versaoPonte?: string;
   pareadoEm?: Momento;
+  /** OST 15: onde a maquina esta, para o diretor ler (Notebook, Nuvem, Escritorio). Null sem configuracao. */
+  rotulo?: string | null;
 }
 
 export interface Consumo {
@@ -92,6 +94,12 @@ export interface Fabrica {
    */
   tarefaInicio?: Momento;
   tarefaFim?: Momento;
+  /** OST 15: ultimo custom-title da transcricao (nome dado no app), mascarado e cortado. */
+  nomeDaSessao?: string | null;
+  /** OST 15: ultimo ai-title da transcricao (titulo que o Claude Code deu). */
+  tituloDaSessao?: string | null;
+  /** OST 15: hora do servidor da ultima gravacao de nome ou titulo. */
+  nomeDaSessaoLidoEm?: Momento;
 }
 
 export type TipoAtividade = 'init' | 'texto' | 'pensamento' | 'ferramenta' | 'resultado' | 'fim';
