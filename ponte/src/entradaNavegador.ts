@@ -308,6 +308,12 @@ botao.addEventListener('click', async () => {
 
 /** Abre o navegador padrão do diretor no endereço, sem travar se não der. */
 function abrirNavegador(endereco: string, registrar: (l: string) => void): void {
+  // Fora do Windows o cmd nao existe, e o erro de programa ausente chega por
+  // evento, depois deste try, e derrubaria o processo. Achado do estudo, 1.5.
+  if (process.platform !== 'win32') {
+    registrar('fora do Windows a ponte nao abre navegador; abra o endereco na mao');
+    return;
+  }
   try {
     // No Windows o start é do próprio interpretador de comandos. O par de aspas
     // vazias é o título da janela, e sem ele o start trata o endereço como título.

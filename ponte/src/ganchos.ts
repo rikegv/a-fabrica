@@ -63,7 +63,8 @@ import { join } from 'node:path';
 import { addDoc, collection, doc, getDoc, serverTimestamp, type Firestore } from 'firebase/firestore';
 import { PASTA_LOCAL, ROTULO_DE_TESTE } from './config.js';
 import { atualizarFabrica, somarConsumoDaFabrica } from './base.js';
-import { lerTranscricao, type MarcaDaTranscricao } from './transcricao.js';
+import { type MarcaDaTranscricao } from './transcricao.js';
+import { lerTranscricaoDaSessao } from './leitorDoDiretor.js';
 import { mascarar } from './mascara.js';
 import type { EstadoFabrica } from './tipos.js';
 import { agentesParaABase, lerAgentesDoProjeto } from './personas.js';
@@ -691,7 +692,7 @@ export async function varrerFila(
       // A marca do arquivo vale primeiro; sem ela, a da fabrica, que sobrevive ao
       // arquivamento. Sem nenhuma das duas, e sessao nova de verdade.
       const anterior = marca.transcricao ?? marcas.transcricoes?.[fabricaDoArquivo] ?? null;
-      const leitura = lerTranscricao(caminhoDaTranscricao, anterior);
+      const leitura = await lerTranscricaoDaSessao(caminhoDaTranscricao, anterior);
       try {
         if (leitura.acrescimo !== null) {
           await somarConsumoDaFabrica(db, fabricaDoArquivo, leitura.acrescimo);

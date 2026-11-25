@@ -101,10 +101,20 @@ function pedacoDeTexto(valor, teto) {
   return valor.length > teto ? valor.slice(0, teto) + '[...cortado]' : valor;
 }
 
-/** Deixa um caminho do Windows comparavel: minusculo, barra invertida, sem barra no fim. */
+// OST 14: o gancho roda tambem no Linux. Mesmo arquivo, duas regras de caminho.
+const NO_WINDOWS = process.platform === 'win32';
+const SEP = NO_WINDOWS ? '\\' : '/';
+
+/**
+ * Deixa um caminho comparavel, sem separador no fim.
+ * Windows: minusculo e barra invertida, porque la maiuscula nao conta.
+ * Linux: como veio. La maiuscula conta, e baixar a caixa ALARGARIA a liberacao:
+ * /home/x/a-fabrica liberaria /home/x/A-Fabrica, que e outra pasta. Estudo
+ * docs/ponte-na-vm.md, secao 1.2.
+ */
 function caminhoComparavel(valor) {
-  let t = String(valor).toLowerCase().replace(/\//g, '\\');
-  while (t.length > 1 && t.charAt(t.length - 1) === '\\') t = t.slice(0, t.length - 1);
+  let t = NO_WINDOWS ? String(valor).toLowerCase().replace(/\//g, '\\') : String(valor);
+  while (t.length > 1 && t.charAt(t.length - 1) === SEP) t = t.slice(0, t.length - 1);
   return t;
 }
 
@@ -122,7 +132,7 @@ function dentroDe(projeto, lista) {
     const alvo = lista[i];
     if (typeof alvo !== 'string' || alvo.length === 0) continue;
     const a = caminhoComparavel(alvo);
-    if (p === a || p.startsWith(a + '\\')) return true;
+    if (p === a || p.startsWith(a + SEP)) return true;
   }
   return false;
 }
@@ -131,8 +141,13 @@ function principal() {
   // 1. Ler a entrada ANTES de tudo. Veja a nota de ordem no cabecalho.
   const bruto = readFileSync(0, 'utf8');
 
-  const pasta = process.env.PONTE_PASTA_LOCAL || process.env.USERPROFILE + '\\.a-fabrica-ponte';
-  const config = JSON.parse(readFileSync(pasta + '\\ganchos.json', 'utf8'));
+  // Linux, OST 14: a fila mora numa pasta da maquina, fora da casa do diretor e
+  // fora da pasta trancada da ponte. O diretor so escreve na fila; a credencial
+  // da ponte fica onde ele nao le. Veja ponte/linux/instalar.sh.
+  const pasta =
+    process.env.PONTE_PASTA_LOCAL ||
+    (NO_WINDOWS ? process.env.USERPROFILE + '\\.a-fabrica-ponte' : '/var/lib/a-fabrica-ganchos');
+  const config = JSON.parse(readFileSync(pasta + SEP + 'ganchos.json', 'utf8'));
   // R4, interruptor. Arquivo ausente cai no catch de fora e tambem sai calado.
   if (config.ligado !== true) return;
 
@@ -150,8 +165,8 @@ function principal() {
   // R6, sem o R7: a liberacao por lista. Ausente, vazia ou corrompida: nada.
   const liberado = config.conteudoDeTodos === true || dentroDe(projeto, config.projetosLiberados);
 
-  const fila = pasta + '\\fila-ganchos';
-  const arquivo = fila + '\\' + String(sessao).replace(/[^A-Za-z0-9_-]/g, '_') + '.jsonl';
+  const fila = pasta + SEP + 'fila-ganchos';
+  const arquivo = fila + SEP + String(sessao).replace(/[^A-Za-z0-9_-]/g, '_') + '.jsonl';
 
   // R1 e R3, tetos. Fila cheia nao e erro: e motivo para sair calado. A ponte tira
   // os arquivos consumidos de dentro desta pasta, entao em operacao normal ela

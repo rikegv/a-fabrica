@@ -50,6 +50,8 @@
 // mostra o que foi medido, e nada e somado por estimativa.
 
 import { closeSync, fstatSync, openSync, readSync } from 'node:fs';
+import { join } from 'node:path';
+import { SEPARADOR, caminhoComparavel } from './plataforma.js';
 
 export const CAMPOS = [
   'input_tokens',
@@ -205,9 +207,9 @@ export interface TextoDoFechamento {
 }
 
 function comparavel(c: string): string {
-  let t = c.toLowerCase().replace(/\//g, '\\');
-  while (t.length > 1 && t.endsWith('\\')) t = t.slice(0, -1);
-  return t;
+  // Windows: minusculo e barra invertida. Linux, OST 14: como veio, porque la
+  // maiuscula conta. Veja plataforma.ts.
+  return caminhoComparavel(c);
 }
 
 /**
@@ -217,11 +219,11 @@ function comparavel(c: string): string {
  */
 export function caminhoDeTranscricaoAceito(caminho: string, sid: string, casa: string): boolean {
   if (caminho.includes('\u0000') || /(^|[\\/])\.\.([\\/]|$)/.test(caminho)) return false;
-  const raiz = comparavel(`${casa}\\.claude\\projects`);
+  const raiz = comparavel(join(casa, '.claude', 'projects'));
   const c = comparavel(caminho);
-  if (!c.startsWith(`${raiz}\\`)) return false;
+  if (!c.startsWith(`${raiz}${SEPARADOR}`)) return false;
   if (!c.endsWith('.jsonl')) return false;
-  const nome = c.slice(c.lastIndexOf('\\') + 1, -'.jsonl'.length);
+  const nome = c.slice(c.lastIndexOf(SEPARADOR) + 1, -'.jsonl'.length);
   return nome === sid.toLowerCase() && /^[a-z0-9-]{8,80}$/.test(nome);
 }
 

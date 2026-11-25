@@ -20,8 +20,10 @@
 // é a do dono, a resposta é NÃO PROTEGIDO. Nunca o contrário.
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, statSync } from 'node:fs';
+import { chmodSync, existsSync, lstatSync, readFileSync, statSync } from 'node:fs';
 import { userInfo } from 'node:os';
+import { dirname, resolve } from 'node:path';
+import { NO_WINDOWS } from './plataforma.js';
 
 export interface EntradaDeAcesso {
   /** Identidade como o sistema a escreve, por exemplo MAQUINA\\usuario. */
@@ -127,6 +129,7 @@ export function conferirProtecao(
   caminho: string,
   opcoes: OpcoesConferencia = { exigirHerancaQuebrada: false }
 ): Veredito {
+  if (!NO_WINDOWS) return conferirProtecaoPosix(caminho, opcoes);
   if (!existsSync(caminho)) {
     return { protegido: false, motivo: `o caminho ${caminho} não existe`, saidaIcacls: '', entradas: [] };
   }
@@ -197,6 +200,7 @@ export function conferirProtecao(
  * continua sendo conferirProtecao, nunca esta função.
  */
 export function aplicarProtecao(caminho: string): string {
+  if (!NO_WINDOWS) return aplicarProtecaoPosix(caminho);
   const usuario = userInfo().username;
   const ehPasta = existsSync(caminho) && statSync(caminho).isDirectory();
   const linhas: string[] = [];
@@ -227,6 +231,120 @@ export function aplicarProtecao(caminho: string): string {
     rodar([caminho, '/remove', alvo]);
   }
   return linhas.join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// Linux, OST 14
+// ---------------------------------------------------------------------------
+//
+// No Linux o modo de arquivo E a tranca, e nao teatro como no Windows. O que
+// conta como protegido, e cada item e conferido, nunca afirmado:
+//   1. o caminho existe e NAO e atalho simbolico (atalho pode apontar para fora);
+//   2. o dono e o usuario que roda este processo;
+//   3. nenhum bit de grupo nem de outros: pasta 700, arquivo 600 ou mais fechado;
+//   4. a pasta de cima nao deixa outro usuario trocar o caminho de lugar: dona
+//      dela e o root ou o proprio dono, e sem escrita de grupo nem de outros;
+//   5. o caminho NAO esta em pasta compartilhada com outra maquina ou com o
+//      Windows. Pasta compartilhada de maquina virtual costuma ignorar o modo de
+//      arquivo, e ai o chmod volta a ser teatro. Achado do estudo, secao 1.4.
+// Qualquer leitura que falhar e NAO PROTEGIDO, igual ao Windows.
+
+/** Sistemas de arquivo em que o modo de arquivo nao segura ninguem. */
+const SISTEMAS_COMPARTILHADOS = /^(vboxsf|9p|v9fs|virtiofs|cifs|smb3?|smbfs|nfs4?|drvfs|prl_fs|vmhgfs|fuse(\..*)?|sshfs|afs|ceph|glusterfs)$/i;
+
+/** Ponto de montagem mais longo que contem o caminho, com o tipo do sistema. */
+export function montagemDe(caminho: string): { ponto: string; tipo: string } | null {
+  let bruto: string;
+  try {
+    bruto = readFileSync('/proc/self/mountinfo', 'utf8');
+  } catch {
+    return null;
+  }
+  const alvo = resolve(caminho);
+  let melhor: { ponto: string; tipo: string } | null = null;
+  for (const linha of bruto.split('\n')) {
+    // formato: id pai maior:menor raiz PONTO opcoes [campos opcionais] - TIPO origem opcoes
+    const partes = linha.split(' ');
+    const ponto = partes[4];
+    const traco = partes.indexOf('-');
+    const tipo = traco >= 0 ? partes[traco + 1] : undefined;
+    if (ponto === undefined || tipo === undefined) continue;
+    const p = ponto.replace(/\\040/g, ' ');
+    const contem = p === '/' || alvo === p || alvo.startsWith(`${p}/`);
+    if (contem && (melhor === null || p.length >= melhor.ponto.length)) melhor = { ponto: p, tipo };
+  }
+  return melhor;
+}
+
+function modoEmTexto(modo: number): string {
+  return (modo & 0o7777).toString(8).padStart(4, '0');
+}
+
+function conferirProtecaoPosix(caminho: string, opcoes: OpcoesConferencia): Veredito {
+  const nao = (motivo: string, evidencia = ''): Veredito => ({ protegido: false, motivo, saidaIcacls: evidencia, entradas: [] });
+  let st: ReturnType<typeof lstatSync>;
+  try {
+    st = lstatSync(caminho);
+  } catch {
+    return nao(`o caminho ${caminho} não existe`);
+  }
+  const uid = typeof process.getuid === 'function' ? process.getuid() : -1;
+  const evidencia = `${caminho} modo ${modoEmTexto(st.mode)} dono uid ${st.uid} grupo gid ${st.gid}, processo uid ${uid}`;
+  const entradas: EntradaDeAcesso[] = [{ identidade: `uid ${st.uid}`, permissoes: modoEmTexto(st.mode), herdada: false }];
+  if (st.isSymbolicLink()) return nao(`${caminho} é atalho simbólico, e atalho pode apontar para fora da tranca`, evidencia);
+  if (opcoes.exigirHerancaQuebrada && !st.isDirectory()) return nao(`${caminho} devia ser pasta e não é`, evidencia);
+  if (st.uid !== uid) return nao(`${caminho} é do uid ${st.uid}, e esta ponte roda como uid ${uid}`, evidencia);
+  if ((st.mode & 0o077) !== 0) {
+    return {
+      protegido: false,
+      motivo: `${caminho} dá acesso a grupo ou a outros usuários, modo ${modoEmTexto(st.mode)}; o certo é ${st.isDirectory() ? '0700' : '0600'}`,
+      saidaIcacls: evidencia,
+      entradas,
+    };
+  }
+  // 4. A pasta de cima. Quem escreve nela pode trocar este caminho de lugar.
+  const pai = dirname(resolve(caminho));
+  try {
+    const sp = statSync(pai);
+    const donoOk = sp.uid === 0 || sp.uid === uid;
+    const escritaAlheia = (sp.mode & 0o022) !== 0;
+    const pegajosa = (sp.mode & 0o1000) !== 0;
+    if (!donoOk || (escritaAlheia && !pegajosa)) {
+      return nao(
+        `a pasta de cima, ${pai}, deixa outro usuário trocar ${caminho} de lugar (dono uid ${sp.uid}, modo ${modoEmTexto(sp.mode)})`,
+        evidencia
+      );
+    }
+  } catch {
+    return nao(`não deu para conferir a pasta de cima de ${caminho}`, evidencia);
+  }
+  // 5. Pasta compartilhada.
+  const m = montagemDe(caminho);
+  if (m === null) return nao(`não deu para ler as montagens do sistema, e sem isso a resposta é não protegido`, evidencia);
+  if (SISTEMAS_COMPARTILHADOS.test(m.tipo)) {
+    return nao(
+      `${caminho} está numa pasta compartilhada (${m.tipo} em ${m.ponto}), onde o modo de arquivo não tranca nada`,
+      `${evidencia}, montagem ${m.tipo} em ${m.ponto}`
+    );
+  }
+  return {
+    protegido: true,
+    motivo: `${caminho} está trancado para o uid ${uid} e mais ninguém, modo ${modoEmTexto(st.mode)}, em ${m.tipo}`,
+    saidaIcacls: `${evidencia}, montagem ${m.tipo} em ${m.ponto}`,
+    entradas,
+  };
+}
+
+function aplicarProtecaoPosix(caminho: string): string {
+  try {
+    const st = lstatSync(caminho);
+    if (st.isSymbolicLink()) return `${caminho} é atalho simbólico, nada foi mudado`;
+    const modo = st.isDirectory() ? 0o700 : 0o600;
+    chmodSync(caminho, modo);
+    return `chmod ${modo.toString(8)} ${caminho}`;
+  } catch (e) {
+    return `falhou ao trancar ${caminho}: ${e instanceof Error ? e.message : String(e)}`;
+  }
 }
 
 export class SessaoDesprotegida extends Error {

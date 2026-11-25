@@ -43,6 +43,7 @@ import type { NivelRisco, PacoteAprovacao } from './tipos.js';
 import type { Firestore } from 'firebase/firestore';
 import type { PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 import { homedir } from 'node:os';
+import { comoInstalar } from './plataforma.js';
 
 /**
  * As fabricas vivas deste processo, com o AbortController de cada uma. E por aqui
@@ -64,13 +65,22 @@ export function risco(cmd: string): NivelRisco {
   // arquivo nao tem verbo nenhum. Acontece que aquele arquivo e a CHAVE DE
   // APROVACAO da ponte: e a leitura mais perigosa que existe neste sistema, e
   // era a que aparecia mais inofensiva na hora de ele decidir.
-  if (c.includes('.a-fabrica-ponte') || c.includes('sessao.json') || c.includes('sessao-emulador.json')) {
+  // OST 14: no Linux a pasta da ponte e /var/lib/a-fabrica-ponte, sem o ponto.
+  if (c.includes('a-fabrica-ponte') || c.includes('sessao.json') || c.includes('sessao-emulador.json')) {
     return 'alto';
   }
   if (/\b(rm|remove-item|del|format|dd|curl|wget|invoke-webrequest|git\s+push|npm\s+publish|shutdown)\b|>/.test(c)) {
     return 'alto';
   }
+  // OST 14, verbos de Linux. Antes, sudo e ssh chegavam ao diretor como risco
+  // baixo, o mesmo defeito de tela que a pasta da ponte teve. Estudo, secao 1.7.
+  if (/\b(sudo|su|ssh|scp|rsync|nc|systemctl|kill|pkill|killall|reboot|mkfs|crontab|visudo|passwd|useradd|usermod)\b/.test(c)) {
+    return 'alto';
+  }
   if (/\b(set-content|new-item|mkdir|out-file|move-item|copy-item|git\s+commit|npm\s+install)\b/.test(c)) {
+    return 'medio';
+  }
+  if (/\b(mv|cp|chmod|chown|chgrp|tee|ln|touch|apt|apt-get|dpkg|pip3?|npx|sed\s+-i)\b/.test(c)) {
     return 'medio';
   }
   return 'baixo';
@@ -128,7 +138,7 @@ export function montarPacote(d: DadosPacote): PacoteAprovacao {
   // Quando o alvo e a pasta da propria ponte, o diretor precisa ler a frase certa,
   // e nao a frase generica de risco alto. Ali mora a sessao que vale como chave de
   // aprovacao: quem ler aquilo pode responder aprovacao no lugar dele.
-  const mexeNaPonte = /\.a-fabrica-ponte|sessao\.json|sessao-emulador\.json/i.test(String(cmd));
+  const mexeNaPonte = /a-fabrica-ponte|sessao\.json|sessao-emulador\.json/i.test(String(cmd));
   const frasedeImpacto = mexeNaPonte
     ? 'Toca a pasta da propria ponte, onde mora a sessao que vale como chave de aprovacao. Nenhuma fabrica precisa disso para trabalhar.'
     : impacto[r];
@@ -380,7 +390,9 @@ if (executadoDireto) {
   const trava = tomarTravaDeInstancia();
   if (!trava.ok) {
     console.log(
-      `outra ponte ja esta no ar (processo ${trava.pidDaOutra}, desde ${trava.desde}), esta nao sobe. Nao e falha.`
+      'motivo' in trava
+        ? `esta ponte nao sobe: ${trava.motivo}.`
+        : `outra ponte ja esta no ar (processo ${trava.pidDaOutra}, desde ${trava.desde}), esta nao sobe. Nao e falha.`
     );
     process.exit(SAIDA_OUTRA_PONTE);
   }
@@ -391,7 +403,7 @@ if (executadoDireto) {
     if (e instanceof SessaoDesprotegida) {
       console.error('');
       console.error('Isto e recusa de proposito, nao defeito. O que resolve, uma vez so:');
-      console.error('  powershell -ExecutionPolicy Bypass -File ponte\\instalar.ps1');
+      console.error(`  ${comoInstalar()}`);
       for (const v of e.vereditos) console.error(`  ${v.protegido ? 'TRANCADO' : 'ABERTO'}: ${v.motivo}`);
       process.exit(6);
     }

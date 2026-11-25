@@ -17,14 +17,29 @@
 // §A.17: o registro so acrescenta, um arquivo por dia, nada e apagado.
 // §A.6: nada aqui abre porta. E arquivo local, na pasta trancada da ponte.
 
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { format } from 'node:util';
 import { PASTA_LOCAL, PASTA_TRAVAS } from './config.js';
 
 export const PASTA_REGISTROS = join(PASTA_LOCAL, 'registros');
-export const CAMINHO_TRAVA = join(PASTA_TRAVAS, 'ponte-no-ar.json');
+/**
+ * Onde mora a trava de instancia unica.
+ *
+ * Windows: na pasta da ponte, como sempre foi.
+ *
+ * Linux, OST 14: numa pasta DA MAQUINA, /run/a-fabrica-ponte, que o systemd cria
+ * na subida do servico, dona o usuario da ponte, e que qualquer usuario LE. Isso
+ * faz a recusa valer para a maquina inteira, e nao so para quem usa a mesma pasta
+ * local: uma segunda ponte rodada por outro usuario le a trava, ve a primeira viva
+ * e nao sobe. E se a trava faltar ou for de processo morto, so o usuario da ponte
+ * consegue escrever ali, entao ninguem mais toma o lugar dela. Falha fechada.
+ */
+export const CAMINHO_TRAVA =
+  process.platform === 'win32'
+    ? join(PASTA_TRAVAS, 'ponte-no-ar.json')
+    : (process.env.PONTE_TRAVA_MAQUINA ?? '').trim() || '/run/a-fabrica-ponte/ponte-no-ar.json';
 
 /** Codigo de saida de quando outra ponte ja esta no ar. Nao e falha, e recusa. */
 export const SAIDA_OUTRA_PONTE = 7;
@@ -87,7 +102,16 @@ function ponteViva(pid: number): boolean {
   } catch {
     return false;
   }
-  if (process.platform !== 'win32') return true;
+  if (process.platform !== 'win32') {
+    // Linux: a linha de comando do processo, lida do proprio sistema. Sem
+    // permissao de ler, na duvida, viva: duas pontes e pior que esperar.
+    try {
+      const linha = readFileSync(`/proc/${pid}/cmdline`, 'utf8').replace(/\0/g, ' ');
+      return /node/i.test(linha) && /ponte\.js/i.test(linha);
+    } catch {
+      return existsSync(`/proc/${pid}`);
+    }
+  }
   const r = spawnSync(
     'powershell.exe',
     [
@@ -105,13 +129,17 @@ function ponteViva(pid: number): boolean {
   return /node/i.test(linha) && /ponte\.js/i.test(linha);
 }
 
-export type ResultadoDaTrava = { ok: true } | { ok: false; pidDaOutra: number; desde: string };
+export type ResultadoDaTrava =
+  | { ok: true }
+  | { ok: false; pidDaOutra: number; desde: string }
+  | { ok: false; pidDaOutra: 0; desde: string; motivo: string };
 
 /**
  * Trava de instancia unica, por pasta local. A trava antiga de um processo que ja
  * morreu e reescrita, porque ela so diz quem esta no ar, e quem estava nao esta.
  */
 export function tomarTravaDeInstancia(): ResultadoDaTrava {
+  if (process.platform !== 'win32') return tomarTravaDaMaquina();
   mkdirSync(PASTA_TRAVAS, { recursive: true });
   if (existsSync(CAMINHO_TRAVA)) {
     try {
@@ -123,5 +151,47 @@ export function tomarTravaDeInstancia(): ResultadoDaTrava {
     }
   }
   writeFileSync(CAMINHO_TRAVA, JSON.stringify({ pid: process.pid, desde: new Date().toISOString() }), 'utf8');
+  return { ok: true };
+}
+
+/**
+ * Linux: a trava da maquina, OST 14. Tres regras:
+ *   1. trava de processo vivo que e ponte: esta nao sobe;
+ *   2. trava ausente ou de processo morto: esta escreve a sua, por troca atomica
+ *      (arquivo temporario e renomeacao), e depois LE DE VOLTA para conferir que
+ *      e a dela, porque duas subidas no mesmo instante podem ter trocado juntas;
+ *   3. nao deu para escrever (pasta ausente, de outro dono): esta nao sobe, e
+ *      diz por que. Quem pode ser a ponte desta maquina e so o usuario dela.
+ */
+function tomarTravaDaMaquina(): ResultadoDaTrava {
+  const recusa = (motivo: string): ResultadoDaTrava => ({ ok: false, pidDaOutra: 0, desde: '', motivo });
+  if (existsSync(CAMINHO_TRAVA)) {
+    try {
+      const antes = JSON.parse(readFileSync(CAMINHO_TRAVA, 'utf8')) as { pid?: unknown; desde?: unknown };
+      const pid = Number(antes.pid);
+      if (ponteViva(pid)) return { ok: false, pidDaOutra: pid, desde: String(antes.desde ?? '') };
+    } catch {
+      // trava ilegivel: quem escreveu nao esta mais la para dizer
+    }
+  }
+  const minha = JSON.stringify({ pid: process.pid, desde: new Date().toISOString() });
+  const temporario = `${CAMINHO_TRAVA}.${process.pid}`;
+  try {
+    writeFileSync(temporario, minha, { encoding: 'utf8', mode: 0o644, flag: 'wx' });
+    renameSync(temporario, CAMINHO_TRAVA);
+  } catch (e) {
+    return recusa(
+      `nao deu para escrever a trava da maquina em ${dirname(CAMINHO_TRAVA)} ` +
+        `(${e instanceof Error ? e.message : String(e)}). No Linux, so o servico a-fabrica-ponte e a ponte desta maquina`
+    );
+  }
+  try {
+    const depois = JSON.parse(readFileSync(CAMINHO_TRAVA, 'utf8')) as { pid?: unknown; desde?: unknown };
+    if (Number(depois.pid) !== process.pid) {
+      return { ok: false, pidDaOutra: Number(depois.pid), desde: String(depois.desde ?? '') };
+    }
+  } catch {
+    return recusa('a trava da maquina sumiu logo depois de escrita, outra subida mexeu nela');
+  }
   return { ok: true };
 }

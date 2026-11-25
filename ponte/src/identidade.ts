@@ -50,6 +50,8 @@ import {
 } from './config.js';
 import { criarPersistenciaEmArquivo, type SessaoEmArquivo } from './persistenciaArquivo.js';
 import { entrarPeloNavegador, EntradaPeloNavegadorFalhou } from './entradaNavegador.js';
+import { concluirEntrada, EntradaPorCodigoFalhou, type EntradaPendente } from './entradaPorCodigo.js';
+import { comoEntrar } from './plataforma.js';
 
 const NOME_APP = 'ponte-da-fabrica';
 // Porta propria da ponte, para nao colidir com emulador de outro projeto na mesma
@@ -71,6 +73,12 @@ export interface ContextoDegrau {
    * tem um lugar so para conferir: quem seta isto.
    */
   permitirNavegador: boolean;
+  /**
+   * OST 14: o login por codigo colado, no modelo do login do Claude Code. So
+   * existe quando o comando de login (entrar.ts) recebeu a colagem do diretor.
+   * O servico nunca preenche isto. Veja entradaPorCodigo.ts.
+   */
+  entradaPorCodigo: { pendente: EntradaPendente; colado: string } | null;
   /** Instancia de autenticacao, disponivel apenas na fase pelo SDK. */
   auth: Auth | null;
   registrar: (linha: string) => void;
@@ -413,6 +421,39 @@ const degrauNavegadorLocal: Degrau = {
 };
 
 // ---------------------------------------------------------------------------
+// Degrau de nuvem da OST 14: login por codigo colado, sem porta nenhuma
+// ---------------------------------------------------------------------------
+//
+// O diretor abre o link em qualquer navegador e cola o endereco onde a pagina
+// parou. O transporte e outro, a conferencia e a mesma: conferirEGravarSessao.
+
+const degrauCodigoColado: Degrau = {
+  nome: 'login-por-codigo-colado',
+  descricao:
+    'A ponte entrega um link de login do Google, o diretor abre em qualquer navegador, entra com a segunda etapa que a conta ' +
+    'dele exige, e cola o endereco onde a pagina parou. A ponte troca o codigo de uso unico por sessao no Authentication do ' +
+    'projeto, por conexao de SAIDA, confere conta, e-mail verificado e projeto, e so entao grava. Nada escuta em momento nenhum.',
+  fase: 'antes do SDK',
+  aplicavel: (ctx) => !ctx.emulador && ctx.entradaPorCodigo !== null,
+  async tentar(ctx) {
+    const entrada = ctx.entradaPorCodigo;
+    if (entrada === null) return { ok: false, detalhe: 'sem colagem' };
+    let credencial: Awaited<ReturnType<typeof concluirEntrada>>;
+    try {
+      credencial = await concluirEntrada(ctx.config, entrada.pendente, entrada.colado);
+    } catch (e) {
+      if (e instanceof EntradaPorCodigoFalhou) {
+        return { ok: false, detalhe: `${e.message}. O que fazer: ${e.oQueFazer}`, erroReal: e.message };
+      }
+      return { ok: false, detalhe: 'o login por codigo colado falhou', erroReal: erroDe(e) };
+    }
+    ctx.registrar(`codigo trocado no Authentication, conta declarada ${credencial.emailDeclarado ?? 'nao declarada'}`);
+    const bruta = JSON.stringify({ email: credencial.emailDeclarado, refreshToken: credencial.refreshToken });
+    return conferirEGravarSessao(ctx, bruta, 'login por codigo colado');
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Degrau do emulador: usuario de teste com o e-mail do diretor
 // ---------------------------------------------------------------------------
 
@@ -493,7 +534,7 @@ const degrauEmulador: Degrau = {
  * Fora desta lista, o unico caminho de identidade e a sessao ja salva, que o SDK
  * renova sozinho.
  */
-export const ESCADA: Degrau[] = [degrauEmulador, degrauNavegadorLocal];
+export const ESCADA: Degrau[] = [degrauEmulador, degrauCodigoColado, degrauNavegadorLocal];
 
 // ---------------------------------------------------------------------------
 // Abertura da identidade
@@ -518,6 +559,8 @@ export interface OpcoesIdentidade {
    * nunca passam.
    */
   permitirNavegador?: boolean;
+  /** OST 14: a colagem do diretor, so no comando de login. Padrao: nenhuma. */
+  entradaPorCodigo?: { pendente: EntradaPendente; colado: string } | null;
   registrar?: (linha: string) => void;
 }
 
@@ -544,6 +587,7 @@ export async function abrirIdentidade(opcoes: OpcoesIdentidade = {}): Promise<Id
     emulador,
     sessao,
     permitirNavegador: opcoes.permitirNavegador === true,
+    entradaPorCodigo: opcoes.entradaPorCodigo ?? null,
     auth: null,
     registrar,
   };
@@ -603,8 +647,7 @@ export async function abrirIdentidade(opcoes: OpcoesIdentidade = {}): Promise<Id
   if (!usuarioBruto) {
     throw new IdentidadeRecusada(
       'nenhum degrau da escada de credencial entregou sessao. A ponte nao sobe sem identidade do diretor, §A.6. ' +
-        'Rode o login no navegador, uma vez so: ' +
-        'powershell -ExecutionPolicy Bypass -File ponte\\instalar.ps1',
+        `Rode o login, uma vez so: ${comoEntrar()}`,
       relato
     );
   }

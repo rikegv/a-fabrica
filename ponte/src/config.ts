@@ -11,6 +11,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { aplicarProtecao } from './protecaoSessao.js';
+import { NO_WINDOWS, comoInstalar } from './plataforma.js';
 
 export const DIRETOR = 'henrique.vieira@soulan.com.br';
 export const PROJETO_NUVEM = 'a-fabrica-soulan';
@@ -29,6 +30,14 @@ export const ROTULO_DE_TESTE = process.env.PONTE_ROTULO_TESTE === '1';
 export const PASTA_LOCAL = process.env.PONTE_PASTA_LOCAL
   ? String(process.env.PONTE_PASTA_LOCAL)
   : join(homedir(), '.a-fabrica-ponte');
+
+/**
+ * Onde mora o ganchos.json, a configuracao dos ganchos de ciclo de vida.
+ * Windows: na pasta da ponte, como sempre. Linux, OST 14: na pasta da fila,
+ * /var/lib/a-fabrica-ganchos, porque o gancho roda como o diretor e precisa
+ * ler este arquivo, e a pasta da ponte ele nao le.
+ */
+export const PASTA_DOS_GANCHOS = (process.env.PONTE_PASTA_GANCHOS ?? '').trim() || PASTA_LOCAL;
 
 export const CAMINHO_CONFIG = join(PASTA_LOCAL, 'config.json');
 export const CAMINHO_SESSAO = join(PASTA_LOCAL, 'sessao.json');
@@ -85,7 +94,7 @@ export function carregarConfig(opcoes: { emulador?: boolean } = {}): ConfigLocal
   if (!bruto) {
     throw new FaltaConfig(
       `configuracao local ausente em ${CAMINHO_CONFIG}. ` +
-        'Rode a instalacao da ponte: powershell -ExecutionPolicy Bypass -File ponte\\instalar.ps1'
+        `Rode a instalacao da ponte: ${comoInstalar()}`
     );
   }
   // A maquina pode ser apontada por ambiente, para rodada de teste nao escrever
@@ -145,6 +154,9 @@ export function protegerPastaLocal(): string {
   // A mesma tranca do arquivo de sessao, que nao confia no /inheritance:r
   // sozinho. O porque esta em protecaoSessao.ts e em docs/tranca-da-ponte.md.
   const linhas = [aplicarProtecao(PASTA_LOCAL)];
+  // No Linux a evidencia e o proprio modo, que a conferencia le com stat. O
+  // icacls so existe no Windows.
+  if (!NO_WINDOWS) return linhas.join('\n');
   try {
     linhas.push(`icacls ${PASTA_LOCAL}`);
     linhas.push(execFileSync('icacls', [PASTA_LOCAL], { encoding: 'utf8' }).trim());

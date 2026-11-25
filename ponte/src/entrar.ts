@@ -17,6 +17,12 @@
 //   node dist/entrar.js --emulador      entra no emulador, para teste sem a nuvem
 //   node dist/entrar.js --sem-navegador confere a sessao e NAO abre porta nenhuma
 //   node dist/entrar.js --relato ARQ    grava o relato passo a passo no arquivo indicado
+//
+// No Linux, OST 14, o login e por codigo colado, no modelo do login do Claude
+// Code, e nada escuta porta nenhuma (veja entradaPorCodigo.ts):
+//   node dist/entrar.js                 mostra o link e espera o endereco colado na entrada
+//   node dist/entrar.js --link          so gera o link e guarda a entrada pendente, 15 minutos
+//   node dist/entrar.js --codigo        le o endereco colado da entrada e conclui a entrada pendente
 
 import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
 import { deleteApp, getApps } from 'firebase/app';
@@ -29,7 +35,20 @@ import {
   protegerPastaLocal,
 } from './config.js';
 import { ESCADA, IdentidadeRecusada, abrirIdentidade } from './identidade.js';
+import { createInterface } from 'node:readline';
+import { carregarConfig } from './config.js';
+import {
+  CAMINHO_ENTRADA_PENDENTE,
+  EntradaPorCodigoFalhou,
+  VALIDADE_DA_ENTRADA_MS,
+  apagarEntradaPendente,
+  gerarEntrada,
+  gravarEntradaPendente,
+  lerEntradaPendente,
+  type EntradaPendente,
+} from './entradaPorCodigo.js';
 import { aplicarProtecao, conferirProtecao, exigirProtecao } from './protecaoSessao.js';
+import { NO_WINDOWS, comoEntrar } from './plataforma.js';
 
 /**
  * Sai fechando o que esta aberto.
@@ -52,9 +71,55 @@ function argumento(nome: string): string | null {
   return v !== undefined && !v.startsWith('--') ? v : '';
 }
 
+/** O passo a passo que o diretor le junto do link. §A.11: sem travessao. */
+function mostrarLink(e: EntradaPendente): void {
+  console.log('');
+  console.log('1. Abra este link em qualquer navegador, no computador ou no celular:');
+  console.log('');
+  console.log(e.link);
+  console.log('');
+  console.log('2. Entre com a conta do diretor, com a segunda etapa que a sua conta pedir.');
+  console.log('3. A pagina vai parar numa tela do Firebase com uma mensagem em ingles,');
+  console.log('   "Unable to process request due to missing initial state". Isso e esperado.');
+  console.log('4. Copie o endereco INTEIRO da barra do navegador e cole aqui.');
+  console.log('');
+  console.log(`O link vale ${Math.round(VALIDADE_DA_ENTRADA_MS / 60_000)} minutos e serve uma vez so. Nada nesta maquina escuta porta.`);
+}
+
+/** Le uma linha da entrada, com prazo. Sem prazo, o login esperaria para sempre. */
+function lerUmaLinha(prazoMs: number): Promise<string> {
+  return new Promise((ok, erro) => {
+    const rl = createInterface({ input: process.stdin, terminal: false });
+    const relogio = setTimeout(() => {
+      rl.close();
+      erro(new EntradaPorCodigoFalhou('ninguem colou o endereco dentro do prazo', 'rode o login de novo'));
+    }, prazoMs);
+    rl.once('line', (l) => {
+      clearTimeout(relogio);
+      rl.close();
+      ok(l);
+    });
+    rl.once('close', () => {
+      clearTimeout(relogio);
+      ok('');
+    });
+  });
+}
+
+/** Le a entrada inteira, para o modo --codigo, que recebe a colagem por cano. */
+async function lerTudo(): Promise<string> {
+  const partes: Buffer[] = [];
+  for await (const p of process.stdin) partes.push(Buffer.isBuffer(p) ? p : Buffer.from(String(p)));
+  return Buffer.concat(partes).toString('utf8').slice(0, 8192);
+}
+
 async function principal(): Promise<void> {
   const emulador = process.argv.includes('--emulador') || process.env.PONTE_EMULADOR === '1';
   const semNavegador = process.argv.includes('--sem-navegador');
+  const soLink = process.argv.includes('--link');
+  const comCodigo = process.argv.includes('--codigo');
+  // Login por codigo colado: no Linux, sempre que nao for emulador nem conferencia.
+  const porCodigo = !NO_WINDOWS && !emulador && !semNavegador;
   const arquivoRelato = argumento('--relato');
   const relato: string[] = [];
   const registrar = (linha: string): void => {
@@ -77,8 +142,46 @@ async function principal(): Promise<void> {
   for (const d of ESCADA) console.log(`  ${d.nome} (${d.fase}): ${d.descricao}`);
   console.log('');
 
+  let entradaPorCodigo: { pendente: EntradaPendente; colado: string } | null = null;
   try {
-    const id = await abrirIdentidade({ emulador, permitirNavegador: !semNavegador, registrar });
+    if (porCodigo) {
+      const jaTem = existsSync(caminhoSessao);
+      if (soLink) {
+        if (jaTem) {
+          console.log(`A ponte ja tem sessao em ${caminhoSessao}. Nenhum link novo foi gerado.`);
+          await sairLimpo(0);
+        }
+        const e = await gerarEntrada(carregarConfig());
+        gravarEntradaPendente(e);
+        aplicarProtecao(CAMINHO_ENTRADA_PENDENTE);
+        mostrarLink(e);
+        console.log('');
+        console.log('Entrada pendente guardada na pasta trancada da ponte. Depois de colar, rode com --codigo.');
+        await sairLimpo(0);
+      }
+      if (!jaTem) {
+        if (comCodigo) {
+          entradaPorCodigo = { pendente: lerEntradaPendente(), colado: await lerTudo() };
+        } else {
+          const e = await gerarEntrada(carregarConfig());
+          gravarEntradaPendente(e);
+          aplicarProtecao(CAMINHO_ENTRADA_PENDENTE);
+          mostrarLink(e);
+          console.log('');
+          process.stdout.write('Cole aqui o endereco e aperte Enter: ');
+          entradaPorCodigo = { pendente: e, colado: await lerUmaLinha(VALIDADE_DA_ENTRADA_MS) };
+        }
+      }
+    }
+    const id = await abrirIdentidade({
+      emulador,
+      permitirNavegador: NO_WINDOWS && !semNavegador,
+      entradaPorCodigo,
+      registrar,
+    }).finally(() => {
+      // A entrada pendente serve UMA vez, deu certo ou nao. Um arquivo, nomeado.
+      if (entradaPorCodigo !== null) apagarEntradaPendente();
+    });
 
     // Trancar o ARQUIVO de sessao, nao so a pasta. Na Onda 2 este arquivo vale
     // como chave de aprovacao: a ponte escreve resposta de aprovacao na base com
@@ -128,6 +231,11 @@ async function principal(): Promise<void> {
     await sairLimpo(0);
   } catch (e) {
     console.log('');
+    if (e instanceof EntradaPorCodigoFalhou) {
+      console.error(`O login nao terminou: ${e.message}.`);
+      console.error(`O que fazer: ${e.oQueFazer}.`);
+      await sairLimpo(4);
+    }
     if (e instanceof FaltaConfig) {
       console.error('A ponte nao tem configuracao local ainda.');
       console.error(e.oQueFalta);
@@ -138,8 +246,12 @@ async function principal(): Promise<void> {
       console.error(e.message);
       console.error('');
       console.error('O que resolve, uma vez so:');
-      console.error('  powershell -ExecutionPolicy Bypass -File ponte\\instalar.ps1');
-      console.error('  Vai abrir uma pagina na sua maquina, em 127.0.0.1. Entre com a sua conta do Google.');
+      console.error(`  ${comoEntrar()}`);
+      console.error(
+        NO_WINDOWS
+          ? '  Vai abrir uma pagina na sua maquina, em 127.0.0.1. Entre com a sua conta do Google.'
+          : '  Vai aparecer um link. Abra em qualquer navegador, entre com o Google e cole aqui o endereco onde a pagina parou.'
+      );
       console.error('');
       console.error('A ponte nunca usa o token do Firebase CLI, por decisao do diretor: aquele token tem');
       console.error('escopo de nuvem muito maior do que as regras do Firestore limitam.');

@@ -48,7 +48,7 @@
 // aparencia.
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { SEPARADOR, caminhoComparavel, casaDoDiretor } from './plataforma.js';
 import { dirname, join, resolve } from 'node:path';
 import type { AgentDefinition } from '@anthropic-ai/claude-agent-sdk';
 
@@ -97,7 +97,7 @@ export interface LeituraDePersona {
 }
 
 function pastasDeAgentes(cwd: string): string[] {
-  return [join(cwd, '.claude', 'agents'), join(homedir(), '.claude', 'agents')];
+  return [join(cwd, '.claude', 'agents'), join(casaDoDiretor(), '.claude', 'agents')];
 }
 
 /** Separa o cabecalho em YAML simples do corpo do arquivo de agente. */
@@ -256,9 +256,8 @@ export interface AgenteDoProjeto {
 }
 
 function comparavelDePasta(c: string): string {
-  let t = resolve(c).toLowerCase().replace(/\//g, '\\');
-  while (t.length > 1 && t.endsWith('\\')) t = t.slice(0, -1);
-  return t;
+  // Windows como antes; Linux sem baixar a caixa, OST 14. Veja plataforma.ts.
+  return caminhoComparavel(resolve(c));
 }
 
 function pastaDeAgentesAqui(pasta: string): string | null {
@@ -282,11 +281,11 @@ function pastaDeAgentesAqui(pasta: string): string | null {
  * na base (nome e descricao) da fabrica aberta na mao; a fabrica aberta pelo
  * painel le exatamente o cwd cadastrado.
  */
-export function acharPastaDeAgentes(cwd: string, casa: string = homedir(), subir = false): string | null {
+export function acharPastaDeAgentes(cwd: string, casa: string = casaDoDiretor(), subir = false): string | null {
   const pararEm = comparavelDePasta(casa);
   const inicio = comparavelDePasta(cwd);
   if (inicio === pararEm) return null;
-  const dentroDaCasa = inicio.startsWith(`${pararEm}\\`);
+  const dentroDaCasa = inicio.startsWith(`${pararEm}${SEPARADOR}`);
   if (!subir || !dentroDaCasa) return pastaDeAgentesAqui(resolve(cwd));
   let atual = resolve(cwd);
   for (let i = 0; i < 64; i++) {
@@ -312,7 +311,7 @@ export function lerAgentesDoProjeto(
   cwd: string,
   opcoes: { subir?: boolean; casa?: string } = {}
 ): AgenteDoProjeto[] {
-  const pasta = acharPastaDeAgentes(cwd, opcoes.casa ?? homedir(), opcoes.subir === true);
+  const pasta = acharPastaDeAgentes(cwd, opcoes.casa ?? casaDoDiretor(), opcoes.subir === true);
   if (pasta === null) return [];
   let nomes: string[] = [];
   try {

@@ -11,10 +11,11 @@
 //
 // §A.6: so conexao de saida. Nada aqui escuta porta.
 
-import { homedir } from 'node:os';
+import { SEPARADOR, caminhoComparavel, casaDoDiretor, usuarioDasFabricas } from './plataforma.js';
+import { lerTextoDoFechamentoDaSessao } from './leitorDoDiretor.js';
 import { join } from 'node:path';
 import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where, type Firestore } from 'firebase/firestore';
-import { PASTA_LOCAL, lerTexto } from './config.js';
+import { PASTA_DOS_GANCHOS, lerTexto } from './config.js';
 import { mascarar } from './mascara.js';
 import {
   avaliarFechamento,
@@ -75,9 +76,9 @@ async function lerFabrica(db: Firestore, fabricaId: string): Promise<FabricaLida
 }
 
 function comparavel(c: string): string {
-  let t = c.toLowerCase().replace(/\//g, '\\');
-  while (t.length > 1 && t.endsWith('\\')) t = t.slice(0, -1);
-  return t;
+  // Windows: minusculo e barra invertida. Linux, OST 14: como veio, porque la
+  // maiuscula conta. Veja plataforma.ts.
+  return caminhoComparavel(c);
 }
 
 /**
@@ -85,7 +86,7 @@ function comparavel(c: string): string {
  * por fronteira de caminho? Falha fechada: arquivo ausente ou ilegivel vale como
  * ignorado, e nenhum relatorio sai.
  */
-export function projetoIgnorado(projetos: Array<string | null>, pastaLocal = PASTA_LOCAL): boolean {
+export function projetoIgnorado(projetos: Array<string | null>, pastaLocal = PASTA_DOS_GANCHOS): boolean {
   let lista: unknown;
   try {
     lista = (JSON.parse(lerTexto(join(pastaLocal, 'ganchos.json'))) as Record<string, unknown>)['projetosIgnorados'];
@@ -100,7 +101,7 @@ export function projetoIgnorado(projetos: Array<string | null>, pastaLocal = PAS
     for (const alvo of lista) {
       if (typeof alvo !== 'string' || alvo.length === 0) continue;
       const a = comparavel(alvo);
-      if (c === a || c.startsWith(`${a}\\`)) return true;
+      if (c === a || c.startsWith(`${a}${SEPARADOR}`)) return true;
     }
   }
   return false;
@@ -151,7 +152,7 @@ export function textoDoFimDaMao(
  * Fechamento da fabrica aberta na mao. Devolve um motivo curto para o registro,
  * sem texto. Lanca so em falha de base.
  */
-export async function fechamentoDaMao(db: Firestore, e: FimDeRodadaDaMao, casa = homedir()): Promise<string> {
+export async function fechamentoDaMao(db: Firestore, e: FimDeRodadaDaMao, casa = casaDoDiretor()): Promise<string> {
   if (e.evento !== 'Stop') return 'nao e Stop';
   // §A.23 e condicao da seguranca: sem conteudo === true, nao existe fechamento.
   if (e.conteudo !== true) return 'sem conteudo liberado';
@@ -160,7 +161,16 @@ export async function fechamentoDaMao(db: Firestore, e: FimDeRodadaDaMao, casa =
   if (!ehFimDaSessaoPrincipal(e.evento, e.subagente, fab.agente)) return 'linha de subagente';
   if (projetoIgnorado([e.projetoDaLinha, fab.projeto])) return 'projeto ignorado ou lista ilegivel';
 
-  const { texto, fonte, cortado } = textoDoFimDaMao(e.resposta, e.transcricao, e.sid, e.t, casa);
+  // Linux, OST 14: a transcricao e lida como o diretor, antes, e o resultado entra
+  // pelo mesmo leitor injetavel. As condicoes continuam todas em textoDoFimDaMao.
+  let ler: typeof lerTextoDoFechamento = lerTextoDoFechamento;
+  if (usuarioDasFabricas() !== null && e.resposta.endsWith(SUFIXO_DE_CORTE) && e.transcricao !== null) {
+    const achado = caminhoDeTranscricaoAceito(e.transcricao, e.sid, casa)
+      ? await lerTextoDoFechamentoDaSessao(e.transcricao, e.resposta.slice(0, -SUFIXO_DE_CORTE.length), e.t)
+      : null;
+    ler = () => achado ?? { texto: null, cortado: false, motivo: 'caminho fora da regra' };
+  }
+  const { texto, fonte, cortado } = textoDoFimDaMao(e.resposta, e.transcricao, e.sid, e.t, casa, ler);
   const v = avaliarFechamento(texto);
   if (!v.fechamento) return `nao e fechamento, ${v.motivo}`;
   const id = idDoFechamento(e.fabricaId, e.sid, e.t);
@@ -198,7 +208,7 @@ export interface FimDeRodadaDoPainel {
 export async function fechamentoDoPainel(
   db: Firestore,
   e: FimDeRodadaDoPainel,
-  pastaLocal: string = PASTA_LOCAL
+  pastaLocal: string = PASTA_DOS_GANCHOS
 ): Promise<string> {
   const v = avaliarFechamento(e.texto);
   if (!v.fechamento) return `nao e fechamento, ${v.motivo}`;

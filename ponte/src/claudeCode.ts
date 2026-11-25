@@ -10,8 +10,10 @@
 // identicas. Nenhum `any` solto no caminho de decisao de aprovacao: o portao
 // recebe e devolve tipos fechados do proprio kit.
 
+import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
+import { usuarioDasFabricas } from './plataforma.js';
 import {
   query,
   type AgentDefinition,
@@ -19,6 +21,8 @@ import {
   type Options,
   type PermissionMode,
   type PermissionResult,
+  type SpawnOptions,
+  type SpawnedProcess,
 } from '@anthropic-ai/claude-agent-sdk';
 import type { Consumo, TipoAtividade } from './tipos.js';
 
@@ -68,6 +72,47 @@ export interface EscolhasDaSessao {
   controle?: AbortController | null;
 }
 
+/**
+ * O lancador que roda o Claude Code como o diretor, no Linux. OST 14.
+ *
+ * Por que existe: no Linux a ponte roda como o usuario fabrica-ponte, dono da
+ * pasta onde mora a chave de aprovacao. Se a fabrica nascesse como esse mesmo
+ * usuario, ela leria a chave, e a tranca nao valeria nada. Entao a fabrica nasce
+ * como o DIRETOR, com a pasta, a conta do Claude Code e a configuracao dele, como
+ * se ele tivesse aberto na mao (§A.9). Quem permite a troca de usuario e uma regra
+ * estreita do sudo, gravada pela instalacao, que deixa a ponte rodar SO este
+ * lancador e SO como o diretor. O lancador, por sua vez, so aceita o Claude Code
+ * do proprio kit da ponte e so passa adiante as variaveis do kit.
+ *
+ * As opcoes, o portao e o fluxo de dados continuam os mesmos: o kit fala com o
+ * filho pela entrada e pela saida padrao, e o sudo so fica no meio do caminho.
+ * A isca do portao passa por aqui tambem, entao a ressalva 1 prova o caminho real.
+ */
+export const LANCADOR_COMO_DIRETOR = process.env.PONTE_LANCADOR_CLAUDE ?? '/opt/a-fabrica-ponte/bin/claude-como-diretor';
+
+/** Variaveis que o kit poe no filho e que o lancador aceita levar. Nada mais passa. */
+const VARIAVEIS_DO_KIT = /^(CLAUDE_CODE_ENTRYPOINT|CLAUDE_AGENT_SDK[A-Z_]*|DEBUG)$/;
+
+export function argumentosDoLancador(usuario: string, o: SpawnOptions): string[] {
+  const pares: string[] = [];
+  for (const [k, v] of Object.entries(o.env ?? {})) {
+    if (v === undefined || !VARIAVEIS_DO_KIT.test(k)) continue;
+    pares.push('--env', `${k}=${v}`);
+  }
+  return ['-n', '-u', usuario, '--', LANCADOR_COMO_DIRETOR, ...pares, '--', o.command, ...o.args];
+}
+
+function abrirComoDiretor(usuario: string): (o: SpawnOptions) => SpawnedProcess {
+  return (o: SpawnOptions): SpawnedProcess => {
+    const filho = spawn('sudo', argumentosDoLancador(usuario, o), {
+      cwd: o.cwd,
+      stdio: ['pipe', 'pipe', 'inherit'],
+      signal: o.signal,
+    });
+    return filho as unknown as SpawnedProcess;
+  };
+}
+
 /** As MESMAS opcoes da sessao real, para a verificacao do portao valer. */
 export function opcoesDaSessao(cwd: string, escolhas: EscolhasDaSessao = {}): Options {
   const modelo = escolhas.modelo ?? MODELO_PADRAO;
@@ -86,6 +131,9 @@ export function opcoesDaSessao(cwd: string, escolhas: EscolhasDaSessao = {}): Op
     options.agent = escolhas.agent;
   }
   if (escolhas.controle) options.abortController = escolhas.controle;
+  // Linux, OST 14: a fabrica nasce como o diretor, nunca como a ponte.
+  const comoQuem = usuarioDasFabricas();
+  if (comoQuem !== null) options.spawnClaudeCodeProcess = abrirComoDiretor(comoQuem);
   return options;
 }
 
