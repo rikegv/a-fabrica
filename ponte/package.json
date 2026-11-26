@@ -29,7 +29,10 @@
     "prova:consumo": "tsc -p tsconfig.json && node dist/testes/prova-consumo.js",
     "prova:relatorios": "tsc -p tsconfig.json && node dist/testes/prova-relatorios.js",
     "prova:nome": "tsc -p tsconfig.json && node dist/testes/prova-nome-e-maquina.js",
-    "prova:nome:sem-base": "tsc -p tsconfig.json && cross-env PONTE_SEM_BASE=1 node dist/testes/prova-nome-e-maquina.js"
+    "prova:nome:sem-base": "tsc -p tsconfig.json && cross-env PONTE_SEM_BASE=1 node dist/testes/prova-nome-e-maquina.js",
+    "cracha": "tsc -p tsconfig.json && node dist/pedirCracha.js",
+    "prova:cracha:emulador": "tsc -p tsconfig.json && cross-env PONTE_EMULADOR=1 node dist/testes/prova-cracha.js",
+    "prova:cracha:sem-base": "tsc -p tsconfig.json && cross-env PONTE_SEM_BASE=1 node dist/testes/prova-cracha.js"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.3.296",

@@ -5,8 +5,9 @@
  * corpo da tela. Uma tela so, sem rolagem da pagina.
  *
  * Telas construidas: Visao geral, Fabrica (posto de comando), Aprovacoes e Nova
- * fabrica. OST 13: Relatórios, juntando todas as fábricas. Indicadores,
- * Configurações e a tela Fábricas seguem como destino inerte, dito na tela, §A.12.
+ * fabrica. OST 13: Relatórios, juntando todas as fábricas. OST 16: Configurações,
+ * com a situação da ponte e os crachás das máquinas. Indicadores e a tela
+ * Fábricas seguem como destino inerte, dito na tela, §A.12.
  */
 
 import { useCallback, useState } from 'react';
@@ -18,6 +19,7 @@ import type { EstadoDoPainel } from '@/dados/painel';
 import { indicadoresDaPonte } from '@/dados/tradutor';
 import { desdeQuando, diaPorExtenso, plural } from '@/formato';
 import { Aprovacoes } from './Aprovacoes';
+import { Configuracoes } from './Configuracoes';
 import { FabricaTela } from './FabricaTela';
 import { FabricasFechadas } from './FabricasFechadas';
 import { Inerte } from './Inerte';
@@ -120,7 +122,9 @@ export function Computador({
             ? 'Nada é apagado. A fábrica só muda de lugar, e abre igual.'
             : tela === 'reports'
               ? 'Fechamentos e diários de todas as fábricas, mais novo em cima'
-              : undefined;
+              : tela === 'settings'
+                ? 'Situação da ponte e crachás das máquinas'
+                : undefined;
 
   const motivoDeAbrir = motivoDeAbrirFabrica(impedimentoDaEscrita(escrita));
   const direita =
@@ -184,6 +188,8 @@ export function Computador({
     );
   } else if (tela === 'reports') {
     corpo = <RelatoriosGerais base={base} estado={estado} />;
+  } else if (tela === 'settings') {
+    corpo = <Configuracoes base={base} estado={estado} escrita={escrita} avisar={avisar} />;
   } else if (tela === 'approvals') {
     corpo = <Aprovacoes estado={estado} resposta={resposta} />;
   } else if (tela === 'new') {

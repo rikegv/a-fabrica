@@ -61,8 +61,24 @@ interface FabricaLida {
   consumoPorDia: Record<string, Record<string, number>>;
 }
 
+/**
+ * OST 16: com o cracha, ler fabrica de outra maquina e NEGADO pela regra. Isso
+ * quer dizer "nao e minha", nao falha de base: quem chama nao grava nada.
+ */
+export class FabricaDeOutraMaquina extends Error {
+  constructor() {
+    super('fabrica de outra maquina, a regra negou a leitura');
+    this.name = 'FabricaDeOutraMaquina';
+  }
+}
+
 async function lerFabrica(db: Firestore, fabricaId: string): Promise<FabricaLida> {
-  const d = await getDoc(doc(db, 'fabricas', fabricaId));
+  const d = await getDoc(doc(db, 'fabricas', fabricaId)).catch((e: unknown) => {
+    if (typeof e === 'object' && e !== null && (e as Record<string, unknown>)['code'] === 'permission-denied') {
+      throw new FabricaDeOutraMaquina();
+    }
+    throw e;
+  });
   const f = (d.exists() ? d.data() : {}) as Record<string, unknown>;
   const txt = (v: unknown): string | null => (typeof v === 'string' && v.length > 0 ? v : null);
   const cpd = f['consumoPorDia'];
@@ -72,6 +88,16 @@ async function lerFabrica(db: Firestore, fabricaId: string): Promise<FabricaLida
     agente: txt(f['agente']),
     consumoPorDia: typeof cpd === 'object' && cpd !== null ? (cpd as Record<string, Record<string, number>>) : {},
   };
+}
+
+/** Null quando a regra negou a leitura: fabrica de outra maquina. Outro erro lanca. */
+async function lerFabricaSeForMinha(db: Firestore, fabricaId: string): Promise<FabricaLida | null> {
+  try {
+    return await lerFabrica(db, fabricaId);
+  } catch (e) {
+    if (e instanceof FabricaDeOutraMaquina) return null;
+    throw e;
+  }
 }
 
 function comparavel(c: string): string {
@@ -156,7 +182,8 @@ export async function fechamentoDaMao(db: Firestore, e: FimDeRodadaDaMao, casa =
   // §A.23 e condicao da seguranca: sem conteudo === true, nao existe fechamento.
   if (e.conteudo !== true) return 'sem conteudo liberado';
   if (e.resposta === null || e.resposta.length === 0) return 'sem resposta';
-  const fab = await lerFabrica(db, e.fabricaId);
+  const fab = await lerFabricaSeForMinha(db, e.fabricaId);
+  if (fab === null) return 'fabrica de outra maquina';
   if (!ehFimDaSessaoPrincipal(e.evento, e.subagente, fab.agente)) return 'linha de subagente';
   if (projetoIgnorado([e.projetoDaLinha, fab.projeto])) return 'projeto ignorado ou lista ilegivel';
 
@@ -206,7 +233,8 @@ export async function fechamentoDoPainel(
   // com a mesma funcao e a mesma falha fechada. Primeiro pelo cwd, antes de
   // tocar a base; depois pelo projeto gravado na fabrica.
   if (projetoIgnorado([e.cwd], pastaLocal)) return 'projeto ignorado ou lista ilegivel';
-  const fab = await lerFabrica(db, e.fabricaId);
+  const fab = await lerFabricaSeForMinha(db, e.fabricaId);
+  if (fab === null) return 'fabrica de outra maquina';
   if (projetoIgnorado([fab.projeto], pastaLocal)) return 'projeto ignorado ou lista ilegivel';
   const id = idDoFechamento(e.fabricaId, e.sessao, e.fim);
   const marcas: GrupoDoCriterio[] = v.marcas;
@@ -245,7 +273,10 @@ export async function passadaDoDiario(
   for (const a of diariosAFazer(livro, agora)) {
     try {
       const fab = await lerFabrica(db, a.fabricaId);
-      const docs = await getDocs(query(collection(db, 'relatorios'), where('fabricaId', '==', a.fabricaId)));
+      // OST 16, P3 e R9: filtro pela maquina desta ponte, sem ele a regra nega.
+      const docs = await getDocs(
+        query(collection(db, 'relatorios'), where('maquinaId', '==', maquinaId), where('fabricaId', '==', a.fabricaId))
+      );
       const fechamentos = docs.docs
         .map((d) => d.data() as Record<string, unknown>)
         // Pela JANELA do diario, nao pelo dia do calendario: montarDiario filtra

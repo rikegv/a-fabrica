@@ -92,7 +92,11 @@ async function recusar(
 ): Promise<SaidaDeAcao> {
   mundo.registrar?.(`ordem ${acao} recusada, fabrica ${fabricaId}: ${motivo}`);
   if (fabricaId.length > 0) {
-    await mundo.anotarFabrica(fabricaId, { erro: motivo }).catch(() => undefined);
+    // OST 16, R7: a ordem de abrir recusada e a PRIMEIRA gravacao da fabrica, e
+    // primeira gravacao leva maquinaId. Nas outras ordens a fabrica ja existe e o
+    // maquinaId nao vai, para nenhuma recusa trocar a maquina de ninguem.
+    const dados: Partial<Fabrica> = acao === 'abrir' ? { maquinaId: mundo.maquinaId, erro: motivo } : { erro: motivo };
+    await mundo.anotarFabrica(fabricaId, dados).catch(() => undefined);
   }
   return { acao, fabricaId, cumprida: false, motivo };
 }

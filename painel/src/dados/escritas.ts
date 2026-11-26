@@ -27,12 +27,49 @@
  * aprovacoes, e a ponte le. Nenhuma funcao aqui escreve em fabricas, em
  * atividade, em maquinas ou em relatorios, que sao da ponte.
  *
+ * OST 16: o painel tambem escreve em crachas, e so ele, porque emitir e revogar
+ * o cracha de uma maquina e decisao do diretor. Essas duas escritas nao pedem
+ * ponte viva (a maquina que pede cracha ainda nao tem ponte no ar) e saem
+ * sempre em gravacao em lote, docs/ost16-contrato.md.
+ *
  * Nenhuma funcao lanca excecao para a tela. Toda uma devolve Resultado, com erro
  * em portugues, para a tela nunca fingir que deu certo.
  */
 
 import type { User } from 'firebase/auth';
-import { addDoc, collection, doc, serverTimestamp, updateDoc, type Firestore } from 'firebase/firestore';
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit as limitar,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+  writeBatch,
+  type FieldValue,
+  type Firestore
+} from 'firebase/firestore';
+import {
+  LIMITE_DE_PEDIDOS,
+  barreiraDaEmissao,
+  fraseDaBarreira,
+  inicioDaJanela,
+  loteDeEmissao,
+  loteDeRevogacao,
+  origemDoPainel,
+  pedidosAbertos,
+  traduzirCracha,
+  traduzirPedido,
+  type Cracha,
+  type CrachaBase,
+  type Escrita,
+  type PedidoDeCracha,
+  type PedidoDeCrachaBase
+} from './crachas';
 import { EMAIL_DO_DIRETOR } from './firebase';
 
 /* Acoes de comando, seção 2 do contrato da Onda 2 (docs/ost7-contrato-onda2.md).
@@ -91,7 +128,9 @@ function conferir(ctx: ContextoDeEscrita): Confirmado | { impedimento: Impedimen
   if (!ctx.pontePronta) return { impedimento: 'ponte offline' };
   const maquinaId = (ctx.maquinaId ?? '').trim();
   if (!maquinaId) return { impedimento: 'sem maquina' };
-  return { base: ctx.base, origem: `painel no ${ctx.celular ? 'celular' : 'computador'}, ${email}`, maquinaId };
+  /* R5, OST 16: a origem começa SEMPRE com "painel". A regra nova separa a
+     resposta do diretor da recusa da ponte por esse começo. */
+  return { base: ctx.base, origem: origemDoPainel(ctx.celular, email), maquinaId };
 }
 
 function falhou(valor: Confirmado | { impedimento: Impedimento }): valor is { impedimento: Impedimento } {
@@ -388,6 +427,153 @@ export async function responderAprovacao(
       };
     }
     return { ok: false, erro: mensagemDoErro(erro, 'a resposta') };
+  }
+}
+
+/* ---------- cracha por maquina, OST 16 ---------- */
+
+/* Para emitir e revogar basta base ligada e sessao do diretor. A ponte nao
+   precisa estar no ar: a maquina que pede cracha ainda nao tem ponte, e revogar
+   tem de funcionar justamente quando a maquina sumiu. */
+function conferirDiretor(ctx: ContextoDeEscrita): { base: Firestore; origem: string } | { erro: string } {
+  if (!ctx.base) {
+    return { erro: 'O painel não está ligado à base agora, então nada foi gravado. Recarregue o painel e tente de novo.' };
+  }
+  const quem = ctx.usuario;
+  const email = (quem?.email ?? '').toLowerCase();
+  if (!quem || !email || email !== EMAIL_DO_DIRETOR || !quem.emailVerified) return { erro: SEM_SESSAO };
+  return { base: ctx.base, origem: origemDoPainel(ctx.celular, email) };
+}
+
+export type ResultadoDoCracha = { ok: true; id: string; revogados: number } | { ok: false; erro: string };
+
+function erroDoCracha(erro: unknown, oQue: 'a emissão' | 'a revogação'): string {
+  const codigo = (erro as { code?: string } | null)?.code ?? '';
+  if (codigo === 'permission-denied') {
+    return oQue === 'a emissão'
+      ? 'A base recusou a emissão, e nada foi gravado: nem o crachá novo, nem a revogação do antigo. O motivo mais provável é o pedido ter passado dos 15 minutos, ou a regra nova da OST 16 ainda não estar publicada. Rode de novo o pedido de crachá na máquina e tente outra vez.'
+      : 'A base recusou a revogação, e nada foi gravado. O motivo mais provável é a regra nova da OST 16 ainda não estar publicada, ou o crachá já ter sido revogado por outra tela. Recarregue o painel e confira a lista.';
+  }
+  return mensagemDoErro(erro, oQue);
+}
+
+/* Aplica o lote montado pelo calculo puro. Uma gravacao so: ou tudo entra, ou
+   nada entra, N3. criar usa set num documento que nao existe, e a regra ve
+   criacao; revogar usa update so de ativo, revogadoEm e revogadoPor, R12. */
+async function gravarLote(base: Firestore, lote: Escrita<FieldValue>[]): Promise<void> {
+  const gravacao = writeBatch(base);
+  for (const e of lote) {
+    const ref = doc(base, e.colecao, e.id);
+    if (e.operacao === 'criar') gravacao.set(ref, e.dados);
+    else gravacao.update(ref, e.dados);
+  }
+  await gravacao.commit();
+}
+
+/* Le de novo, direto da base, o que a decisao precisa. A tela ja mostra os
+   pedidos ao vivo, mas a decisao de emitir nao confia no que esta na tela:
+   pedido falso que chegou um segundo antes do clique tem de barrar, N1. */
+async function lerParaDecidir(
+  base: Firestore,
+  maquinaId: string,
+  agora: Date
+): Promise<{ pedidos: PedidoDeCracha[]; listaCheia: boolean; crachasDaMaquina: Cracha[] }> {
+  const [fotoDosPedidos, fotoDosCrachas] = await Promise.all([
+    getDocs(
+      query(
+        collection(base, 'pedidosDeCracha'),
+        where('criadoEm', '>=', inicioDaJanela(agora)),
+        orderBy('criadoEm', 'desc'),
+        limitar(LIMITE_DE_PEDIDOS)
+      )
+    ),
+    getDocs(query(collection(base, 'crachas'), where('maquinaId', '==', maquinaId)))
+  ]);
+  return {
+    pedidos: fotoDosPedidos.docs.map((d) => traduzirPedido({ ...(d.data() as object), id: d.id } as PedidoDeCrachaBase)),
+    listaCheia: fotoDosPedidos.size >= LIMITE_DE_PEDIDOS,
+    crachasDaMaquina: fotoDosCrachas.docs.map((d) => traduzirCracha({ ...(d.data() as object), id: d.id } as CrachaBase))
+  };
+}
+
+/*
+ * Emite o cracha de um pedido. A tela so chama depois de o diretor conferir, no
+ * terminal da maquina, o codigo e o comeco do uid (conferido). Falha fechada:
+ * qualquer duvida barra e diz por que, §A.22.
+ */
+export async function emitirCracha(
+  ctx: ContextoDeEscrita,
+  dados: { pedido: PedidoDeCracha; conferido: boolean }
+): Promise<ResultadoDoCracha> {
+  const pronto = conferirDiretor(ctx);
+  if ('erro' in pronto) return { ok: false, erro: pronto.erro };
+  const agora = new Date();
+
+  let lido: Awaited<ReturnType<typeof lerParaDecidir>>;
+  let jaTemCracha: boolean;
+  try {
+    lido = await lerParaDecidir(pronto.base, dados.pedido.maquinaId, agora);
+    jaTemCracha = (await getDoc(doc(pronto.base, 'crachas', dados.pedido.uid))).exists();
+  } catch (erro) {
+    return {
+      ok: false,
+      erro: `Antes de emitir, o painel confere de novo os pedidos na base, e essa leitura falhou. Nada foi emitido. ${mensagemDoErro(erro, 'a conferência')}`
+    };
+  }
+
+  /* O pedido como esta na base agora, nao como estava na tela. */
+  const pedido = lido.pedidos.find((p) => p.uid === dados.pedido.uid) ?? dados.pedido;
+  const crachasConhecidos = jaTemCracha
+    ? [...lido.crachasDaMaquina, { ...traduzirCracha({ id: pedido.uid }), uid: pedido.uid }]
+    : lido.crachasDaMaquina;
+  const barreira = barreiraDaEmissao(pedido, {
+    abertos: pedidosAbertos(lido.pedidos, crachasConhecidos, agora),
+    crachas: crachasConhecidos,
+    agora,
+    listaCheia: lido.listaCheia,
+    conferido: dados.conferido
+  });
+  if (barreira) return { ok: false, erro: fraseDaBarreira(barreira) };
+
+  const lote = loteDeEmissao<FieldValue>(pedido, lido.crachasDaMaquina, pronto.origem, serverTimestamp());
+  try {
+    await gravarLote(pronto.base, lote);
+    return { ok: true, id: pedido.uid, revogados: lote.length - 1 };
+  } catch (erro) {
+    return { ok: false, erro: erroDoCracha(erro, 'a emissão') };
+  }
+}
+
+/* Revoga TODOS os crachas ativos da maquina, N3. A tela confirma antes. */
+export async function revogarCrachasDaMaquina(
+  ctx: ContextoDeEscrita,
+  dados: { maquinaId: string }
+): Promise<ResultadoDoCracha> {
+  const pronto = conferirDiretor(ctx);
+  if ('erro' in pronto) return { ok: false, erro: pronto.erro };
+  const maquinaId = dados.maquinaId.trim();
+  if (!maquinaId) return { ok: false, erro: 'Este crachá não diz de qual máquina é, então nada foi revogado.' };
+
+  let crachas: Cracha[];
+  try {
+    const foto = await getDocs(query(collection(pronto.base, 'crachas'), where('maquinaId', '==', maquinaId)));
+    crachas = foto.docs.map((d) => traduzirCracha({ ...(d.data() as object), id: d.id } as CrachaBase));
+  } catch (erro) {
+    return {
+      ok: false,
+      erro: `Antes de revogar, o painel confere os crachás da máquina na base, e essa leitura falhou. Nada foi revogado. ${mensagemDoErro(erro, 'a conferência')}`
+    };
+  }
+
+  const lote = loteDeRevogacao<FieldValue>(maquinaId, crachas, pronto.origem, serverTimestamp());
+  if (!lote.length) {
+    return { ok: false, erro: 'Esta máquina não tem crachá ativo na base, então não havia o que revogar. Recarregue o painel e confira a lista.' };
+  }
+  try {
+    await gravarLote(pronto.base, lote);
+    return { ok: true, id: maquinaId, revogados: lote.length };
+  } catch (erro) {
+    return { ok: false, erro: erroDoCracha(erro, 'a revogação') };
   }
 }
 

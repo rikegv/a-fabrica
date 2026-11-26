@@ -438,3 +438,28 @@ body {
 .gf-bridges-compact { align-items: flex-end; gap: 3px; }
 .gf-bridges-compact .gf-bridge { padding: 2px 9px; gap: 6px; }
 .gf-bridge-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------------------------------------------------------------------------
+   OST 16, crachas das maquinas, em Configuracoes. O pedido aberto pede acao e
+   vem em ambar; o barrado, em vermelho; o cracha ativo leva o selo verde e o
+   revogado fica apagado. O codigo e grande e monoespacado para o diretor
+   comparar com o terminal da maquina digito por digito.
+   --------------------------------------------------------------------------- */
+.gf-cr-rola { flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: var(--space-3); padding-right: 4px; }
+.gf-cr-rola-celular { padding-right: 0; }
+.gf-cr-titulo { display: flex; align-items: baseline; gap: var(--space-2); margin-top: var(--space-1); }
+.gf-cr-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.gf-cr-pedido, .gf-cr-cracha { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-md); border: 1px solid var(--line-100); background: var(--bg-100); min-width: 0; }
+.gf-cr-pedido { border-color: var(--state-approval); background: var(--state-approval-bg); }
+.gf-cr-pedido-barrado { border-color: var(--state-failed); background: var(--state-failed-bg); }
+.gf-cr-cracha-revogado { opacity: .62; }
+.gf-cr-linha { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.gf-cr-quem { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.gf-cr-codigo { font-family: var(--font-mono); font-size: 18px; line-height: 24px; font-weight: 700; letter-spacing: .12em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.gf-cr-codigo-grande { font-size: 28px; line-height: 34px; }
+.gf-cr-campos { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px var(--space-3); margin: 0; }
+.gf-cr-campos dd { margin: 0; min-width: 0; }
+.gf-cr-aviso { margin: 0; color: var(--state-approval); }
+.gf-cr-acao { display: flex; justify-content: flex-end; }
+.gf-cr-conferir { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-6); padding: var(--space-3); border-radius: var(--radius-md); border: 1px solid var(--state-approval); background: var(--state-approval-bg); }
+.gf-cr-conferir-item { display: flex; flex-direction: column; gap: 2px; }

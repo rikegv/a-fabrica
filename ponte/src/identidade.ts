@@ -49,6 +49,13 @@ import {
   type ConfigLocal,
 } from './config.js';
 import { criarPersistenciaEmArquivo, type SessaoEmArquivo } from './persistenciaArquivo.js';
+import {
+  caminhoDoCracha,
+  conferirMaquinaDoCracha,
+  escolherCaminhoDeEntrada,
+  maquinaIdDoArquivo,
+  tokenDaEntrada,
+} from './cracha.js';
 import { entrarPeloNavegador, EntradaPeloNavegadorFalhou } from './entradaNavegador.js';
 
 const NOME_APP = 'ponte-da-fabrica';
@@ -100,6 +107,12 @@ export interface Identidade {
   degrau: string;
   /** Relato passo a passo, para evidencia e para o relatorio. */
   relato: string[];
+  /**
+   * OST 16: preenchido quando a ponte entrou com o cracha da maquina. Null no
+   * caminho antigo, a sessao do diretor. Quem confere o cracha na base e
+   * initBase, logo depois, porque a conferencia precisa do Firestore ligado.
+   */
+  cracha: { uid: string; maquinaId: string } | null;
 }
 
 export class IdentidadeRecusada extends Error {
@@ -167,8 +180,12 @@ interface SessaoTrocada {
  * Troca um token de atualizacao por sessao, no endpoint de token seguro.
  * Conexao de SAIDA, pedido HTTPS comum. Nada escuta.
  */
-async function trocarNoEndpointDeToken(apiKey: string, refreshToken: string): Promise<SessaoTrocada> {
-  const resposta = await fetch(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(apiKey)}`, {
+async function trocarNoEndpointDeToken(
+  apiKey: string,
+  refreshToken: string,
+  raiz = 'https://securetoken.googleapis.com'
+): Promise<SessaoTrocada> {
+  const resposta = await fetch(`${raiz}/v1/token?key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken }).toString(),
@@ -536,6 +553,14 @@ export async function abrirIdentidade(opcoes: OpcoesIdentidade = {}): Promise<Id
 
   const config = carregarConfig({ emulador });
   registrar(`configuracao local lida, maquina ${config.maquinaId}, projeto ${config.projectId}`);
+
+  // OST 16, P1: com cracha.json presente, a ponte entra SO com o cracha, e daqui
+  // para baixo nada toca sessao.json, nem como plano B. A decisao e esta linha.
+  const caminhoCracha = caminhoDoCracha(emulador);
+  if (escolherCaminhoDeEntrada(existsSync(caminhoCracha)) === 'cracha') {
+    return abrirComCracha(config, emulador, caminhoCracha, registrar, relato);
+  }
+
   const sessao = criarPersistenciaEmArquivo(emulador ? CAMINHO_SESSAO_EMULADOR : CAMINHO_SESSAO);
   registrar(`sessao persistida em ${sessao.caminho}`);
 
@@ -616,7 +641,101 @@ export async function abrirIdentidade(opcoes: OpcoesIdentidade = {}): Promise<Id
     throw new IdentidadeRecusada(`identidade recusada: ${erroDe(e)}`, relato);
   }
   registrar(`identidade confirmada, ${usuario.email}, pelo degrau ${degrauUsado || 'sessao-salva'}`);
-  return { app, auth, usuario, degrau: degrauUsado || 'sessao-salva', relato };
+  return { app, auth, usuario, degrau: degrauUsado || 'sessao-salva', relato, cracha: null };
+}
+
+// ---------------------------------------------------------------------------
+// OST 16: entrada com o cracha da maquina
+// ---------------------------------------------------------------------------
+
+/**
+ * Entra com o cracha: le o token de atualizacao da conta anonima em cracha.json,
+ * troca no endpoint de token (como a sessao do diretor), confere que a conta e
+ * anonima, do projeto desta ponte e a mesma do arquivo, regrava o arquivo e abre
+ * o SDK sobre ele. Qualquer desvio: IdentidadeRecusada, com o motivo no relato.
+ *
+ * P1: nunca abre sessao.json. P2: o token nunca vai para o relato nem para erro.
+ * A conferencia de "e o e-mail do diretor" NAO vale aqui: quem entra e a maquina.
+ * A conferencia de `crachas/{uid}` ativo e da mesma maquina acontece em initBase.
+ */
+async function abrirComCracha(
+  config: ConfigLocal,
+  emulador: boolean,
+  caminhoCracha: string,
+  registrar: (linha: string) => void,
+  relato: string[]
+): Promise<Identidade> {
+  registrar(`cracha encontrado em ${caminhoCracha}, a ponte entra so com ele, a sessao do diretor nao e lida`);
+  const recusar = (motivo: string): never => {
+    registrar(`cracha recusado: ${motivo}`);
+    throw new IdentidadeRecusada(`a ponte nao sobe com este cracha: ${motivo}`, relato);
+  };
+
+  const maquina = conferirMaquinaDoCracha(maquinaIdDoArquivo(), process.env.PONTE_MAQUINA_ID);
+  if (!maquina.ok) return recusar(maquina.motivo);
+  if (maquina.maquinaId !== config.maquinaId) return recusar('a maquina da configuracao nao bate com a do arquivo');
+
+  const arquivo = criarPersistenciaEmArquivo(caminhoCracha);
+  const chave = arquivo.chaveDoUsuario(config.apiKey, NOME_APP);
+  const entrada = arquivo.ler(chave);
+  const lido = tokenDaEntrada(entrada);
+  if (lido === null) {
+    return recusar('o arquivo do cracha esta ilegivel ou sem a conta da maquina; o diretor revoga e a maquina pede outro');
+  }
+  if (!lido.anonimo) return recusar('o arquivo do cracha guarda conta que nao e anonima, e o cracha so aceita a conta da maquina');
+
+  let s: SessaoTrocada;
+  try {
+    s = await trocarNoEndpointDeToken(
+      config.apiKey,
+      lido.refreshToken,
+      emulador ? `${EMULADOR_AUTH}/securetoken.googleapis.com` : undefined
+    );
+  } catch (e) {
+    // P2: so o codigo HTTP sai daqui. O corpo da resposta nao entra no relato.
+    const http = /HTTP (\d+)/.exec(e instanceof Error ? e.message : '')?.[1] ?? 'sem resposta';
+    return recusar(`o endpoint de token recusou o cracha (HTTP ${http}); a conta anonima pode ter sido apagada ou desativada`);
+  }
+  const alegacoes = alegacoesDoJwt(s.idToken);
+  if (alegacoes === null) return recusar('o endpoint de token devolveu uma sessao ilegivel');
+  const firebase =
+    typeof alegacoes['firebase'] === 'object' && alegacoes['firebase'] !== null
+      ? (alegacoes['firebase'] as Record<string, unknown>)
+      : {};
+  if (firebase['sign_in_provider'] !== 'anonymous') return recusar('a sessao trocada nao e de conta anonima');
+  if (alegacoes['aud'] !== config.projectId) return recusar(`a sessao trocada nao e do projeto ${config.projectId}`);
+  if (s.uid !== lido.uid) return recusar('a conta devolvida pelo endpoint nao e a do arquivo do cracha');
+
+  // So aqui, tudo conferido, o arquivo e regravado com o token novo, no mesmo
+  // formato que o SDK le na abertura. Dali em diante o SDK renova sozinho.
+  arquivo.escrever(chave, {
+    ...(entrada as Record<string, unknown>),
+    stsTokenManager: { refreshToken: s.refreshToken, accessToken: s.idToken, expirationTime: s.expiraEmMs },
+    lastLoginAt: String(Date.now()),
+  });
+
+  const app = initializeApp(
+    { apiKey: config.apiKey, authDomain: config.authDomain, projectId: config.projectId, appId: config.appId },
+    NOME_APP
+  );
+  const auth = initializeAuth(app, { persistence: arquivo.persistencia });
+  if (emulador) connectAuthEmulator(auth, EMULADOR_AUTH, { disableWarnings: true });
+  onIdTokenChanged(auth, (u) => {
+    if (u) registrar(`token do cracha renovado pelo SDK, conta ${u.uid.slice(0, 8)}`);
+  });
+  await auth.authStateReady();
+  const u = auth.currentUser;
+  if (!u || !u.isAnonymous || u.uid !== lido.uid) return recusar('o SDK nao abriu a conta do cracha');
+
+  registrar(`cracha aberto, conta ${u.uid.slice(0, 8)}, maquina ${maquina.maquinaId}; falta conferir na base que esta ativo`);
+  return {
+    app,
+    auth,
+    usuario: { uid: u.uid, email: `cracha da maquina ${maquina.maquinaId}` },
+    degrau: 'cracha',
+    relato,
+    cracha: { uid: u.uid, maquinaId: maquina.maquinaId },
+  };
 }
 
 export { NOME_APP };

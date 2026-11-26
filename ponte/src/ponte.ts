@@ -32,6 +32,7 @@ import {
   carregarConfig,
 } from './config.js';
 import { SessaoDesprotegida, exigirProtecao } from './protecaoSessao.js';
+import { caminhoDoCracha, escolherCaminhoDeEntrada, vigiarCracha } from './cracha.js';
 import { iniciarPublicadorDeGanchos } from './ganchos.js';
 import { anotarPasso, anotarRodada, livroDaPonte, marcarLivroSujo, salvarLivro } from './relatorios.js';
 import { fechamentoDoPainel, iniciarDiario } from './relatoriosBase.js';
@@ -49,6 +50,9 @@ import { homedir } from 'node:os';
  * que encerrar e pausar alcancam uma sessao que esta rodando agora.
  */
 const registro = new RegistroDeFabricas();
+
+/** OST 16: saida da ponte quando o cracha cai no meio do caminho. Diferente de zero, de proposito. */
+export const SAIDA_CRACHA_CAIU = 8;
 
 function cwdPadrao(): string {
   return process.env.PONTE_CWD ?? join(homedir(), 'a-fabrica-lab', 'projeto-cc');
@@ -199,7 +203,7 @@ export function portaoParaBase(
         }),
       });
       await atualizarFabrica(db, fabricaId, { estado: 'aguardando aprovacao' });
-      const r = await esperarResposta(db, aprovacaoId);
+      const r = await esperarResposta(db, aprovacaoId, maquinaId);
       // Volta para em execucao SO se a fabrica continua viva e sem ordem de parar.
       // Sem esta conferencia, a resposta que chega depois de o diretor encerrar ou
       // pausar reescreveria o estado e o painel passaria a mentir.
@@ -258,7 +262,7 @@ export function mundoNaBase(db: Firestore, maquinaId: string, registrar: (l: str
       if (saida.startsWith('fechamento')) registrar(`fabrica ${d.fabricaId}: ${saida}`);
     },
     lerConversa: (fabricaId) => lerConversaDaFabrica(db, fabricaId),
-    recusarPendentes: (fabricaId, motivo) => recusarAprovacoesDaFabrica(db, fabricaId, motivo),
+    recusarPendentes: (fabricaId, motivo) => recusarAprovacoesDaFabrica(db, fabricaId, motivo, maquinaId),
     fazerPortao: (ctx) =>
       portaoParaBase(db, maquinaId, ctx.fabricaId, ctx.tarefa, ctx.pegarTexto, ctx.pegarUltimoEventoEm),
   };
@@ -271,7 +275,15 @@ export interface OpcoesServico {
 export async function main(opcoes: OpcoesServico = {}): Promise<void> {
   const emulador = opcoes.emulador === true;
   const config = carregarConfig({ emulador });
-  const caminhoSessao = emulador ? CAMINHO_SESSAO_EMULADOR : CAMINHO_SESSAO;
+  // OST 16, P1 e P2: com cracha, a chave em disco e o cracha, com a mesma tranca,
+  // e sessao.json nem entra na conferencia. Sem cracha, tudo como antes.
+  const caminhoCracha = caminhoDoCracha(emulador);
+  const caminhoSessao =
+    escolherCaminhoDeEntrada(existsSync(caminhoCracha)) === 'cracha'
+      ? caminhoCracha
+      : emulador
+        ? CAMINHO_SESSAO_EMULADOR
+        : CAMINHO_SESSAO;
 
   // PORTAO DE SUBIDA, antes de qualquer coisa: a sessao em disco e a chave com que
   // a ponte responde aprovacao na base. Se ela nao estiver trancada para o dono e
@@ -295,7 +307,8 @@ export async function main(opcoes: OpcoesServico = {}): Promise<void> {
   for (const v of exigirProtecao([{ caminho: caminhoSessao, tipo: 'arquivo' }])) {
     console.log(`[tranca] ${v.motivo}`);
   }
-  const maquinaId = config.maquinaId;
+  // OST 16, P1: com cracha, a maquina e a do cracha, ja conferida contra o config.
+  const maquinaId = base.identidade.cracha?.maquinaId ?? config.maquinaId;
   console.log(`ponte entrou como ${base.identidade.usuario.email}, degrau ${base.identidade.degrau}`);
 
   // OST 15: o rotulo vai em todo sinal de vida, null quando nao configurado.
@@ -333,13 +346,24 @@ export async function main(opcoes: OpcoesServico = {}): Promise<void> {
   // Identidade perdida e parada segura: a ponte nao executa nada sem o diretor.
   onAuthStateChanged(base.auth, (u) => {
     if (!u) {
-      console.error('sessao do diretor perdida, a ponte para por seguranca');
+      console.error('sessao da ponte perdida, a ponte para por seguranca');
       void encerrar();
     }
   });
 
+  // OST 16, item 7: cracha revogado, de outra maquina ou ilegivel derruba a ponte
+  // na hora, com o motivo no registro, e a saida nao e zero.
+  const cracha = base.identidade.cracha;
+  const offCracha =
+    cracha !== null
+      ? vigiarCracha(base.db, cracha.uid, cracha.maquinaId, (motivo) => {
+          console.error(`cracha caiu, a ponte para por seguranca: ${motivo}`);
+          void encerrar(SAIDA_CRACHA_CAIU);
+        })
+      : () => undefined;
+
   let encerrando = false;
-  const encerrar = async (): Promise<void> => {
+  const encerrar = async (codigo = 0): Promise<void> => {
     if (encerrando) return;
     encerrando = true;
     try {
@@ -347,13 +371,14 @@ export async function main(opcoes: OpcoesServico = {}): Promise<void> {
     } catch {
       // ouvinte ja desligado
     }
+    offCracha();
     ganchos.parar();
     diario.parar();
     // Uma ultima passada na fila antes de morrer: o que o gancho escreveu nos
     // ultimos segundos nao fica para tras so porque a ponte esta encerrando.
     await ganchos.agora().catch(() => undefined);
     await hb.parar([...registro.keys()]);
-    process.exit(0);
+    process.exit(codigo);
   };
   process.on('SIGINT', () => void encerrar());
   process.on('SIGTERM', () => void encerrar());

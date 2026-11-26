@@ -8,6 +8,7 @@
   "scripts": {
     "login": "node verificar-login.mjs",
     "regras": "firebase emulators:exec --only firestore --project a-fabrica-soulan \"node regras.test.mjs\"",
+    "cracha": "firebase emulators:exec --only firestore --project a-fabrica-soulan \"node cracha.test.mjs\"",
     "ponte": "firebase emulators:exec --only firestore,auth --project a-fabrica-soulan \"node --experimental-transform-types --import ./registrar-resolucao.mjs ponte-real.test.mjs\""
   },
   "dependencies": {

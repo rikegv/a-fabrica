@@ -27,6 +27,7 @@ import {
   type Query
 } from 'firebase/firestore';
 import type { AprovacaoBase, AtividadeBase, ComandoBase, FabricaBase, MaquinaBase, RelatorioBase, TarefaBase } from './tipos';
+import type { CrachaBase, PedidoDeCrachaBase } from './crachas';
 
 export interface Colecao<T> {
   itens: T[];
@@ -243,6 +244,44 @@ export function usarTarefas(base: Firestore | null, fabricaId: string | null): C
     [base, fabricaId]
   );
   return usarConsulta<TarefaBase>(consulta);
+}
+
+/*
+ * OST 16: crachás das máquinas e pedidos de crachá. Só abrem com a tela de
+ * Configurações aberta (ativo), para não ficar lendo a base o tempo todo.
+ *
+ * Pedidos: janela de 15 minutos e limite de 20, N2. Faixa e ordem no mesmo campo,
+ * criadoEm, sem índice composto. O início da janela vem de fora, arredondado ao
+ * minuto pela tela, para a escuta não reabrir a cada segundo; o filtro fino da
+ * janela é refeito em memória por crachas.ts.
+ */
+export function usarCrachas(base: Firestore | null, ativo: boolean): Colecao<CrachaBase> {
+  const consulta = useMemo(
+    () => (base && ativo ? query(collection(base, 'crachas'), orderBy('emitidoEm', 'desc'), limitar(100)) : null),
+    [base, ativo]
+  );
+  return usarConsulta<CrachaBase>(consulta);
+}
+
+export function usarPedidosDeCracha(
+  base: Firestore | null,
+  desde: Date | null,
+  quantos: number
+): Colecao<PedidoDeCrachaBase> {
+  const desdeMs = desde?.getTime() ?? null;
+  const consulta = useMemo(
+    () =>
+      base && desdeMs !== null
+        ? query(
+            collection(base, 'pedidosDeCracha'),
+            where('criadoEm', '>=', new Date(desdeMs)),
+            orderBy('criadoEm', 'desc'),
+            limitar(quantos)
+          )
+        : null,
+    [base, desdeMs, quantos]
+  );
+  return usarConsulta<PedidoDeCrachaBase>(consulta);
 }
 
 /* Relogio do painel: mantem "parado há 18 min" e o tempo decorrido vivos sem

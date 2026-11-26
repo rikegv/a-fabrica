@@ -31,11 +31,18 @@
 //   node scripts/publicar.mjs --indices    publica firebase/firestore.indexes.json
 //   node scripts/publicar.mjs --painel     publica painel/out na hospedagem
 //   node scripts/publicar.mjs --conferir   so compara o que esta na nuvem, nao publica
+//   node scripts/publicar.mjs --cracha     OST 16: liga SO o provedor anonimo do
+//                                          Authentication, para o cracha por maquina
+//   node scripts/publicar.mjs --encerrar-sessoes-do-diretor
+//                                          OST 16, U4: invalida os tokens de
+//                                          atualizacao da conta do diretor. So depois
+//                                          da troca do notebook para o cracha.
 
 import { execFileSync } from 'node:child_process';
 import { gzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, join, posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -43,6 +50,7 @@ const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PROJETO = 'a-fabrica-soulan';
 const SITE = 'a-fabrica-soulan';
 const ESTADO = join(RAIZ, '.claude', 'state');
+const EMAIL_DO_DIRETOR = 'henrique.vieira@soulan.com.br';
 
 const ARQUIVO_REGRA = join(RAIZ, 'firebase', 'firestore.rules');
 const ARQUIVO_INDICES = join(RAIZ, 'firebase', 'firestore.indexes.json');
@@ -51,7 +59,9 @@ const PASTA_PAINEL = join(RAIZ, 'painel', 'out');
 function selo() {
   const d = new Date();
   const p = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}${p(d.getMinutes())}`;
+  // OST 16: com segundos, para duas chamadas no mesmo minuto nao dividirem a
+  // mesma pasta e uma nao sobrescrever a evidencia da outra, §A.17.
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
 }
 
 const RODADA = join('C:\\Users\\Henrique\\a-fabrica-lab\\rodadas', `${selo()}-ost7-publicacao`);
@@ -504,11 +514,223 @@ async function conferirPainelNoAr(mapa) {
 }
 
 // ---------------------------------------------------------------------------
+// Provedor anonimo do Authentication, OST 16, condicao U2
+// ---------------------------------------------------------------------------
+//
+// O cracha por maquina e uma conta ANONIMA do Firebase Authentication. O unico
+// ajuste de producao fora da regra e ligar esse provedor, uma vez. Este modo liga
+// SO isso, com updateMask restrito a signIn.anonymous.enabled, grava a
+// configuracao antes e depois na pasta da rodada e prova, campo a campo, que
+// nada alem disso mudou.
+//
+// SEGREDO NA CONFIGURACAO: a resposta traz signIn.hashConfig, com a signerKey que
+// assina as senhas do projeto. Ela nunca e gravada nem impressa: sai da copia
+// antes de qualquer arquivo ou linha de registro. Para provar que ela tambem nao
+// mudou, compara-se so o resumo dela antes e depois, e o resumo tambem nao e
+// impresso, so o veredito igual ou diferente.
+
+const ENDERECO_CONFIG = `https://identitytoolkit.googleapis.com/admin/v2/projects/${PROJETO}/config`;
+const CHAVES_SECRETAS = /^(hashConfig|signerKey|saltSeparator|apiKey|clientSecret|privateKey|secret)$/i;
+
+function semSegredos(valor) {
+  if (Array.isArray(valor)) return valor.map(semSegredos);
+  if (valor === null || typeof valor !== 'object') return valor;
+  const saida = {};
+  for (const [chave, v] of Object.entries(valor)) {
+    if (CHAVES_SECRETAS.test(chave)) {
+      saida[chave] = '(retirado, segredo)';
+      continue;
+    }
+    saida[chave] = semSegredos(v);
+  }
+  return saida;
+}
+
+/** Resumo so das partes secretas, para comparar antes e depois sem expor nada. */
+function resumoDosSegredos(valor) {
+  const partes = [];
+  const andar = (v, caminho) => {
+    if (Array.isArray(v)) return v.forEach((x, i) => andar(x, `${caminho}[${i}]`));
+    if (v === null || typeof v !== 'object') return;
+    for (const [chave, x] of Object.entries(v).sort(([a], [b]) => a.localeCompare(b))) {
+      const aqui = caminho ? `${caminho}.${chave}` : chave;
+      if (CHAVES_SECRETAS.test(chave)) partes.push(`${aqui}=${JSON.stringify(x)}`);
+      else andar(x, aqui);
+    }
+  };
+  andar(valor, '');
+  return createHash('sha256').update(partes.join('\n')).digest('hex');
+}
+
+/** Achata o objeto em caminho = valor, para comparar campo a campo. */
+function achatar(valor, caminho = '', saida = {}) {
+  if (Array.isArray(valor)) {
+    if (valor.length === 0) saida[caminho] = '[]';
+    valor.forEach((x, i) => achatar(x, `${caminho}[${i}]`, saida));
+    return saida;
+  }
+  if (valor !== null && typeof valor === 'object') {
+    const chaves = Object.keys(valor);
+    if (chaves.length === 0 && caminho) saida[caminho] = '{}';
+    for (const chave of chaves) achatar(valor[chave], caminho ? `${caminho}.${chave}` : chave, saida);
+    return saida;
+  }
+  saida[caminho] = JSON.stringify(valor);
+  return saida;
+}
+
+function diferencas(antes, depois) {
+  const a = achatar(antes);
+  const d = achatar(depois);
+  const caminhos = [...new Set([...Object.keys(a), ...Object.keys(d)])].sort();
+  return caminhos
+    .filter((c) => a[c] !== d[c])
+    .map((c) => ({ caminho: c, antes: a[c] ?? '(nao existia)', depois: d[c] ?? '(nao existe)' }));
+}
+
+async function ligarProvedorAnonimo() {
+  exigirFlag('provedor anonimo do Authentication, cracha por maquina');
+
+  const cruaAntes = await chamar('GET', ENDERECO_CONFIG);
+  const antes = semSegredos(cruaAntes);
+  guardar('authentication-config-antes.json', JSON.stringify(antes, null, 2));
+  reg(`configuracao do Authentication lida e gravada sem segredos: ${join(RODADA, 'authentication-config-antes.json')}`);
+  reg(`provedor anonimo antes: ${cruaAntes.signIn?.anonymous?.enabled === true ? 'LIGADO' : 'DESLIGADO'}`);
+
+  if (cruaAntes.signIn?.anonymous?.enabled === true) {
+    reg('o provedor anonimo ja estava ligado, nada foi escrito');
+    guardar('authentication-config-depois.json', JSON.stringify(antes, null, 2));
+    return;
+  }
+
+  // updateMask restrito: a API so toca o campo nomeado, mesmo que o corpo tivesse
+  // mais coisa. O corpo leva so esse campo, de qualquer forma.
+  await chamar('PATCH', `${ENDERECO_CONFIG}?updateMask=signIn.anonymous.enabled`, {
+    signIn: { anonymous: { enabled: true } },
+  });
+  reg('pedido de ligar o provedor anonimo aceito pela API');
+
+  const cruaDepois = await chamar('GET', ENDERECO_CONFIG);
+  const depois = semSegredos(cruaDepois);
+  guardar('authentication-config-depois.json', JSON.stringify(depois, null, 2));
+  reg(`configuracao depois gravada sem segredos: ${join(RODADA, 'authentication-config-depois.json')}`);
+
+  const difs = diferencas(antes, depois);
+  const esperado = (d) => d.caminho === 'signIn.anonymous.enabled' && d.depois === 'true';
+  const alemDoPedido = difs.filter((d) => !esperado(d));
+  const segredosIguais = resumoDosSegredos(cruaAntes) === resumoDosSegredos(cruaDepois);
+  guardar(
+    'authentication-diferencas.txt',
+    [
+      `diferencas entre antes e depois, sem segredos: ${difs.length}`,
+      ...difs.map((d) => `  ${d.caminho}\n    antes:  ${d.antes}\n    depois: ${d.depois}`),
+      '',
+      `campos secretos (hashConfig e afins) iguais antes e depois, comparados por resumo: ${segredosIguais ? 'SIM' : 'NAO'}`,
+    ].join('\n')
+  );
+  for (const d of difs) reg(`  mudou ${d.caminho}: ${d.antes} para ${d.depois}`);
+  reg(`campos secretos iguais antes e depois: ${segredosIguais ? 'SIM' : 'NAO'}`);
+
+  if (cruaDepois.signIn?.anonymous?.enabled !== true) {
+    throw new Error('a API aceitou, mas a configuracao lida depois diz que o provedor anonimo continua desligado');
+  }
+  if (alemDoPedido.length > 0 || !segredosIguais) {
+    throw new Error(
+      `o provedor anonimo ligou, mas ${alemDoPedido.length} outro(s) campo(s) mudaram junto` +
+        `${segredosIguais ? '' : ' e uma parte secreta mudou'}. Nada foi desfeito automaticamente. ` +
+        'Veja authentication-diferencas.txt na rodada e avise o diretor.'
+    );
+  }
+  reg('CONFERIDO: o provedor anonimo esta ligado e nada alem dele mudou, U2');
+}
+
+// ---------------------------------------------------------------------------
+// Encerrar as sessoes do diretor, OST 16, condicao U4
+// ---------------------------------------------------------------------------
+//
+// Depois da troca do notebook para o cracha, o token de atualizacao da conta do
+// diretor que morava em sessao.json nao pode continuar valendo. Este modo marca
+// validSince na conta dele com a hora de agora: todo token de atualizacao emitido
+// antes deixa de servir. Efeito colateral declarado: o navegador do diretor
+// precisa entrar de novo, uma vez.
+//
+// Ordem obrigatoria, conferida aqui e nao so confiada: a ponte do notebook ja tem
+// cracha.json e sessao.json ja foi apagado. Sem isso, invalidar derrubaria a
+// ponte. O script so confere se os arquivos EXISTEM; nunca abre nenhum dos dois.
+//
+// Nenhum token e impresso nem gravado. A resposta da API nao e registrada; so o
+// identificador da conta (pelos 8 primeiros caracteres) e as horas.
+
+const PASTA_DA_PONTE = join(homedir(), '.a-fabrica-ponte');
+
+async function contaDoDiretor() {
+  const r = await chamar('POST', `https://identitytoolkit.googleapis.com/v1/projects/${PROJETO}/accounts:lookup`, {
+    email: [EMAIL_DO_DIRETOR],
+  });
+  const contas = (r.users ?? []).filter((u) => String(u.email ?? '').toLowerCase() === EMAIL_DO_DIRETOR);
+  if (contas.length !== 1 || typeof contas[0].localId !== 'string' || contas[0].localId.length === 0) {
+    throw new Error(`esperava exatamente uma conta com o e-mail do diretor, achei ${contas.length}. Nada foi alterado.`);
+  }
+  return { uid: contas[0].localId, validSince: contas[0].validSince ?? null };
+}
+
+async function encerrarSessoesDoDiretor() {
+  const sessao = join(PASTA_DA_PONTE, 'sessao.json');
+  const cracha = join(PASTA_DA_PONTE, 'cracha.json');
+  if (existsSync(sessao)) {
+    console.error('publicar: BLOQUEADO (encerrar as sessoes do diretor).');
+    console.error(`Motivo: ${sessao} ainda existe. A troca do notebook para o cracha nao terminou, U4.`);
+    console.error('Invalidar agora derrubaria a ponte que ainda entra como o diretor.');
+    process.exit(2);
+  }
+  if (!existsSync(cracha)) {
+    console.error('publicar: BLOQUEADO (encerrar as sessoes do diretor).');
+    console.error(`Motivo: ${cracha} nao existe. A ponte do notebook ficaria sem identidade nenhuma, U4.`);
+    process.exit(2);
+  }
+  reg(`conferido: ${sessao} nao existe e ${cracha} existe (nenhum dos dois foi aberto)`);
+
+  exigirFlag('encerrar as sessoes do diretor, invalidar tokens de atualizacao');
+
+  const antes = await contaDoDiretor();
+  const curto = antes.uid.slice(0, 8);
+  reg(`conta do diretor achada pelo e-mail, uid comecando com ${curto}`);
+  reg(`validSince antes: ${antes.validSince ?? '(nunca marcado)'}`);
+
+  const agora = Math.floor(Date.now() / 1000);
+  await chamar('POST', `https://identitytoolkit.googleapis.com/v1/projects/${PROJETO}/accounts:update`, {
+    localId: antes.uid,
+    validSince: String(agora),
+  });
+  reg(`pedido aceito: tokens emitidos antes de ${new Date(agora * 1000).toISOString()} deixam de valer`);
+
+  const depois = await contaDoDiretor();
+  if (depois.uid !== antes.uid) throw new Error('a conta lida depois nao e a mesma de antes, confira a mao');
+  const marcado = Number(depois.validSince ?? '0');
+  guardar(
+    'encerrar-sessoes-do-diretor.txt',
+    [
+      `conta: uid comecando com ${curto}`,
+      `validSince antes: ${antes.validSince ?? '(nunca marcado)'}`,
+      `validSince pedido: ${agora}`,
+      `validSince depois: ${depois.validSince ?? '(nao veio)'}`,
+      'nenhum token foi lido, impresso ou gravado',
+    ].join('\n')
+  );
+  if (!Number.isFinite(marcado) || marcado < agora) {
+    throw new Error(`a API aceitou, mas validSince lido depois (${depois.validSince ?? 'nada'}) e anterior ao pedido (${agora})`);
+  }
+  reg(`CONFERIDO: validSince da conta do diretor agora e ${marcado}. O navegador dele vai pedir login de novo, uma vez.`);
+}
+
+// ---------------------------------------------------------------------------
 
 async function principal() {
   const args = process.argv.slice(2);
   if (args.length === 0) {
-    console.error('Diga o que publicar: --regra, --indices, --painel ou --conferir');
+    console.error(
+      'Diga o que publicar: --regra, --indices, --painel, --conferir, --cracha ou --encerrar-sessoes-do-diretor'
+    );
     process.exit(2);
   }
   reg(`publicacao, projeto ${PROJETO}, explicito, §A.20`);
@@ -518,6 +740,8 @@ async function principal() {
     if (args.includes('--regra')) await publicarRegra();
     if (args.includes('--indices')) await publicarIndices();
     if (args.includes('--painel')) await publicarPainel();
+    if (args.includes('--cracha')) await ligarProvedorAnonimo();
+    if (args.includes('--encerrar-sessoes-do-diretor')) await encerrarSessoesDoDiretor();
     reg('');
     reg('PRONTO.');
   } catch (e) {

@@ -1,0 +1,355 @@
+rules_version = '2';
+
+// Regras do Firestore da Fabrica.
+//
+// ESTA VERSAO, A DA OST 16, AINDA NAO ESTA PUBLICADA. O que esta no ar e a versao
+// da OST 6, que so conhece o diretor. Publicar e peso pesado, so com a autorizacao
+// de producao do diretor, §A.7, pelo coordenador. Nenhum agente publica por conta
+// propria.
+//
+// O QUE MUDOU NA OST 16, o cracha por maquina (docs/ost16-contrato.md):
+//  - Funcao nova cracha(): conta ANONIMA do Firebase Authentication com documento
+//    crachas/{uid} existindo, ativo == true e uid igual ao da conta. minhaMaquina()
+//    e o maquinaId desse documento. O cracha so alcanca a fila da propria maquina.
+//  - Ordem de conferencia em toda permissao, condicao R1 da seguranca: primeiro
+//    diretor(), que nao le documento; depois o que nao le documento (provedor
+//    anonimo, forma do id, forma do dado); so entao o get de crachas. O get do
+//    mesmo caminho e reaproveitado dentro de uma avaliacao (o Firestore guarda o
+//    resultado), entao cracha() e minhaMaquina() juntas custam uma leitura so.
+//  - O cracha so RECUSA aprovacao, e so nos tres motivos da ponte, com
+//    respondidoPor exato. Aprovar, pelo cracha, e negado sempre.
+//  - Leitura em lista pelo cracha so com filtro por maquinaId. Documento
+//    inexistente o cracha so le em fabricas e relatorios.
+//  - Colecoes novas: pedidosDeCracha/{uid}, criada pela propria conta anonima uma
+//    vez, e crachas/{uid}, que so o diretor cria (com pedido de menos de 15 minutos)
+//    e so revoga uma vez. Revogado nao volta.
+//  - O diretor continua podendo TUDO o que podia na OST 6, com as mesmas condicoes.
+//    A ponte antiga do notebook, que entra como diretor, segue funcionando no dia
+//    da publicacao. A troca para o cracha acontece depois, sem parar nada.
+//
+// Como conferir o que esta no ar, em vez de confiar neste comentario:
+//
+//     node scripts/publicar.mjs --conferir
+//
+// Ele baixa o conjunto publicado em projects/a-fabrica-soulan/releases/
+// cloud.firestore e compara com este arquivo byte a byte e so pelo CORPO, sem
+// comentario. Quem editar este arquivo, inclusive so o comentario, publica de novo.
+//
+// Principios, §A.6:
+//  - Conta unica de pessoa. So o e-mail do diretor, com e-mail verificado. Alem
+//    dele, so o cracha de maquina, que nao e pessoa e alcanca so a propria fila.
+//  - Cada documento tem um unico dono de escrita (ver docs/contrato-tres-pecas.md).
+//  - Trilha de comando e aprovacao imutavel: nao se apaga, nao se reescreve, e a
+//    hora e do servidor, nao do cliente. Toda hora de trilha tem de ser escrita com
+//    serverTimestamp(), senao a escrita e negada. Isso impede hora forjada.
+//  - Comando entrega uma vez. Aprovacao responde uma vez. Depois, documento congelado.
+//  - Toda resposta de aprovacao carrega hora do servidor e quem respondeu, em
+//    respondidoPor. Sem origem da resposta, a escrita e negada.
+//  - A fila carrega maquinaId, que nao muda depois de criado.
+//
+// Observacao honesta para a seguranca: sob a conta do diretor, maquinaId continua
+// sendo escopo logico, porque o diretor alcanca a fila de qualquer maquina. Com o
+// cracha, maquinaId vira fronteira de verdade para a maquina: quem tem o cracha de
+// uma maquina nao le nem escreve a fila de outra. Quem rouba o cracha de uma
+// maquina alcanca a fila daquela maquina ate o diretor revogar.
+//
+// SEGUNDO FATOR: esta regra NAO confere segundo fator, e nada neste projeto confere.
+// O token do provedor Google nao carrega essa informacao, e o Authentication deste
+// projeto nao impoe segunda etapa. O cracha tambem nao tem segundo fator. Nenhum
+// arquivo deste repositorio deve afirmar que o segundo fator esta exigido.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function diretor() {
+      return request.auth != null
+        && request.auth.token.email == 'henrique.vieira@soulan.com.br'
+        && request.auth.token.email_verified == true;
+    }
+
+    // Conta anonima do Firebase Authentication. Nao le documento.
+    function anonima() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    function caminhoDoCracha() {
+      return /databases/$(database)/documents/crachas/$(request.auth.uid);
+    }
+
+    // R2: cracha existe, esta ativo e e desta conta. O provedor e conferido antes,
+    // sem ler documento, R1.
+    function cracha() {
+      return anonima()
+        && exists(caminhoDoCracha())
+        && get(caminhoDoCracha()).data.ativo == true
+        && get(caminhoDoCracha()).data.uid == request.auth.uid;
+    }
+
+    // So chamada depois de cracha() verdadeiro. Mesmo caminho, mesma leitura.
+    function minhaMaquina() {
+      return get(caminhoDoCracha()).data.maquinaId;
+    }
+
+    function caminhoDaFabrica(id) {
+      return /databases/$(database)/documents/fabricas/$(id);
+    }
+
+    // R6: a fabrica existe e e da maquina do cracha. Forma do id antes do get.
+    function fabricaDaMinhaMaquina(id) {
+      return id is string && id.size() > 0
+        && exists(caminhoDaFabrica(id))
+        && get(caminhoDaFabrica(id)).data.get('maquinaId', null) == minhaMaquina();
+    }
+
+    // Campos imutaveis preservados numa atualizacao.
+    function mantem(campos) {
+      return campos.toSet().difference(
+        request.resource.data.diff(resource.data).affectedKeys()
+      ).size() == campos.size();
+    }
+
+    // R3: a atualizacao so toca estes campos.
+    function soMuda(campos) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(campos);
+    }
+
+    function textoPreenchido(valor) {
+      return valor is string && valor.size() > 0;
+    }
+
+    function idDeMaquina(valor) {
+      return valor is string && valor.matches('^maquina-[a-z0-9-]{1,40}$');
+    }
+
+    // Nome e rotulo do pedido de cracha, R11. Texto puro, sem simbolo.
+    function textoSimples(valor, teto) {
+      return valor is string && valor.size() <= teto && valor.matches('^[A-Za-z0-9 ._-]{1,60}$');
+    }
+
+    // ------------------------------------------------------------------ maquinas
+    // Sinal de vida escrito pela ponte. A hora de visto por ultimo e do servidor,
+    // senao a tela poderia mostrar ponte viva com hora inventada, §A.10.
+    // R10: o cracha so alcanca o documento da propria maquina.
+    function batidaValida() {
+      return request.resource.data.vistoPorUltimo == request.time
+        && request.resource.data.estadoPonte in ['online', 'offline'];
+    }
+
+    match /maquinas/{maquinaId} {
+      allow get: if diretor()
+        || (resource != null && cracha() && maquinaId == minhaMaquina());
+      allow list: if diretor()
+        || cracha();
+      allow create, update: if (diretor() && batidaValida())
+        || (batidaValida()
+          && request.resource.data.get('maquinaId', maquinaId) == maquinaId
+          && cracha()
+          && maquinaId == minhaMaquina());
+      allow delete: if false; // registro de maquina nao se apaga
+    }
+
+    // ------------------------------------------------------------------ fabricas
+    match /fabricas/{fabricaId} {
+      // R8: fabrica inexistente o cracha pode ler (a ponte le antes de criar).
+      allow get: if diretor()
+        || (cracha() && (resource == null || resource.data.get('maquinaId', null) == minhaMaquina()));
+      allow list: if diretor()
+        || cracha();
+      // R7: nasce com maquinaId da maquina do cracha e fabricaId igual ao id.
+      allow create: if (diretor() && request.resource.data.atualizadoEm == request.time)
+        || (request.resource.data.atualizadoEm == request.time
+          && request.resource.data.get('fabricaId', null) == fabricaId
+          && cracha()
+          && request.resource.data.get('maquinaId', null) == minhaMaquina());
+      // R3: qualquer campo, menos maquinaId e fabricaId, que nao mudam nem somem.
+      allow update: if (diretor() && request.resource.data.atualizadoEm == request.time)
+        || (request.resource.data.atualizadoEm == request.time
+          && request.resource.data.get('fabricaId', null) == fabricaId
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['maquinaId', 'fabricaId'])
+          && cracha()
+          && resource.data.get('maquinaId', null) == minhaMaquina());
+      allow delete: if false; // fabrica encerrada vira estado concluida, nao desaparece
+
+      // R6: o cracha so le e escreve tarefa de fabrica da propria maquina.
+      match /tarefas/{tarefaId} {
+        allow read, create, update: if diretor()
+          || (cracha() && fabricaDaMinhaMaquina(fabricaId));
+        allow delete: if false;
+      }
+
+      // Atividade so adiciona, em ordem de tempo do servidor.
+      match /atividade/{passoId} {
+        allow read: if diretor()
+          || (cracha() && fabricaDaMinhaMaquina(fabricaId));
+        allow create: if (diretor() && request.resource.data.em == request.time)
+          || (request.resource.data.em == request.time
+            && cracha()
+            && fabricaDaMinhaMaquina(fabricaId));
+        allow update, delete: if false;
+      }
+    }
+
+    // ------------------------------------------------------------------ comandos
+    // O diretor cria pendente pelo painel; a ponte marca entregue, uma vez.
+    // O cracha nunca cria comando.
+    function entregaValida() {
+      return resource.data.situacao == 'pendente'
+        && request.resource.data.situacao == 'entregue'
+        && request.resource.data.entregueEm == request.time
+        && mantem(['fabricaId','maquinaId','texto','criadoEm','origem']);
+    }
+
+    match /comandos/{comandoId} {
+      allow get: if diretor()
+        || (resource != null && cracha() && resource.data.maquinaId == minhaMaquina());
+      allow list: if diretor()
+        || cracha();
+      allow create: if diretor()
+        && request.resource.data.keys().hasAll(
+             ['fabricaId','maquinaId','texto','situacao','criadoEm','origem'])
+        && request.resource.data.situacao == 'pendente'
+        && request.resource.data.criadoEm == request.time
+        && request.resource.data.get('entregueEm', null) == null
+        && textoPreenchido(request.resource.data.fabricaId)
+        && textoPreenchido(request.resource.data.maquinaId)
+        && textoPreenchido(request.resource.data.texto)
+        && textoPreenchido(request.resource.data.origem);
+      allow update: if (diretor() && entregaValida())
+        || (entregaValida()
+          && soMuda(['situacao', 'entregueEm'])
+          && cracha()
+          && resource.data.maquinaId == minhaMaquina());
+      allow delete: if false; // a trilha nao se apaga
+    }
+
+    // ---------------------------------------------------------------- aprovacoes
+    // A ponte cria o pedido; o diretor responde, uma vez. O cracha so recusa.
+    function pedidoValido() {
+      return request.resource.data.keys().hasAll(
+             ['fabricaId','maquinaId','pacote','situacao','criadoEm','origem'])
+        && request.resource.data.situacao == 'pendente'
+        && request.resource.data.criadoEm == request.time
+        && request.resource.data.get('resposta', null) == null
+        && request.resource.data.get('respondidoEm', null) == null
+        && request.resource.data.get('respondidoPor', null) == null
+        && textoPreenchido(request.resource.data.fabricaId)
+        && textoPreenchido(request.resource.data.maquinaId)
+        && textoPreenchido(request.resource.data.origem);
+    }
+
+    function respostaValida() {
+      return resource.data.situacao == 'pendente'
+        && request.resource.data.situacao == 'respondida'
+        && request.resource.data.resposta in ['aprovado','recusado','aprovado com observacao']
+        && request.resource.data.respondidoEm == request.time
+        && textoPreenchido(request.resource.data.respondidoPor)
+        && mantem(['fabricaId','maquinaId','pacote','criadoEm','origem']);
+    }
+
+    // R4: so recusa, so de pendente, so nos tres motivos da ponte, com a maquina
+    // do cracha no fim de respondidoPor. Formato conferido antes do get.
+    function recusaDaPonte() {
+      return request.resource.data.resposta == 'recusado'
+        && soMuda(['situacao', 'resposta', 'observacao', 'respondidoEm', 'respondidoPor'])
+        && request.resource.data.get('observacao', null) is string
+        && request.resource.data.observacao.size() <= 300
+        && cracha()
+        && resource.data.maquinaId == minhaMaquina()
+        && request.resource.data.respondidoPor in [
+             'ponte, tempo esgotado, ' + minhaMaquina(),
+             'ponte, reconciliacao, ' + minhaMaquina(),
+             'ponte, ordem do diretor pelo painel, ' + minhaMaquina()
+           ];
+    }
+
+    match /aprovacoes/{aprovacaoId} {
+      allow get: if diretor()
+        || (resource != null && cracha() && resource.data.maquinaId == minhaMaquina());
+      allow list: if diretor()
+        || cracha();
+      allow create: if (diretor() && pedidoValido())
+        || (pedidoValido()
+          && cracha()
+          && request.resource.data.maquinaId == minhaMaquina()
+          && fabricaDaMinhaMaquina(request.resource.data.fabricaId));
+      allow update: if (diretor() && respostaValida())
+        || (respostaValida() && recusaDaPonte());
+      allow delete: if false; // a trilha nao se apaga
+    }
+
+    // ---------------------------------------------------------------- relatorios
+    // Relatorio de fechamento: criado uma vez, nao muda depois, §A.16.
+    match /relatorios/{relatorioId} {
+      // R8: relatorio inexistente o cracha pode ler (a ponte le antes de criar).
+      allow get: if diretor()
+        || (cracha() && (resource == null || resource.data.get('maquinaId', null) == minhaMaquina()));
+      allow list: if diretor()
+        || cracha();
+      allow create: if (diretor() && request.resource.data.criadoEm == request.time)
+        || (request.resource.data.criadoEm == request.time
+          && cracha()
+          && request.resource.data.get('maquinaId', null) == minhaMaquina()
+          && fabricaDaMinhaMaquina(request.resource.data.get('fabricaId', null)));
+      allow update, delete: if false;
+    }
+
+    // ---------------------------------------------------------- pedidosDeCracha
+    // R11: a conta anonima pede o proprio cracha, uma vez. So o diretor le.
+    match /pedidosDeCracha/{uid} {
+      allow read: if diretor();
+      allow create: if anonima()
+        && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid','maquinaId','nome','rotulo','codigo','criadoEm'])
+        && request.resource.data.keys().hasAll(['uid','maquinaId','nome','rotulo','codigo','criadoEm'])
+        && request.resource.data.uid == uid
+        && idDeMaquina(request.resource.data.maquinaId)
+        && textoSimples(request.resource.data.nome, 60)
+        && (request.resource.data.rotulo == null || textoSimples(request.resource.data.rotulo, 40))
+        && request.resource.data.codigo is string
+        && request.resource.data.codigo.matches('^[0-9]{6}$')
+        && request.resource.data.criadoEm == request.time;
+      allow update, delete: if false; // nao muda, nao se apaga
+    }
+
+    // ------------------------------------------------------------------- crachas
+    // R12: so o diretor emite, com pedido existente da mesma maquina e de menos de
+    // 15 minutos. Muda uma vez so, de ativo para revogado. Revogado nao volta.
+    function caminhoDoPedido(uid) {
+      return /databases/$(database)/documents/pedidosDeCracha/$(uid);
+    }
+
+    match /crachas/{uid} {
+      // O dono le o proprio cracha, so quando ele existe, R8 e R13.
+      allow get: if diretor()
+        || (resource != null && anonima() && request.auth.uid == uid);
+      allow list: if diretor();
+      allow create: if diretor()
+        && request.resource.data.keys().hasOnly(['uid','maquinaId','rotulo','ativo','emitidoEm','emitidoPor'])
+        && request.resource.data.keys().hasAll(['uid','maquinaId','rotulo','ativo','emitidoEm','emitidoPor'])
+        && request.resource.data.uid == uid
+        && idDeMaquina(request.resource.data.maquinaId)
+        && (request.resource.data.rotulo == null || textoSimples(request.resource.data.rotulo, 40))
+        && request.resource.data.ativo == true
+        && request.resource.data.emitidoEm == request.time
+        && textoPreenchido(request.resource.data.emitidoPor)
+        && request.resource.data.emitidoPor.size() <= 200
+        && exists(caminhoDoPedido(uid))
+        && get(caminhoDoPedido(uid)).data.maquinaId == request.resource.data.maquinaId
+        && request.time < get(caminhoDoPedido(uid)).data.criadoEm + duration.value(15, 'm');
+      allow update: if diretor()
+        && resource.data.ativo == true
+        && request.resource.data.ativo == false
+        && soMuda(['ativo', 'revogadoEm', 'revogadoPor'])
+        && request.resource.data.revogadoEm == request.time
+        && textoPreenchido(request.resource.data.get('revogadoPor', null))
+        && request.resource.data.revogadoPor.size() <= 200;
+      allow delete: if false; // cracha nao se apaga
+    }
+
+    // Tudo o mais, negado. Vale tambem para subcolecao desconhecida dentro de fabricas.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

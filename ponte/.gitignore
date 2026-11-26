@@ -7,3 +7,4 @@ emulador/firestore.indexes.json
 
 # Registros do emulador
 *-debug.log
+dist-ost16*/

@@ -31,7 +31,8 @@ import {
 } from 'firebase/firestore';
 import type { Auth } from 'firebase/auth';
 import type { FirebaseApp } from 'firebase/app';
-import { abrirIdentidade, type Identidade } from './identidade.js';
+import { IdentidadeRecusada, abrirIdentidade, type Identidade } from './identidade.js';
+import { conferirCrachaNaBase } from './cracha.js';
 import { DIRETOR, VERSAO_PONTE } from './config.js';
 import { diaDaJanela, somaDoDia } from './relatorios.js';
 import {
@@ -82,7 +83,32 @@ export async function initBase(opcoes: OpcoesBase = {}): Promise<Base> {
   });
   const db = getFirestore(identidade.app);
   if (opcoes.emulador === true) connectFirestoreEmulator(db, EMULADOR_FIRESTORE_HOST, EMULADOR_FIRESTORE_PORTA);
+  // OST 16, P1: com cracha, a ponte so sobe se `crachas/{uid}` esta ativo e e
+  // desta maquina. Revogado, de outra maquina ou ilegivel: nao sobe, com motivo.
+  if (identidade.cracha !== null) {
+    const r = await conferirCrachaNaBase(db, identidade.cracha.uid, identidade.cracha.maquinaId);
+    if (!r.ok) {
+      identidade.relato.push(`cracha recusado na base: ${r.motivo}`);
+      opcoes.registrar?.(`cracha recusado na base: ${r.motivo}`);
+      throw new IdentidadeRecusada(`a ponte nao sobe com este cracha: ${r.motivo}`, identidade.relato);
+    }
+    opcoes.registrar?.(`cracha ativo na base, maquina ${identidade.cracha.maquinaId}`);
+  }
   return { app: identidade.app, auth: identidade.auth, db, identidade };
+}
+
+/** OST 16, R4: os tres motivos com que a ponte recusa um pedido. Nunca aprova. */
+export type MotivoDaRecusaDaPonte = 'tempo esgotado' | 'reconciliacao' | 'ordem do diretor pelo painel';
+
+/** R4 e P4: `ponte, <motivo>, <maquinaId>`, exatamente, sem o e-mail do diretor. */
+export function respondidoPorDaPonte(motivo: MotivoDaRecusaDaPonte, maquinaId: string): string {
+  return `ponte, ${motivo}, ${maquinaId}`;
+}
+
+/** R4: a observacao da recusa da ponte tem no maximo 300 caracteres. */
+export const TETO_OBSERVACAO_DA_PONTE = 300;
+export function observacaoDaPonte(texto: string): string {
+  return texto.slice(0, TETO_OBSERVACAO_DA_PONTE);
 }
 
 /**
@@ -134,7 +160,7 @@ export function iniciarHeartbeat(
           // segue para a proxima
         }
       }
-      await setDoc(ref, { estadoPonte: 'offline', vistoPorUltimo: serverTimestamp() }, { merge: true }).catch(
+      await setDoc(ref, { maquinaId, estadoPonte: 'offline', vistoPorUltimo: serverTimestamp() }, { merge: true }).catch(
         () => undefined
       );
     },
@@ -235,18 +261,20 @@ export type SaidaDaTrilhaDeTempo = 'gravado' | 'ja respondido pelo diretor' | 'n
 export async function registrarRecusaPorTempo(
   db: Firestore,
   aprovacaoId: string,
-  limiteMs: number
+  limiteMs: number,
+  maquinaId: string
 ): Promise<SaidaDaTrilhaDeTempo> {
   const segundos = Math.round(limiteMs / 1000);
   try {
     await updateDoc(doc(db, 'aprovacoes', aprovacaoId), {
       situacao: 'respondida',
       resposta: 'recusado',
-      observacao:
+      observacao: observacaoDaPonte(
         `recusa por tempo esgotado, nao resposta do diretor: ninguem respondeu em ${segundos} segundo(s), ` +
-        'a ponte negou por seguranca e nada executou, §A.6',
+          'a ponte negou por seguranca e nada executou, §A.6'
+      ),
       respondidoEm: serverTimestamp(),
-      respondidoPor: `ponte, tempo esgotado, ${DIRETOR}`,
+      respondidoPor: respondidoPorDaPonte('tempo esgotado', maquinaId),
     });
     return 'gravado';
   } catch {
@@ -268,14 +296,19 @@ export async function registrarRecusaPorTempo(
  * No tempo esgotado a recusa vai para a base antes de a ponte seguir, para a
  * trilha nao mentir.
  */
-export function esperarResposta(db: Firestore, aprovacaoId: string, limiteMs = LIMITE_APROVACAO_MS): Promise<DecisaoPortao> {
+export function esperarResposta(
+  db: Firestore,
+  aprovacaoId: string,
+  maquinaId: string,
+  limiteMs = LIMITE_APROVACAO_MS
+): Promise<DecisaoPortao> {
   return new Promise<DecisaoPortao>((resolve) => {
     let resolvido = false;
     let desligar: (() => void) | null = null;
     const relogio = setTimeout(() => {
       // Decide primeiro, grava a trilha depois, e so entao devolve a recusa. A
       // decisao nao depende da gravacao: se a gravacao falhar, continua recusado.
-      void registrarRecusaPorTempo(db, aprovacaoId, limiteMs).then((trilha) => {
+      void registrarRecusaPorTempo(db, aprovacaoId, limiteMs, maquinaId).then((trilha) => {
         fim({ decisao: 'deny', resposta: `sem resposta no tempo, recusado por seguranca (trilha na base: ${trilha})` });
       });
     }, limiteMs);
@@ -399,9 +432,9 @@ export async function reconciliarPendentes(
             await updateDoc(s.ref, {
               situacao: 'respondida',
               resposta: 'recusado',
-              observacao: 'ponte reiniciou, sessao encerrada, recusa por seguranca',
+              observacao: observacaoDaPonte('ponte reiniciou, sessao encerrada, recusa por seguranca'),
               respondidoEm: serverTimestamp(),
-              respondidoPor: `ponte, reconciliacao, ${DIRETOR}`,
+              respondidoPor: respondidoPorDaPonte('reconciliacao', maquinaId),
             }).catch(() => undefined);
             n++;
           }
@@ -460,25 +493,33 @@ export async function reconciliarPendentes(
 export async function recusarAprovacoesDaFabrica(
   db: Firestore,
   fabricaId: string,
-  motivo: string
+  motivo: string,
+  maquinaId: string
 ): Promise<number> {
   try {
+    // OST 16, P3 e R9: a consulta filtra pela maquina desta ponte. Sem o filtro,
+    // a regra nega a consulta inteira para o cracha.
     const q = query(
       collection(db, 'aprovacoes'),
+      where('maquinaId', '==', maquinaId),
       where('fabricaId', '==', fabricaId),
       where('situacao', '==', 'pendente')
     );
     const achados = await getDocs(q);
     let n = 0;
     for (const s of achados.docs) {
-      await updateDoc(s.ref, {
+      if (!ehDaMaquina(s.data(), maquinaId)) continue; // segunda tranca, OST 15
+      const ok = await updateDoc(s.ref, {
         situacao: 'respondida',
         resposta: 'recusado',
-        observacao: motivo,
+        observacao: observacaoDaPonte(motivo),
         respondidoEm: serverTimestamp(),
-        respondidoPor: `ponte, ordem do diretor pelo painel, ${DIRETOR}`,
-      }).catch(() => undefined);
-      n++;
+        respondidoPor: respondidoPorDaPonte('ordem do diretor pelo painel', maquinaId),
+      }).then(
+        () => true,
+        () => false
+      );
+      if (ok) n++;
     }
     return n;
   } catch {

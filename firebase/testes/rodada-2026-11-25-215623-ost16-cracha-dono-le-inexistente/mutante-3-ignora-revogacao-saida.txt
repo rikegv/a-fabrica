@@ -1,0 +1,498 @@
+[36m[1mi  emulators:[22m[39m Starting emulators: firestore
+[36m[1mi  firestore:[22m[39m Firestore Emulator logging to [1mfirestore-debug.log[22m
+[32m[1m+  firestore:[22m[39m Firestore Emulator UI websocket is running on 9150.
+[36m[1mi [22m[39m Running script: [1mnode rodada-2026-11-25-215623-ost16-cracha-dono-le-inexistente/mutante-3-ignora-revogacao.test.mjs[22m
+=== CRACHA POR MAQUINA, OST 16, emulador, projeto a-fabrica-soulan ===
+Momento: 2026-11-26T00:57:46.046Z
+[2026-11-26T00:57:46.476Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2bb error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L145, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L145, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L145, false for 'update' @ L357
+[2026-11-26T00:57:46.514Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2bc error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L145, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L145, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L145, false for 'update' @ L357
+[2026-11-26T00:57:46.542Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2bd error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L145, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L145, false for 'update' @ L357, false for 'update' @ L145, false for 'update' @ L357
+[2026-11-26T00:57:46.565Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2be error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L145, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L145, false for 'update' @ L357, false for 'update' @ L145, false for 'update' @ L357
+[2026-11-26T00:57:46.872Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2c2 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'delete' @ L150, false for 'delete' @ L357
+[2026-11-26T00:57:47.071Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2c3 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L161, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357, Property email is undefined on object. for 'create' @ L161, false for 'create' @ L357
+[2026-11-26T00:57:47.089Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2c4 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L161, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357, Property email is undefined on object. for 'create' @ L161, false for 'create' @ L357
+[2026-11-26T00:57:47.104Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2c5 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L161, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357, Property email is undefined on object. for 'create' @ L161, false for 'create' @ L357
+[2026-11-26T00:57:47.120Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2c6 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L161, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357, Property email is undefined on object. for 'create' @ L161, false for 'create' @ L357
+[2026-11-26T00:57:47.185Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2c7 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L161, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357
+[2026-11-26T00:57:47.208Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2c8 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357
+[2026-11-26T00:57:47.224Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2c9 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L161, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357
+[2026-11-26T00:57:47.250Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2ca error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357
+[2026-11-26T00:57:47.269Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2cb error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L161, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357
+[2026-11-26T00:57:47.300Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2cc error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L161, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357
+[2026-11-26T00:57:47.314Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2cd error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L161, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357, false for 'update' @ L167, false for 'update' @ L357
+[2026-11-26T00:57:47.322Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2ce error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'delete' @ L173, false for 'delete' @ L357
+[2026-11-26T00:57:47.349Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2cf error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L186, false for 'create' @ L357, Property email is undefined on object. for 'create' @ L186, false for 'create' @ L357
+[2026-11-26T00:57:47.376Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2d0 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L186, false for 'create' @ L357, Property email is undefined on object. for 'create' @ L186, false for 'create' @ L357
+[2026-11-26T00:57:47.385Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2d1 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L186, false for 'create' @ L357
+[2026-11-26T00:57:47.451Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2d2 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'update' @ L190, false for 'update' @ L357
+[2026-11-26T00:57:47.462Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2d3 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'delete' @ L190, false for 'delete' @ L357
+[2026-11-26T00:57:47.532Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2d4 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L177, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L177, false for 'update' @ L357, Property email is undefined on object. for 'create' @ L177, false for 'create' @ L357
+[2026-11-26T00:57:47.547Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2d5 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'update' @ L177, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L177, false for 'update' @ L357
+[2026-11-26T00:57:47.574Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2d6 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'delete' @ L179, false for 'delete' @ L357
+[2026-11-26T00:57:47.587Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2d7 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L357, false for 'update' @ L357
+[2026-11-26T00:57:47.702Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2d8 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L209, false for 'create' @ L357, Property email is undefined on object. for 'create' @ L209, false for 'create' @ L357
+[2026-11-26T00:57:47.763Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2db error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'update' @ L219, false for 'update' @ L357, false for 'update' @ L219, false for 'update' @ L357
+[2026-11-26T00:57:47.787Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2dc error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'update' @ L219, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L219, false for 'update' @ L357
+[2026-11-26T00:57:47.798Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2dd error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'update' @ L219, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L219, false for 'update' @ L357
+[2026-11-26T00:57:47.824Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2de error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'update' @ L219, false for 'update' @ L357, false for 'update' @ L219, false for 'update' @ L357
+[2026-11-26T00:57:47.835Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2df error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'update' @ L219, false for 'update' @ L357, false for 'update' @ L219, false for 'update' @ L357
+[2026-11-26T00:57:47.845Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2e0 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'update' @ L219, false for 'update' @ L357, false for 'update' @ L219, false for 'update' @ L357
+[2026-11-26T00:57:47.852Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2e1 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'delete' @ L224, false for 'delete' @ L357
+[2026-11-26T00:57:47.899Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2e2 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L272, false for 'create' @ L357, evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, Property email is undefined on object. for 'create' @ L272, false for 'create' @ L357
+[2026-11-26T00:57:47.926Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2e3 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L272, false for 'create' @ L357, evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, Property email is undefined on object. for 'create' @ L272, false for 'create' @ L357
+[2026-11-26T00:57:47.943Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2e4 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L272, false for 'create' @ L357, evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, Property email is undefined on object. for 'create' @ L272, false for 'create' @ L357
+[2026-11-26T00:57:47.970Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2e5 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L272, false for 'create' @ L357, evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, false for 'create' @ L272, false for 'create' @ L357
+[2026-11-26T00:57:47.981Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2e6 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L272, false for 'create' @ L357, false for 'update' @ L277, false for 'update' @ L357
+[2026-11-26T00:57:48.109Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2e7 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L277, false for 'update' @ L357
+[2026-11-26T00:57:48.121Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2e8 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L277, false for 'update' @ L357
+[2026-11-26T00:57:48.138Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2e9 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L277, false for 'update' @ L357
+[2026-11-26T00:57:48.154Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2ea error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L277, false for 'update' @ L357
+[2026-11-26T00:57:48.169Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2eb error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L277, false for 'update' @ L357
+[2026-11-26T00:57:48.184Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2ec error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L277, false for 'update' @ L357
+[2026-11-26T00:57:48.196Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2ed error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L277, false for 'update' @ L357
+[2026-11-26T00:57:48.213Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2ee error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L277, false for 'update' @ L357
+[2026-11-26T00:57:48.229Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2ef error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L277, false for 'update' @ L357
+[2026-11-26T00:57:48.239Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2f0 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, false for 'update' @ L277, false for 'update' @ L357
+[2026-11-26T00:57:48.249Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2f1 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, false for 'update' @ L277, false for 'update' @ L357
+[2026-11-26T00:57:48.273Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2f2 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L277, false for 'update' @ L357
+[2026-11-26T00:57:48.286Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2f3 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, false for 'update' @ L277, false for 'update' @ L357
+[2026-11-26T00:57:48.308Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2f4 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L277, false for 'update' @ L357
+[2026-11-26T00:57:48.338Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2f5 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L277, false for 'update' @ L357
+[2026-11-26T00:57:48.394Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2f6 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, false for 'update' @ L277, false for 'update' @ L357
+[2026-11-26T00:57:48.406Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2f7 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'delete' @ L279, false for 'delete' @ L357
+[2026-11-26T00:57:48.568Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2f9 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L290, false for 'create' @ L357, false for 'update' @ L295, false for 'update' @ L357, Property email is undefined on object. for 'create' @ L290, false for 'create' @ L357
+[2026-11-26T00:57:48.578Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2fa error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L290, false for 'create' @ L357, false for 'update' @ L295, false for 'update' @ L357, Property email is undefined on object. for 'create' @ L290, false for 'create' @ L357
+[2026-11-26T00:57:48.595Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2fb error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L290, false for 'create' @ L357, false for 'update' @ L295, false for 'update' @ L357, Property email is undefined on object. for 'create' @ L290, false for 'create' @ L357
+[2026-11-26T00:57:48.604Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2fc error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L290, false for 'create' @ L357, false for 'update' @ L295, false for 'update' @ L357, Property email is undefined on object. for 'create' @ L290, false for 'create' @ L357
+[2026-11-26T00:57:48.624Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2fd error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L290, false for 'create' @ L357, false for 'update' @ L295, false for 'update' @ L357
+[2026-11-26T00:57:48.630Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2fe error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'update' @ L295, false for 'update' @ L357
+[2026-11-26T00:57:48.638Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2ff error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'delete' @ L295, false for 'delete' @ L357
+[2026-11-26T00:57:48.687Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd300 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'update' @ L345, false for 'update' @ L357, false for 'update' @ L345, false for 'update' @ L357
+[2026-11-26T00:57:48.704Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd301 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L332, false for 'create' @ L357, false for 'update' @ L345, false for 'update' @ L357
+[2026-11-26T00:57:48.733Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd302 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L357, false for 'update' @ L357
+[2026-11-26T00:57:48.860Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd305 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L145, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L145, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L145, false for 'update' @ L357
+[2026-11-26T00:57:48.907Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd307 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L161, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357
+[2026-11-26T00:57:48.938Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd308 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'update' @ L219, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L219, false for 'update' @ L357
+[2026-11-26T00:57:48.969Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd309 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L186, false for 'create' @ L357, Property email is undefined on object. for 'create' @ L186, false for 'create' @ L357
+[2026-11-26T00:57:48.992Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd30a error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L145, false for 'create' @ L357, false for 'update' @ L145, false for 'update' @ L357
+[2026-11-26T00:57:49.047Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd30c error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L145, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L145, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L145, false for 'update' @ L357
+[2026-11-26T00:57:49.203Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd311 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L145, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L145, false for 'update' @ L357, Property email is undefined on object. for 'create' @ L145, false for 'create' @ L357
+[2026-11-26T00:57:49.232Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd312 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L161, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L167, false for 'update' @ L357, Property email is undefined on object. for 'create' @ L161, false for 'create' @ L357
+[2026-11-26T00:57:49.262Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd313 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L272, false for 'create' @ L357, evaluation error at L277:24 for 'update' @ L277, false for 'update' @ L357, Property email is undefined on object. for 'create' @ L272, false for 'create' @ L357
+[2026-11-26T00:57:49.277Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd314 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L290, false for 'create' @ L357, false for 'update' @ L295, false for 'update' @ L357, Property email is undefined on object. for 'create' @ L290, false for 'create' @ L357
+[2026-11-26T00:57:49.314Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd315 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'create' @ L332, false for 'create' @ L357, Property email is undefined on object. for 'update' @ L345, false for 'update' @ L357, false for 'create' @ L332, false for 'create' @ L357
+[2026-11-26T00:57:49.321Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd316 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L302:24 for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357, false for 'create' @ L302, false for 'create' @ L357
+[2026-11-26T00:57:49.339Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd317 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L302:24 for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357, false for 'create' @ L302, false for 'create' @ L357
+[2026-11-26T00:57:49.354Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd318 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L302:24 for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357, false for 'create' @ L302, false for 'create' @ L357
+[2026-11-26T00:57:49.369Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd319 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357
+[2026-11-26T00:57:49.386Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd31a error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L302:24 for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357, false for 'create' @ L302, false for 'create' @ L357
+[2026-11-26T00:57:49.394Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd31b error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L302:24 for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357, false for 'create' @ L302, false for 'create' @ L357
+[2026-11-26T00:57:49.416Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd31c error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L302:24 for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357, false for 'create' @ L302, false for 'create' @ L357
+[2026-11-26T00:57:49.423Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd31d error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L302:24 for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357, false for 'create' @ L302, false for 'create' @ L357
+[2026-11-26T00:57:49.432Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd31e error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L302:24 for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357, false for 'create' @ L302, false for 'create' @ L357
+[2026-11-26T00:57:49.447Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd31f error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L302:24 for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357, false for 'create' @ L302, false for 'create' @ L357
+[2026-11-26T00:57:49.463Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd320 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L302:24 for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357, false for 'create' @ L302, false for 'create' @ L357
+[2026-11-26T00:57:49.479Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd321 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L302:24 for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357, false for 'create' @ L302, false for 'create' @ L357
+[2026-11-26T00:57:49.487Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd322 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L302:24 for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357, false for 'create' @ L302, false for 'create' @ L357
+[2026-11-26T00:57:49.494Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd323 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L302:24 for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357, false for 'create' @ L302, false for 'create' @ L357
+[2026-11-26T00:57:49.510Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd324 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L302:24 for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357, false for 'create' @ L302, false for 'create' @ L357
+[2026-11-26T00:57:49.525Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd325 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L302:24 for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357, false for 'create' @ L302, false for 'create' @ L357
+[2026-11-26T00:57:49.539Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd326 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357
+[2026-11-26T00:57:49.555Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd327 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357
+[2026-11-26T00:57:49.563Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd328 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357
+[2026-11-26T00:57:49.567Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd2f8 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357
+[2026-11-26T00:57:49.610Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd329 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L302:24 for 'create' @ L302, false for 'create' @ L357, false for 'update' @ L313, false for 'update' @ L357, false for 'update' @ L313, false for 'update' @ L357
+[2026-11-26T00:57:49.617Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd32b error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'update' @ L313, false for 'update' @ L357
+[2026-11-26T00:57:49.632Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd32c error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'delete' @ L313, false for 'delete' @ L357
+[2026-11-26T00:57:49.714Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd32e error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L332:24 for 'create' @ L332, false for 'create' @ L357, evaluation error at L345:24 for 'update' @ L345, false for 'update' @ L357, false for 'create' @ L332, false for 'create' @ L357
+[2026-11-26T00:57:49.729Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd32f error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L332:24 for 'create' @ L332, false for 'create' @ L357, evaluation error at L345:24 for 'update' @ L345, false for 'update' @ L357, false for 'create' @ L332, false for 'create' @ L357
+[2026-11-26T00:57:49.746Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd330 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L332:24 for 'create' @ L332, false for 'create' @ L357, evaluation error at L345:24 for 'update' @ L345, false for 'update' @ L357, false for 'create' @ L332, false for 'create' @ L357
+[2026-11-26T00:57:49.760Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd331 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L332:24 for 'create' @ L332, false for 'create' @ L357, evaluation error at L345:24 for 'update' @ L345, false for 'update' @ L357, false for 'create' @ L332, false for 'create' @ L357
+[2026-11-26T00:57:49.776Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd332 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L332:24 for 'create' @ L332, false for 'create' @ L357, evaluation error at L345:24 for 'update' @ L345, false for 'update' @ L357, false for 'create' @ L332, false for 'create' @ L357
+[2026-11-26T00:57:49.790Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd333 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L332, false for 'create' @ L357, false for 'update' @ L345, false for 'update' @ L357
+[2026-11-26T00:57:49.800Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd334 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L332:24 for 'create' @ L332, false for 'create' @ L357, evaluation error at L345:24 for 'update' @ L345, false for 'update' @ L357, false for 'create' @ L332, false for 'create' @ L357
+[2026-11-26T00:57:49.822Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd335 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L332:24 for 'create' @ L332, false for 'create' @ L357, evaluation error at L345:24 for 'update' @ L345, false for 'update' @ L357, false for 'create' @ L332, false for 'create' @ L357
+[2026-11-26T00:57:49.829Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd336 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L332, false for 'create' @ L357, false for 'update' @ L345, false for 'update' @ L357
+[2026-11-26T00:57:49.852Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd337 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L332:24 for 'create' @ L332, false for 'create' @ L357, evaluation error at L345:24 for 'update' @ L345, false for 'update' @ L357, false for 'update' @ L345, false for 'update' @ L357
+[2026-11-26T00:57:49.887Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd339 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L345:24 for 'update' @ L345, false for 'update' @ L357, false for 'update' @ L345, false for 'update' @ L357
+[2026-11-26T00:57:49.901Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd33a error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L345:24 for 'update' @ L345, false for 'update' @ L357, false for 'update' @ L345, false for 'update' @ L357
+[2026-11-26T00:57:49.916Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd33b error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L345:24 for 'update' @ L345, false for 'update' @ L357, false for 'update' @ L345, false for 'update' @ L357
+[2026-11-26T00:57:49.926Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd33c error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L345:24 for 'update' @ L345, false for 'update' @ L357, false for 'update' @ L345, false for 'update' @ L357
+[2026-11-26T00:57:49.936Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd33d error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'update' @ L345, false for 'update' @ L357
+[2026-11-26T00:57:49.941Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd338 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+Property email is undefined on object. for 'update' @ L345, false for 'update' @ L357, Property email is undefined on object. for 'update' @ L345, false for 'update' @ L357
+[2026-11-26T00:57:49.982Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd33e error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L345:24 for 'update' @ L345, false for 'update' @ L357, false for 'update' @ L345, false for 'update' @ L357
+[2026-11-26T00:57:49.989Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd340 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L345:24 for 'update' @ L345, false for 'update' @ L357, false for 'update' @ L345, false for 'update' @ L357
+[2026-11-26T00:57:50.005Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd341 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'delete' @ L352, false for 'delete' @ L357
+[2026-11-26T00:57:50.023Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd342 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L332:24 for 'create' @ L332, false for 'create' @ L357, evaluation error at L345:24 for 'update' @ L345, false for 'update' @ L357, false for 'update' @ L345, false for 'update' @ L357
+[2026-11-26T00:57:50.064Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd343 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L345:24 for 'update' @ L345, false for 'update' @ L357, evaluation error at L332:24 for 'create' @ L332, false for 'create' @ L357, evaluation error at L345:24 for 'update' @ L345, false for 'update' @ L357, false for 'update' @ L345, false for 'update' @ L357, false for 'create' @ L332, false for 'create' @ L357
+[2026-11-26T00:57:50.195Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x4c8dd344 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'delete' @ L279, false for 'delete' @ L357
+
+PASSOU: 228 | FALHOU: 8 | TOTAL: 236
+  OK    1.1 cracha A bate heartbeat da propria maquina PASSA
+  OK    1.2 cracha A marca offline sem mandar maquinaId PASSA
+  OK    1.3 cracha A bate heartbeat na maquina B NEGADO
+  OK    1.4 cracha A grava maquinaId diferente do id NEGADO
+  OK    1.5 cracha A heartbeat com hora forjada NEGADO
+  OK    1.6 cracha A estado de ponte fora da lista NEGADO
+  OK    1.7 cracha A le a propria maquina PASSA
+  OK    1.8 cracha A le a maquina B NEGADO
+  OK    1.9 cracha C le a propria maquina ainda inexistente NEGADO (R8)
+  OK    1.10 cracha C cria a propria maquina PASSA
+  OK    1.11 cracha A lista maquinas filtrando a propria PASSA
+  OK    1.12 cracha A lista maquinas SEM filtro NEGADO (R9)
+  OK    1.13 cracha A lista maquinas filtrando a B NEGADO
+  OK    1.14 cracha A apaga a propria maquina NEGADO
+  OK    2.1 cracha A le fabrica da propria maquina PASSA
+  OK    2.2 cracha A le fabrica da maquina B NEGADO
+  OK    2.3 cracha A le fabrica inexistente PASSA (R8)
+  OK    2.4 cracha A le fabrica sem maquinaId NEGADO
+  OK    2.5 cracha A lista fabricas da propria maquina em execucao PASSA (reconciliacao)
+  OK    2.6 cracha A lista fabricas SEM filtro de maquina NEGADO (R9)
+  OK    2.7 cracha A lista fabricas da maquina B NEGADO
+  OK    2.8 cracha A cria fabrica com maquinaId e fabricaId certos PASSA (R7)
+  OK    2.9 cracha A cria fabrica mao- com maquinaId PASSA (R7)
+  OK    2.10 cracha A cria fabrica SEM maquinaId NEGADO (R7)
+  OK    2.11 cracha A cria fabrica com maquinaId da B NEGADO
+  OK    2.12 cracha A cria fabrica com fabricaId diferente do id NEGADO (R7)
+  OK    2.13 cracha A cria fabrica sem fabricaId NEGADO (R7)
+  OK    2.14 cracha A atualiza estado da propria fabrica PASSA (atualizarFabrica)
+  OK    2.15 cracha A soma consumo na propria fabrica PASSA (somarConsumoDaFabrica)
+  OK    2.16 cracha A troca maquinaId da propria fabrica NEGADO (R3)
+  OK    2.17 cracha A apaga maquinaId da propria fabrica NEGADO (R3)
+  OK    2.18 cracha A troca fabricaId da propria fabrica NEGADO (R3)
+  OK    2.19 cracha A apaga fabricaId da propria fabrica NEGADO (R3)
+  OK    2.20 cracha A atualiza fabrica da maquina B NEGADO
+  OK    2.21 cracha A "adota" fabrica sem maquinaId NEGADO
+  OK    2.22 cracha A atualiza com hora forjada NEGADO
+  OK    2.23 cracha A apaga fabrica NEGADO
+  OK    3.1 cracha A adiciona passo na propria fabrica PASSA
+  OK    3.2 cracha A adiciona passo na fabrica da B NEGADO
+  OK    3.3 cracha A adiciona passo em fabrica inexistente NEGADO
+  OK    3.4 cracha A passo com hora forjada NEGADO
+  OK    3.5 cracha A le atividade da propria fabrica PASSA
+  OK    3.6 cracha A le atividade da fabrica da B NEGADO
+  OK    3.7 cracha A altera passo NEGADO
+  OK    3.8 cracha A apaga passo NEGADO
+  OK    3.9 cracha A cria tarefa na propria fabrica PASSA
+  OK    3.10 cracha A muda tarefa na propria fabrica PASSA
+  OK    3.11 cracha A le tarefa da propria fabrica PASSA
+  OK    3.12 cracha A cria tarefa na fabrica da B NEGADO
+  OK    3.13 cracha A muda tarefa da fabrica da B NEGADO
+  OK    3.14 cracha A le tarefas da fabrica da B NEGADO
+  OK    3.15 cracha A apaga tarefa NEGADO
+  OK    3.16 cracha A subcolecao desconhecida NEGADO
+  OK    4.1 cracha A le comando da propria maquina PASSA
+  OK    4.2 cracha A le comando da maquina B NEGADO
+  OK    4.3 cracha A le comando inexistente NEGADO (R8)
+  OK    4.4 cracha A lista pendentes da propria maquina PASSA (ouvirComandos)
+  OK    4.5 cracha A lista pendentes SEM filtro de maquina NEGADO (R9)
+  OK    4.6 cracha A lista comandos da maquina B NEGADO
+  OK    4.7 cracha A cria comando NEGADO (nunca cria)
+  OK    4.8 cracha A marca entregue pela transacao da ponte PASSA (tomarComando)
+  OK    4.9 cracha A marca entregue DE NOVO NEGADO
+  OK    4.10 cracha A marca entregue comando da B NEGADO
+  OK    4.11 cracha A entregue com campo a mais NEGADO (R3)
+  OK    4.12 cracha A entregue trocando maquinaId NEGADO
+  OK    4.13 cracha A entregue com hora forjada NEGADO
+  OK    4.14 cracha A muda o texto do comando NEGADO
+  OK    4.15 cracha A apaga comando NEGADO
+  OK    4.16 cracha A entregue simples PASSA
+  OK    5.1 cracha A cria pedido pendente da propria maquina PASSA (publicarAprovacao)
+  OK    5.2 cracha A cria pedido com maquinaId da B NEGADO
+  OK    5.3 cracha A cria pedido da propria maquina para fabrica da B NEGADO (R6)
+  OK    5.4 cracha A cria pedido para fabrica inexistente NEGADO (R6)
+  OK    5.5 cracha A cria pedido ja respondido NEGADO
+  OK    5.6 cracha A cria pedido com hora forjada NEGADO
+  OK    5.7 cracha A le pedido da propria maquina PASSA (esperarResposta)
+  OK    5.8 cracha A le pedido da maquina B NEGADO
+  OK    5.9 cracha A le pedido inexistente NEGADO (R8)
+  OK    5.10 cracha A lista pendentes da propria maquina PASSA (reconciliacao)
+  OK    5.11 cracha A lista por fabricaId SEM maquinaId NEGADO (R9, P3)
+  OK    5.12 cracha A lista por fabricaId COM maquinaId PASSA (P3)
+  OK    5.13 cracha A lista aprovacoes da B NEGADO
+  OK    5.14 cracha A APROVA NEGADO (R4)
+  OK    5.15 cracha A aprova com observacao NEGADO (R4)
+  OK    5.16 cracha A recusa com respondidoPor antigo, com e-mail, NEGADO (R4)
+  OK    5.17 cracha A recusa assinando com a maquina B NEGADO (R4)
+  OK    5.18 cracha A recusa com motivo fora da lista NEGADO (R4)
+  OK    5.19 cracha A recusa com espaco a mais no fim NEGADO (formato exato)
+  OK    5.20 cracha A recusa com respondidoPor em maiusculas NEGADO
+  OK    5.21 cracha A recusa com observacao de 301 caracteres NEGADO (R4)
+  OK    5.22 cracha A recusa sem observacao NEGADO (R4)
+  OK    5.23 cracha A recusa com hora forjada NEGADO (R4)
+  OK    5.24 cracha A recusa reescrevendo o pacote NEGADO (R3)
+  OK    5.25 cracha A recusa com campo a mais NEGADO (R3)
+  OK    5.26 cracha A recusa trocando maquinaId NEGADO (R3)
+  OK    5.27 cracha A recusa pedido da maquina B NEGADO
+  OK    5.28 cracha B recusa pedido da maquina A, assinando como B, NEGADO
+  OK    5.29 cracha A recusa por tempo esgotado, formato exato, PASSA (R4)
+  OK    5.30 cracha A recusa por reconciliacao PASSA (R4)
+  OK    5.31 cracha A recusa por ordem do diretor pelo painel PASSA (R4)
+  OK    5.32 cracha A recusa observacao de 300 caracteres PASSA (limite)
+  OK    5.33 cracha A recusa DE NOVO pedido ja respondido NEGADO
+  OK    5.34 cracha A apaga aprovacao NEGADO
+  OK    5.35 diretor responde aprovado pelo painel com respondidoPor painel PASSA (R5)
+  OK    5.36 ponte antiga, como diretor, recusa com o formato de hoje PASSA
+  OK    6.1 cracha A le relatorio inexistente PASSA (R8, gravarRelatorio le antes)
+  OK    6.2 cracha A le relatorio da propria maquina PASSA
+  OK    6.3 cracha A le relatorio da maquina B NEGADO
+  OK    6.4 cracha A lista por fabricaId SEM maquinaId NEGADO (R9, P3)
+  OK    6.5 cracha A lista por fabricaId COM maquinaId PASSA (passadaDoDiario com P3)
+  OK    6.6 cracha A lista relatorios da B NEGADO
+  OK    6.7 cracha A cria fechamento da propria maquina PASSA
+  OK    6.8 cracha A cria diario da propria maquina PASSA
+  OK    6.9 cracha A cria relatorio com maquinaId da B NEGADO
+  OK    6.10 cracha A cria relatorio da propria maquina para fabrica da B NEGADO (R6)
+  OK    6.11 cracha A cria relatorio sem maquinaId NEGADO
+  OK    6.12 cracha A cria relatorio sem fabricaId NEGADO (R6)
+  OK    6.13 cracha A relatorio com hora forjada NEGADO
+  OK    6.14 cracha A altera relatorio NEGADO
+  OK    6.15 cracha A apaga relatorio NEGADO
+  OK    7.1 cracha A le o proprio cracha PASSA
+  OK    7.2 cracha A le o cracha da B NEGADO
+  OK    7.3 cracha A lista crachas NEGADO
+  OK    7.4 cracha A mexe no proprio cracha NEGADO
+  OK    7.5 cracha A cria cracha para outra conta NEGADO
+  OK    7.6 cracha A le pedidos de cracha NEGADO
+  OK    7.7 cracha A colecao fora do modelo NEGADO
+  OK    8.1 cracha revogado le o proprio documento PASSA (a ponte sabe que caiu)
+  OK    9.1 cracha B bate heartbeat da maquina A NEGADO
+  OK    9.2 cracha B le fabrica da A NEGADO
+  OK    9.3 cracha B atualiza fabrica da A NEGADO
+  OK    9.4 cracha B lista comandos da A NEGADO
+  OK    9.5 cracha B marca entregue comando da A NEGADO
+  OK    9.6 cracha B le aprovacao da A NEGADO
+  OK    9.7 cracha B adiciona passo na fabrica da A NEGADO
+  OK    9.8 conta Google com documento de cracha ativo NEGADO (provedor, R1)
+  OK    9.9 conta Google com documento de cracha le fabrica NEGADO
+  OK    9.10 cracha cujo documento traz outro uid NEGADO (R2)
+  OK    9.11 cracha cujo documento traz outro uid le comando NEGADO (R2)
+  OK    10.1 sem cracha le o proprio cracha ainda inexistente PASSA (dono, antes da emissao)
+  OK    10.1b sem cracha le cracha inexistente de OUTRA conta NEGADO
+  OK    10.1c conta Google le o proprio cracha inexistente NEGADO (so anonima)
+  OK    10.1d conta nao logada le cracha inexistente NEGADO
+  OK    10.1e sem cracha ouve o proprio cracha inexistente PASSA (onSnapshot da ponte)
+  OK    10.1f sem cracha ouve cracha inexistente de OUTRA conta NEGADO
+  OK    10.2 sem cracha bate heartbeat NEGADO (R13)
+  OK    10.3 sem cracha le fabrica NEGADO (R13)
+  OK    10.4 sem cracha le fabrica inexistente NEGADO (R13)
+  OK    10.5 sem cracha cria fabrica NEGADO (R13)
+  OK    10.6 sem cracha lista comandos NEGADO (R13)
+  OK    10.7 sem cracha cria aprovacao NEGADO (R13)
+  OK    10.8 sem cracha cria relatorio NEGADO (R13)
+  OK    10.9 sem cracha le relatorio inexistente NEGADO (R13)
+  OK    10.10 sem cracha le cracha de outra conta NEGADO (R13)
+  OK    10.11 sem cracha cria o proprio cracha NEGADO
+  OK    10.12 pedido com campo a mais NEGADO (R11)
+  OK    10.13 pedido sem o campo rotulo NEGADO (campos exatos, R11)
+  OK    10.14 pedido com uid no corpo diferente da conta NEGADO (R11)
+  OK    10.15 pedido no id de outra conta NEGADO (R11)
+  OK    10.16 pedido com nome fora do padrao, com simbolo, NEGADO (R11)
+  OK    10.17 pedido com nome acentuado NEGADO (R11)
+  OK    10.18 pedido com nome de 61 caracteres NEGADO (R11)
+  OK    10.19 pedido com nome vazio NEGADO (R11)
+  OK    10.20 pedido com rotulo de 41 caracteres NEGADO (contrato, rotulo ate 40)
+  OK    10.21 pedido com rotulo com quebra de linha NEGADO (R11)
+  OK    10.22 pedido com codigo de 5 digitos NEGADO (R11)
+  OK    10.23 pedido com codigo numerico em vez de texto NEGADO (R11)
+  OK    10.24 pedido com codigo com letra NEGADO (R11)
+  OK    10.25 pedido com maquinaId fora do padrao NEGADO (U5)
+  OK    10.26 pedido com maquinaId sem prefixo NEGADO (U5)
+  OK    10.27 pedido com maquinaId de 41 caracteres depois do prefixo NEGADO (U5)
+  OK    10.28 pedido com hora forjada NEGADO (R11)
+  OK    10.29 pedido de conta nao logada NEGADO
+  OK    10.30 pedido de conta Google, nao anonima, NEGADO (R11)
+  OK    10.31 pedido do diretor NEGADO (pedido e da maquina)
+  OK    10.32 pedido no formato exato PASSA (R11)
+  OK    10.33 pedido com rotulo null PASSA (R11)
+  OK    10.34 segundo pedido da mesma conta NEGADO (uma vez)
+  OK    10.35 pedido mudado depois NEGADO
+  OK    10.36 pedido apagado NEGADO
+  OK    10.37 a propria conta le o proprio pedido NEGADO (so o diretor le)
+  OK    10.38 diretor le o pedido PASSA
+  OK    10.39 diretor lista pedidos dos ultimos 15 minutos PASSA (N2)
+  OK    10.40 outro e-mail le pedido NEGADO
+  OK    11.1 diretor emite sem pedido NEGADO (R12)
+  OK    11.2 diretor emite com maquinaId diferente do pedido NEGADO (R12)
+  OK    11.3 diretor emite com pedido de 16 minutos NEGADO (R12, tempo do servidor)
+  OK    11.4 diretor emite ja revogado NEGADO
+  OK    11.5 diretor emite com campo a mais NEGADO
+  OK    11.6 diretor emite com hora forjada NEGADO
+  OK    11.7 diretor emite com uid no corpo diferente do id NEGADO
+  OK    11.8 diretor emite sem emitidoPor NEGADO
+  OK    11.9 outro e-mail emite NEGADO
+  OK    11.10 diretor emite com pedido de 14 minutos PASSA (R12)
+  OK    11.11 diretor emite com pedido valido PASSA (R12)
+  OK    11.12 diretor emite DE NOVO por cima NEGADO (vira atualizacao)
+  OK    11.13 dono le o cracha recem emitido PASSA (a ponte espera por isto)
+  OK    11.14 cracha recem emitido ja bate heartbeat PASSA
+  OK    11.15 diretor lista crachas PASSA
+  OK    11.16 revogar trocando a maquina junto NEGADO
+  OK    11.17 revogar com hora forjada NEGADO
+  OK    11.18 revogar sem revogadoPor NEGADO
+  OK    11.19 mudar o cracha sem revogar NEGADO
+  OK    11.20 outro e-mail revoga NEGADO
+  OK    11.21 o proprio cracha se revoga NEGADO
+  OK    11.22 diretor revoga PASSA (R12)
+  OK    11.24 revogado NAO volta a ativo NEGADO (R12)
+  OK    11.25 revogar de novo NEGADO
+  OK    11.26 apagar cracha NEGADO, nem o diretor
+  OK    11.27 revogado recriado por cima NEGADO
+  OK    11.28 emitir o primeiro cracha da maquina-l PASSA
+  OK    11.29 lote: revogar o antigo e emitir o novo na mesma gravacao PASSA (N3)
+  OK    11.30 lote com pedido de outra maquina falha inteiro, nada muda
+  OK    11.31 depois do lote negado o cracha de 14 minutos segue ativo
+  OK    12.1 diretor bate heartbeat de qualquer maquina PASSA (ponte antiga)
+  OK    12.2 diretor cria fabrica sem maquinaId PASSA (como hoje)
+  OK    12.3 diretor troca maquinaId de fabrica PASSA (como hoje)
+  OK    12.4 diretor renomeia fabrica de qualquer maquina PASSA (renomearFabrica)
+  OK    12.5 diretor lista fabricas sem filtro PASSA (painel)
+  OK    12.6 diretor cria comando PASSA
+  OK    12.7 diretor marca entregue com campo a mais PASSA (como hoje)
+  OK    12.8 diretor cria aprovacao para fabrica sem documento PASSA (como hoje)
+  OK    12.9 diretor lista aprovacoes pendentes sem filtro de maquina PASSA (painel)
+  OK    12.10 diretor lista relatorios por fabricaId PASSA (ponte antiga)
+  OK    12.11 diretor cria relatorio sem maquinaId PASSA (como hoje)
+  OK    12.12 diretor le atividade de fabrica de qualquer maquina PASSA
+  OK    12.13 diretor cria tarefa PASSA
+  OK    12.14 diretor continua sem apagar nada NEGADO
+  FALHA 8.2 cracha revogado bate heartbeat NEGADO [esperado fail]: Error: Expected request to fail, but it succeeded.
+  FALHA 8.3 cracha revogado le fabrica NEGADO [esperado fail]: Error: Expected request to fail, but it succeeded.
+  FALHA 8.4 cracha revogado le fabrica inexistente NEGADO [esperado fail]: Error: Expected request to fail, but it succeeded.
+  FALHA 8.5 cracha revogado lista comandos NEGADO [esperado fail]: Error: Expected request to fail, but it succeeded.
+  FALHA 8.6 cracha revogado cria aprovacao NEGADO [esperado fail]: Error: Expected request to fail, but it succeeded.
+  FALHA 8.7 cracha revogado recusa aprovacao NEGADO [esperado fail]: Error: Expected request to fail, but it succeeded.
+  FALHA 8.8 cracha revogado cria relatorio NEGADO [esperado fail]: Error: Expected request to fail, but it succeeded.
+  FALHA 11.23 revogacao vale na hora: heartbeat logo depois NEGADO [esperado fail]: Error: Expected request to fail, but it succeeded.
+
+VEREDITO: REGRA DO CRACHA COM FURO, nao publicar.
+[33m[1m! [22m[39m Script exited unsuccessfully (code 1)
+[36m[1mi  emulators:[22m[39m Shutting down emulators.
+[36m[1mi  firestore:[22m[39m Stopping Firestore Emulator
+[33m[1m! [22m[39m Firestore Emulator has exited upon receiving signal: SIGINT
+[36m[1mi  hub:[22m[39m Stopping emulator hub
+[36m[1mi  logging:[22m[39m Stopping Logging Emulator
+
+[1m[31mError:[39m[22m Script "[1mnode rodada-2026-11-25-215623-ost16-cracha-dono-le-inexistente/mutante-3-ignora-revogacao.test.mjs[22m" exited with code 1

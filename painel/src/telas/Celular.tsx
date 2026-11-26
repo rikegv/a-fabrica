@@ -41,6 +41,7 @@ import { ChatComCoordenador, RodapeDaFabrica, TimeNoCelular, usarTimeDaFabrica }
 import { desdeQuando, plural } from '@/formato';
 import { usarAcoesDaFabrica, usarCaixaDeComando, type AcoesDaFabrica } from './FabricaTela';
 import { NovaFabricaCelular } from './NovaFabrica';
+import { ConfiguracoesCelular } from './Configuracoes';
 import { usarRelatoriosDaFabrica } from '@/dados/ouvintes';
 import { RelatoriosDaFabrica, RelatoriosGerais } from './Relatorios';
 import {
@@ -410,6 +411,18 @@ export function Celular({
         <RelatoriosGerais base={base} estado={estado} celular />
       </>
     );
+  } else if (tela === 'settings') {
+    /* OST 16: situação da ponte e crachás das máquinas, a partir de Mais. */
+    navAtiva = 'more';
+    cabecalho = (
+      <MHead title="Configurações" sub="Ponte e crachás das máquinas" onBack={() => setTela('more')} right={chipDaPonte} />
+    );
+    corpo = (
+      <>
+        {faixaDaPonte}
+        <ConfiguracoesCelular base={base} estado={estado} escrita={escrita} avisar={avisar} />
+      </>
+    );
   } else {
     const texto = DESTINOS_INERTES[tela] ?? DESTINOS_INERTES.more;
     cabecalho = <MHead title="Mais" right={chipDaPonte} />;
@@ -420,15 +433,20 @@ export function Celular({
           <Vazio titulo={texto.titulo} detalhe={texto.detalhe} icone={<Icon name="overview" size={20} />} />
         </div>
         {tela === 'more' ? (
-          <Button
-            variant="secondary"
-            size="touch"
-            block
-            disabled={Boolean(motivoDeAbrir)}
-            onClick={() => setTela('new')}
-          >
-            Abrir nova fábrica
-          </Button>
+          <>
+            <Button variant="secondary" size="touch" block onClick={() => setTela('settings')}>
+              Ponte e crachás das máquinas
+            </Button>
+            <Button
+              variant="secondary"
+              size="touch"
+              block
+              disabled={Boolean(motivoDeAbrir)}
+              onClick={() => setTela('new')}
+            >
+              Abrir nova fábrica
+            </Button>
+          </>
         ) : null}
         <Button variant="ghost" size="touch" block onClick={entrada.sair}>
           Sair

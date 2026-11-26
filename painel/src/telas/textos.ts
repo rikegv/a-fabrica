@@ -112,6 +112,6 @@ export const DESTINOS_INERTES: Record<string, { titulo: string; detalhe: string 
   more: {
     titulo: 'Mais entra nas ondas seguintes',
     detalhe:
-      'Indicadores e Configurações moram aqui no celular. Estão prontas Fábricas, Aprovações, Relatórios e a abertura de fábrica nova.'
+      'Indicadores mora aqui no celular e entra na Onda 4. Estão prontas Fábricas, Aprovações, Relatórios, a abertura de fábrica nova e, logo abaixo, a situação da ponte com os crachás das máquinas.'
   }
 };

@@ -1,0 +1,106 @@
+Caso 1. Janela de 15 minutos, N2 e R12.
+PASSOU  janela é de 15 minutos
+PASSOU  limite da consulta é 20
+PASSOU  pedido de agora está dentro
+PASSOU  pedido de 14 min 59 s está dentro
+PASSOU  pedido de 15 min exatos está dentro
+PASSOU  pedido de 15 min e 1 s está fora
+PASSOU  pedido de 2 h está fora
+PASSOU  pedido sem hora está fora (falha fechada)
+PASSOU  pedido 1 min no futuro (relógio atrasado) está dentro
+PASSOU  pedido 3 min no futuro está fora
+PASSOU  início da janela é agora menos 15 min
+PASSOU  quanto falta: pedido de 2 min vence em 13 min
+
+Caso 2. Pedidos abertos: na janela, sem crachá para o mesmo uid, mais novo em cima.
+PASSOU  o vencido sai
+PASSOU  mais novo em cima
+PASSOU  pedido cujo uid já tem crachá ativo sai
+PASSOU  pedido cujo uid já teve crachá revogado sai (revogado não volta)
+
+Caso 3. Pedido malformado não vira crachá.
+PASSOU  pedido bem formado
+PASSOU  uid diferente do id
+PASSOU  máquina fora do padrão
+PASSOU  máquina com maiúscula
+PASSOU  código de 5 dígitos
+PASSOU  código como número, e não texto
+PASSOU  código com letra
+PASSOU  crachá com ativo "true" em texto conta como revogado
+PASSOU  crachá com ativo true é ativo
+PASSOU  pedaço do uid tem 8 caracteres
+
+Caso 4. Pedido duplicado, N1: mesma máquina ou mesmo código barra a emissão.
+PASSOU  dois pedidos para a mesma máquina: duplicidade
+PASSOU  barra o primeiro
+PASSOU  barra o segundo também
+PASSOU  mesmo código em máquinas diferentes: duplicidade
+PASSOU  barra
+PASSOU  máquinas e códigos diferentes: nada barra
+PASSOU  pedido vencido da mesma máquina não conta como duplicado
+PASSOU  pedido já atendido da mesma máquina não conta como duplicado (é troca, N3)
+PASSOU  a frase diz que pode ser falsificação e o que fazer
+
+Caso 5. O que barra a emissão, na ordem, falha fechada.
+PASSOU  malformado barra primeiro
+PASSOU  uid já com crachá barra
+PASSOU  vencido barra
+PASSOU  lista no teto de 20 barra
+PASSOU  sem a conferência do diretor, barra
+PASSOU  pedido certo, conferido, sem duplicado: libera
+PASSOU  nenhuma frase de barreira tem travessão
+PASSOU  toda frase de barreira diz que nada foi emitido ou o que fazer
+
+Caso 6. Lote de emissão: cria o crachá com os campos exatos e revoga os ativos da máquina no mesmo lote.
+PASSOU  máquina sem crachá: uma escrita só, a criação
+PASSOU  documento é crachas/{uid}
+PASSOU  campos exatos: uid, maquinaId, rotulo, ativo, emitidoEm, emitidoPor  (ativo,emitidoEm,emitidoPor,maquinaId,rotulo,uid)
+PASSOU  uid igual ao id do documento
+PASSOU  maquinaId igual ao do pedido
+PASSOU  rótulo igual ao do pedido
+PASSOU  ativo é true
+PASSOU  emitidoEm é a hora do servidor
+PASSOU  emitidoPor começa com "painel"  (painel no computador, henrique.vieira@soulan.com.br)
+PASSOU  pedido sem rótulo: crachá com rótulo null, não ausente
+PASSOU  rótulo vai para o crachá exatamente como está no pedido
+PASSOU  máquina com 2 ativos: 1 criação e 2 revogações no mesmo lote
+PASSOU  revoga só os ativos desta máquina  (velho1,velho2)
+PASSOU  revogação mexe só em ativo, revogadoEm, revogadoPor  (ativo,revogadoEm,revogadoPor)
+PASSOU  revogação põe ativo false
+PASSOU  revogadoEm é a hora do servidor
+PASSOU  revogadoPor começa com "painel"
+
+Caso 7. Revogar revoga todos os ativos da máquina.
+PASSOU  revoga os 2 ativos
+PASSOU  não toca no revogado nem na outra máquina
+PASSOU  máquina sem ativo: lote vazio, e a escrita diz que não havia o que revogar
+PASSOU  lista da tela: ativo em cima do revogado
+
+Caso 8. R5 e a porta única: o que o código grava.
+PASSOU  origem do computador começa com "painel"
+PASSOU  origem do celular começa com "painel"
+PASSOU  conferir() monta a origem com origemDoPainel
+PASSOU  a resposta de aprovação grava respondidoPor com essa origem
+PASSOU  a resposta de aprovação mantém situacao, resposta, observacao e respondidoEm
+PASSOU  emissão e revogação gravam em lote (writeBatch)
+PASSOU  emissão relê os pedidos na base antes de decidir
+PASSOU  a hora gravada é serverTimestamp()
+PASSOU  a tela não chama setDoc, updateDoc, addDoc nem writeBatch
+PASSOU  a tela não importa firebase/firestore para escrever
+PASSOU  consulta de pedidos: criadoEm >= início da janela, ordem por criadoEm e limite
+PASSOU  a tela pede o limite de 20
+PASSOU  a releitura da emissão usa a mesma janela e o mesmo limite
+
+Caso 9. N1 na tela, N4 (texto puro) e N5 (§A.22 e §A.11).
+PASSOU  a confirmação mostra o código e o começo do uid
+PASSOU  o botão de confirmar diz que são os mesmos
+PASSOU  a emissão só sai com conferido: true pela confirmação
+PASSOU  máquina com crachá ativo: a tela avisa antes que emitir revoga o antigo
+PASSOU  revogar pede confirmação
+PASSOU  erro da escrita fica na tela, dentro e fora da confirmação
+PASSOU  erro de leitura aparece na tela
+PASSOU  nenhum arquivo do painel monta HTML cru
+PASSOU  a tela de crachás não tem link, src nem estilo montado com dado
+PASSOU  nenhum travessão nos arquivos tocados
+
+Todas as 87 verificações passaram.
