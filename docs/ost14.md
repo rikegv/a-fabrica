@@ -29,4 +29,18 @@ Agentes: coordenador (fábrica da nuvem, desenho, código e instalação), segur
 
 ## Situação
 
-PREENCHER NO FECHAMENTO.
+PARADA POR DECISÃO DO DIRETOR, 26/11/2026: a ponte NÃO entra com a conta dele. Cada máquina vai ter um crachá próprio, que só informa e nunca aprova. O crachá e a regra da base são da fábrica do notebook. A fábrica da nuvem espera a ordem para instalar nesta VM.
+
+O login por código colado descrito acima não foi feito, e nenhum link novo será gerado com a conta do diretor. O código dele (entradaPorCodigo.ts, entrar.sh) fica no ramo como registro e deve dar lugar ao crachá.
+
+O que ficou pronto e provado antes da parada:
+
+- instalação na fabrica-1, quatro vezes (usuário fabrica-ponte, pasta 700, regra estreita do sudo, unidade do systemd);
+- os ganchos escrevendo na fila com conteúdo, inclusive desta sessão, que já estava aberta;
+- sem login, o serviço sai com o código 3 e não fica religando (NRestarts=0);
+- segurança: aprovado com ressalvas; R2, R3 e N1 corrigidos; R1, R4, T1, L1, I1, I2 declarados;
+- tester: prova nova de 160 casos, 160 passaram no reteste.
+
+O que ficou sem prova, porque depende da ponte no ar: esta sessão no painel, a leitura negada da credencial com sessão gravada, a recusa da segunda ponte, a medida de memória e a volta depois do kill -9 e do reinício da VM. O roteiro dessas provas está pronto em ponte/linux/provar.sh.
+
+Estado da VM na parada: serviço habilitado e parado (failed, código 3, sem sessão); os ganchos continuam ligados no ~/.claude/settings.json do diretor e escrevendo na fila /var/lib/a-fabrica-ganchos/fila-ganchos, que ninguém consome enquanto a ponte não sobe.
